@@ -9,5 +9,5 @@
   "author": "",
   "license": "MIT",
   "packageManager": "pnpm@10.33.0",
-  "private": "true"
+  "private": true
 }
