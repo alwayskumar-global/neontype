@@ -1,9 +1,22 @@
 # Tech
-- TypeScript strict, pnpm workspaces, Vite + React (studio UI), Vitest + fast-check (property-based tests), Playwright (smoke/visual).
-- Rendering: Canvas2D first. WebGL only if an effect needs it.
-- Core rule: renderFrame(project, tSeconds, opts) is pure and deterministic. No Date.now, Math.random, DOM reads or network. Randomness comes only from a seeded PRNG stored in the project.
-- Preview, every exporter and the tests all call renderFrame. Never duplicate render logic.
-- Schemas (Zod) are the source of truth. Generate JSON Schema from them.
-- Client-only. No runtime third-party requests, no analytics, no secrets. Fonts must be OFL and self-hosted; audio CC0 or royalty-free.
-- Dependencies: permissive licenses only (MIT/Apache/BSD). Log each in docs/dependencies.md with the reason.
-- Never put keys in .kiro or the repo. MCP config uses env-var references only.
+
+**Stack:** TypeScript (strict), pnpm workspaces, Vite + React (studio UI), Vitest + fast-check (property-based), Playwright (smoke/visual).
+
+**Rendering:** Canvas2D by default; WebGL only when an effect explicitly requires it.
+`renderFrame(project, tSeconds, opts)` must be pure and deterministic — no `Date.now`, `Math.random`, DOM reads, or network calls. All randomness comes from a seeded PRNG stored in the project. Preview, every exporter, and all tests call the same `renderFrame`; never duplicate render logic. Determinism means the same inputs in the same runtime produce identical output. Golden images are generated and compared in Chromium only.
+
+**Schemas:** Zod definitions in `packages/engine` are the source of truth. Generate JSON Schema from them; do not hand-write JSON Schema.
+
+**Client-only hard constraints:**
+- No runtime third-party requests, analytics, or telemetry.
+- Fonts: OFL, self-hosted. Audio: CC0 or royalty-free.
+- Dependencies: MIT / Apache / BSD licenses only. Log each in `docs/dependencies.md` with the reason.
+- No secrets or API keys anywhere in the repo or `.kiro`. MCP config uses env-var references only.
+
+**Naming:** `camelCase` for variables/functions, `PascalCase` for types/components, `kebab-case` for filenames. Effect ids are `kebab-case` strings matching their directory name.
+
+**Error handling:** Validate external input (project files, effect packs) with Zod `safeParse`. Throw typed errors for internal invariant violations. Never swallow errors silently.
+
+**Testing:** unit tests co-located (`*.test.ts`); integration/visual tests in `tests/`. Property-based tests cover every effect with arbitrary inputs and seeded PRNGs. A passing test suite is required before merging.
+
+**Commits:** Conventional Commits (`feat:`, `fix:`, `chore:`, etc.). One logical change per commit; reference the spec task id when applicable.
