@@ -47,33 +47,33 @@ This plan converts the `effect-presets` design into an ordered series of coding 
     - Run `pnpm --filter @studio/engine exec tsc --noEmit` and `pnpm --filter @studio/engine lint`.
     - **Completion:** Both commands exit with code 0 and zero errors.
 
-- [ ] 3. Group 3a: blur-in, glitch-reveal, kinetic-pop, letter-spread
-  - [ ] 3.1 Implement `blur-in` effect with unit and property tests
+- [x] 3. Group 3a: blur-in, glitch-reveal, kinetic-pop, letter-spread
+  - [x] 3.1 Implement `blur-in` effect with unit and property tests
     - Create `packages/engine/src/effects/blur-in/schema.ts` (`BlurInParamsSchema`: `startDelay`, `durationSeconds`, `startBlur`, `delayPerGroup`, `easing`; `.finite()` on every number, hard min AND max per Requirement 3.2, defaults per design), `packages/engine/src/effects/blur-in/index.ts` (pure `applyEffect` computing `p`, `e`, `opacity = e`, `blur = startBlur * (1 - e)`, clamped on return; `register(registry)`; throws `InvalidEffectParamsError("…", "blur-in", parsed.error)` on `safeParse` failure; no `register` at load time), and `packages/engine/src/effects/blur-in/blur-in.test.ts`.
     - Tests: unit at `p = 0` (`opacity 0`, `blur = startBlur`), `p = 1` (`opacity 1`, `blur 0`), `p = 0.5` (midpoint monotone toward identity); `InvalidEffectParamsError` on bad params. Property tests using `arbBlurInParams`: Property 1 determinism, Property 2 bounded output, Property 3 terminal identity at `p = 1`.
     - **Covers:** Requirement 1.1, Requirement 1.2, Requirement 1.3, Requirement 1.5, Requirement 1.7, Requirement 1.9, Requirement 1.10, Requirement 2.5, Requirement 3.1, Requirement 3.2, Requirement 3.3, Requirement 3.4, Requirement 3.5, Requirement 3.6, Requirement 16.1, Requirement 16.2, Requirement 16.3, Requirement 16.5
     - **Completion:** `pnpm vitest run src/effects/blur-in` (from `packages/engine`) passes with zero failures.
 
-  - [ ] 3.2 Implement `glitch-reveal` effect with unit and property tests
+  - [x] 3.2 Implement `glitch-reveal` effect with unit and property tests
     - Create `packages/engine/src/effects/glitch-reveal/schema.ts` (`startDelay`, `durationSeconds`, `delayPerGroup`, `maxOffset`, `steps` integer, `easing`; `.finite()`, hard min/max per Requirement 4.2, defaults), `index.ts` (compute `p`, `e`, `k = min(steps - 1, floor(p * steps))`, `magnitude = maxOffset * (1 - e)`; when `magnitude > 0` draw exactly `k + 1` PRNG values in order and use the last two `rx`/`ry` — reuse the single draw for both axes when `k + 1 == 1` — for `positionOffset = [(rx*2-1)*magnitude, (ry*2-1)*magnitude]`; when `magnitude == 0` return `[0, 0]` and draw zero values; `opacity = e`; clamp on return; `register`; throws `InvalidEffectParamsError` for `glitch-reveal`), and `glitch-reveal.test.ts`.
     - Tests: unit at `p = 0`, `p = 1` (`opacity 1`, `positionOffset [0,0]`), `p = 0.5`; the `magnitude == 0` zero-draw boundary; `InvalidEffectParamsError` on bad params. Property tests using `arbGlitchRevealParams`: Property 1 determinism, Property 2 bounded (each axis in `[-maxOffset, maxOffset]`), Property 3 terminal identity, Property 5 jitter differs across distinct step indices.
     - **Covers:** Requirement 1.1, Requirement 1.2, Requirement 1.3, Requirement 1.4, Requirement 1.5, Requirement 1.7, Requirement 1.9, Requirement 1.10, Requirement 2.5, Requirement 4.1, Requirement 4.2, Requirement 4.3, Requirement 4.4, Requirement 4.5, Requirement 4.6, Requirement 4.7, Requirement 4.8, Requirement 4.9, Requirement 4.10, Requirement 16.1, Requirement 16.2, Requirement 16.3, Requirement 16.5
     - **Completion:** `pnpm vitest run src/effects/glitch-reveal` (from `packages/engine`) passes with zero failures.
 
-  - [ ] 3.3 Implement `kinetic-pop` effect with unit and property tests
+  - [x] 3.3 Implement `kinetic-pop` effect with unit and property tests
     - Create `packages/engine/src/effects/kinetic-pop/schema.ts` (`startDelay`, `durationSeconds`, `delayPerGroup`, `startScale`, `overshoot`, `easing`; `.finite()`, hard min/max per Requirement 5.2, defaults), `index.ts` (compute `p`, `e`, `peakAt = 0.6`, `target = max(startScale, 1 + overshoot)`; piecewise `scale` per design — first branch `startScale + (target - startScale) * evaluate("easeOut",0,1,e/peakAt)` for `e <= peakAt`, else `target + (1 - target) * smoothstep(v)`; explicit `scale = 1` at `p == 1`; `opacity = e`; `scale` clamped to `[0,100]`; `register`; throws `InvalidEffectParamsError`), and `kinetic-pop.test.ts`.
     - Tests: unit at `p = 0` (`opacity 0`, `scale = startScale`), `p = 1` (`opacity 1`, `scale 1`), `p = 0.5`; `overshoot = 0` boundary; the DEFAULT-params assertion (`scale > 1` at some `p` and `max scale` within `1e-9` of `1.25`); `InvalidEffectParamsError`. Property tests using `arbKineticPopParams`: Property 1 determinism, Property 2 bounded, Property 3 terminal identity, Property 6 kinetic-pop peak (`max scale == target`, attained where `e == 0.6`, exceeds `1` iff `overshoot > 0`).
     - **Covers:** Requirement 1.1, Requirement 1.2, Requirement 1.3, Requirement 1.5, Requirement 1.7, Requirement 1.9, Requirement 1.10, Requirement 2.5, Requirement 5.1, Requirement 5.2, Requirement 5.3, Requirement 5.4, Requirement 5.5, Requirement 5.6, Requirement 5.7, Requirement 16.1, Requirement 16.2, Requirement 16.3, Requirement 16.5
     - **Completion:** `pnpm vitest run src/effects/kinetic-pop` (from `packages/engine`) passes with zero failures.
 
-  - [ ] 3.4 Implement `letter-spread` effect with unit and property tests
+  - [x] 3.4 Implement `letter-spread` effect with unit and property tests
     - Create `packages/engine/src/effects/letter-spread/schema.ts` (`startDelay`, `durationSeconds`, `spreadDistance`, `axis` `x`|`y`, `easing`; `.finite()`, hard min/max per Requirement 6.3, defaults), `index.ts` (compute `p = clamp((t - startDelay) / durationSeconds, 0, 1)` — no `delayPerGroup`; `e`; `m = (groupIndex - (groupCount - 1)/2) * spreadDistance * (1 - e)`; `positionOffset = axis === "x" ? [m, 0] : [0, m]` clamped per axis to `[-32000, 32000]`; `groupCount <= 1` → `[0, 0]`; `register`; throws `InvalidEffectParamsError`), and `letter-spread.test.ts`.
     - Tests: unit at `p = 0` (fully-spread `m`), `p = 1` (`[0, 0]`), `p = 0.5`; `groupCount = 1` boundary → `[0, 0]`; both axes; `InvalidEffectParamsError`. Property tests using `arbLetterSpreadParams`: Property 1 determinism, Property 2 bounded, Property 3 terminal identity.
     - **Covers:** Requirement 1.1, Requirement 1.2, Requirement 1.3, Requirement 1.5, Requirement 1.7, Requirement 1.9, Requirement 1.10, Requirement 2.5, Requirement 6.1, Requirement 6.2, Requirement 6.3, Requirement 6.4, Requirement 6.5, Requirement 6.6, Requirement 6.7, Requirement 6.8, Requirement 16.1, Requirement 16.2, Requirement 16.3, Requirement 16.5
     - **Completion:** `pnpm vitest run src/effects/letter-spread` (from `packages/engine`) passes with zero failures.
     - Commit: `feat(effect-presets): add blur-in, glitch-reveal, kinetic-pop, letter-spread effects`
 
-  - [ ] 3.5 Checkpoint — Group 3a
+  - [x] 3.5 Checkpoint — Group 3a
     - Run `pnpm --filter @studio/engine exec tsc --noEmit`, `pnpm --filter @studio/engine lint`, and `pnpm vitest run src/effects` (from `packages/engine`).
     - **Completion:** All three commands exit with code 0 and zero failures.
 

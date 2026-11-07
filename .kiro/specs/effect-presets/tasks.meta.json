@@ -56,6 +56,48 @@
         "chatSessionId": "sess_effect_presets_impl",
         "timestamp": 1794057503330
       }
+    ],
+    "3.1 Implement `blur-in` effect with unit and property tests": [
+      {
+        "executionId": "8bce404b-419c-4a5e-a837-76765c6cbedf",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794058705116
+      }
+    ],
+    "3.2 Implement `glitch-reveal` effect with unit and property tests": [
+      {
+        "executionId": "8bce404b-419c-4a5e-a837-76765c6cbedf",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794058705116
+      }
+    ],
+    "3.3 Implement `kinetic-pop` effect with unit and property tests": [
+      {
+        "executionId": "8bce404b-419c-4a5e-a837-76765c6cbedf",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794058705116
+      }
+    ],
+    "3.4 Implement `letter-spread` effect with unit and property tests": [
+      {
+        "executionId": "8bce404b-419c-4a5e-a837-76765c6cbedf",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794058705116
+      }
+    ],
+    "3.5 Checkpoint \u2014 Group 3a": [
+      {
+        "executionId": "8bce404b-419c-4a5e-a837-76765c6cbedf",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794058705116
+      }
+    ],
+    "3. Group 3a: blur-in, glitch-reveal, kinetic-pop, letter-spread": [
+      {
+        "executionId": "8bce404b-419c-4a5e-a837-76765c6cbedf",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794058705116
+      }
     ]
   }
 }
