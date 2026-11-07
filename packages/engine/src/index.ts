@@ -44,3 +44,14 @@ export type {
 } from "./registry.js";
 
 export { registerBuiltinEffects, builtinRegistry } from "./effects/index.js";
+
+export { computeFrameState } from "./compute.js";
+export type {
+  ComputeOpts,
+  FrameState,
+  LayerState,
+  BaseSegment,
+  EngineWarning,
+  UnknownEffectWarning,
+  InvalidEffectParamsWarning,
+} from "./compute.js";

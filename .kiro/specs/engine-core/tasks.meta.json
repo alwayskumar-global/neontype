@@ -584,6 +584,61 @@
         "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794035222586
+      },
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794035477692
+      }
+    ],
+    "7.9 Checkpoint — Group 7": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794035484212
+      },
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794035502216
+      }
+    ],
+    "7. Group 7: Effect Registry and Reference Effects": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794035502258
+      }
+    ],
+    "8.1 Implement `computeFrameState`": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794035515466
+      },
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794035833664
+      }
+    ],
+    "8.2 Write unit tests for `computeFrameState`": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794035840127
+      },
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036004287
+      }
+    ],
+    "8.3 Write property-based tests for `computeFrameState` (Properties 3, 4, 5, 6, 9, 10, 11)": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036010004
       }
     ]
   }

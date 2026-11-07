@@ -224,7 +224,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
-- [ ] 7. Group 7: Effect Registry and Reference Effects
+- [x] 7. Group 7: Effect Registry and Reference Effects
   - [x] 7.1 Implement `createRegistry` and `EffectDefinition` types
     - Create `packages/engine/src/registry.ts` exporting `SegmentOverrides` interface, `ApplyEffectArgs` interface, `EffectDefinition` interface, `EffectRegistry` interface (with `register` and `get` methods), and `createRegistry(): EffectRegistry` (backed by a `Map<string, EffectDefinition>`; `register` throws `DuplicateEffectError` if id already registered; `get` returns `undefined` for unknown ids).
     - Re-export `createRegistry`, `EffectDefinition`, `EffectRegistry`, `SegmentOverrides`, `ApplyEffectArgs` from `src/index.ts`.
@@ -268,7 +268,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 7.6, Requirement 7.7, Requirement 8.3
     - **Completion:** Unit test asserts `builtinRegistry.get("typewriter")` and `builtinRegistry.get("fade-slide")` both return defined `EffectDefinition` objects.
 
-  - [-] 7.8 Extend `arbValidProject` with effect instances and `arbGraphemeText`
+  - [x] 7.8 Extend `arbValidProject` with effect instances and `arbGraphemeText`
     - Extend `arbValidProject` (and `arbTextLayer`) in `testing/arbitraries.ts` so generated layers include `effectInstances` referencing the built-in effects (`typewriter`, `fade-slide`) with valid params drawn from the effect-param arbitraries, covering all three granularities (`character`, `word`, `line`).
     - Add `arbGraphemeText` generator mixing ASCII, ZWJ emoji sequences, and Tamil characters.
     - Update `arbitraries.test.ts` smoke test to assert extended `arbValidProject` values still pass `ProjectSchema.safeParse`.
@@ -276,12 +276,12 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Completion:** `pnpm vitest run src/testing/arbitraries.test.ts` passes with zero failures.
     - Commit: `feat(engine-core): implement effect registry, reference effects, and full arbitraries`
 
-  - [ ] 7.9 Checkpoint — Group 7
+  - [x] 7.9 Checkpoint — Group 7
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 8. Group 8: computeFrameState
-  - [ ] 8.1 Implement `computeFrameState`
+  - [x] 8.1 Implement `computeFrameState`
     - Create `packages/engine/src/compute.ts` exporting `computeFrameState(project: Project, t: number, opts: ComputeOpts): FrameState`:
     - Step 1: clamp `t` — NaN or non-finite → `0`; `< 0` → `0`; `> durationSeconds` → `durationSeconds`.
     - Step 2: filter active layers using the half-open interval rule (`t >= startSeconds && (t < endSeconds || (t === endSeconds && endSeconds === durationSeconds))`).
@@ -292,12 +292,12 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 5.1, Requirement 5.4, Requirement 5.5, Requirement 5.6, Requirement 5.7, Requirement 5.8, Requirement 5.9, Requirement 5.10, Requirement 5.11, Requirement 5.13, Requirement 5.14, Requirement 7.5, Requirement 15.1, Requirement 15.2
     - **Completion:** Unit tests in `compute.test.ts` assert: inactive layers are excluded; `tLocal` is correct; unknown effect id produces `UnknownEffectWarning`; `applyEffect` exception produces `InvalidEffectParamsWarning`; `-0` is normalised to `0`.
 
-  - [ ] 8.2 Write unit tests for `computeFrameState`
+  - [x] 8.2 Write unit tests for `computeFrameState`
     - Create `packages/engine/src/compute.test.ts` with unit tests covering: layer visibility at exact `startSeconds` (active), just before (inactive), at exact `endSeconds` (inactive unless `endSeconds === durationSeconds`); `t < 0` clamps to `0`; `t > durationSeconds` clamps to `durationSeconds`; `t = NaN`, `Infinity`, `-Infinity` each return valid `FrameState` without throwing; unknown effect id → `UnknownEffectWarning`; `applyEffect` throwing → `InvalidEffectParamsWarning` and segment rendered with no effect; non-finite value in `SegmentOverrides` → warning, property discarded; a `FrameState` with any `-0` field returns `+0`.
     - **Covers:** Requirement 5.5, Requirement 5.6, Requirement 5.7, Requirement 5.8, Requirement 5.9, Requirement 5.10, Requirement 5.13, Requirement 5.14
     - **Completion:** `pnpm vitest run src/compute.test.ts` passes with zero failures.
 
-  - [ ] 8.3 Write property-based tests for `computeFrameState` (Properties 3, 4, 5, 6, 9, 10, 11)
+  - [-] 8.3 Write property-based tests for `computeFrameState` (Properties 3, 4, 5, 6, 9, 10, 11)
     - In `packages/engine/src/compute.test.ts`, add the following fast-check property-based tests:
     - Property 3 tagged `// Feature: engine-core, Property 3: computeFrameState total function` — for any `arbValidProject` and `arbT(project)`, assert `computeFrameState` does not throw and returns a `FrameState`.
     - Property 4 tagged `// Feature: engine-core, Property 4: computeFrameState determinism` — for any `arbValidProject` and `arbT`, assert two sequential calls return deeply equal results.
