@@ -135,6 +135,7 @@ opacity = e
 - Monotonicity: `evaluate("easeOut", …)` is non-decreasing in `u`, so the first branch is monotone non-decreasing for `e in [0, peakAt]` when `startScale <= target`; `smoothstep` is non-decreasing in `v`, and `(1 - target) <= 0`, so the second branch is monotone non-increasing for `e in [peakAt, 1]`.
 - Peak location `peakAt = 0.6` is the eased value, which lies in `(0.25, 0.75)` as required.
 - `target >= 1 + overshoot` exactly when `startScale <= 1 + overshoot`; the max equals `target`, so the peak is `1 + overshoot` in the common case, strictly `> 1` when `overshoot > 0`, and equals `1` when `overshoot = 0` and `startScale <= 1` (then `target = 1` and the curve rises monotonically `startScale → 1`). `scale` clamp to `[0,100]` is the final hard guarantee.
+- Easing domain: the peak equals `target` only for easings whose eased value **attains** `0.6` — every continuous easing (`linear`, `easeIn`, `easeOut`, `easeInOut`, `cubicBezier`) does. A `step` easing may jump past `0.6` without landing on it, so the curve can skip the apex and never reach `target`; in that case `scale` still stays within `[min(startScale, 1), target]` for all `p` and is exactly `1` at `p = 1` (both branches are bounded by `target` and the `p == 1` guard returns the literal `1`). This is why Property 6's peak-equality is asserted over continuous easings only, with a separate step-easing example for the bounded guarantee.
 
 #### letter-spread
 
@@ -349,7 +350,7 @@ Each new effect's params get a dedicated `arbXxxParams` arbitrary in `testing/ar
 
 ### Property 6: Kinetic-pop peak
 
-*For any* valid `kinetic-pop` params, the maximum `scale` over `p in [0,1]` equals `target = max(startScale, 1 + overshoot)`, attained at the sample whose eased value is `0.6`; the max exceeds `1` iff `overshoot > 0` (with `startScale <= 1 + overshoot`); and a unit test at the DEFAULT params (`startScale 0.2`, `overshoot 0.25`) asserts `scale` exceeds `1` at some `p` and the maximum is within `1e-9` of `1.25`.
+*For any* valid `kinetic-pop` params whose `easing` is continuous (`linear`, `easeIn`, `easeOut`, `easeInOut`, `cubicBezier`) — i.e. an easing whose eased value attains `0.6` — the maximum `scale` over `p in [0,1]` equals `target = max(startScale, 1 + overshoot)`, attained at the sample whose eased value is `0.6`; the max exceeds `1` iff `overshoot > 0` (with `startScale <= 1 + overshoot`); and a unit test at the DEFAULT params (`startScale 0.2`, `overshoot 0.25`, continuous easing) asserts `scale` exceeds `1` at some `p` and the maximum is within `1e-9` of `1.25`. For a `step` easing (whose eased value may skip `0.6`) the peak-equality is NOT asserted; instead a separate example test checks the step-easing guarantee: `scale` stays within `[min(startScale, 1), target]` for all `p` and equals exactly `1` at `p = 1`. Properties 1–3 still cover step easing for determinism, bounded output, and terminal identity.
 
 **Validates: Requirements 5.5**
 
