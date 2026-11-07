@@ -5,6 +5,8 @@
 **Rendering:** Canvas2D by default; WebGL only when an effect explicitly requires it.
 `renderFrame(project, tSeconds, opts)` must be pure and deterministic — no `Date.now`, `Math.random`, DOM reads, or network calls. All randomness comes from a seeded PRNG stored in the project. Preview, every exporter, and all tests call the same `renderFrame`; never duplicate render logic. Determinism means the same inputs in the same runtime produce identical output. Golden images are generated and compared in Chromium only.
 
+`renderFrame(project, t, opts)` composes two functions. `computeFrameState(project, t)` is pure data in and data out, with no canvas or DOM access. `drawFrame(ctx, state)` is a thin painter that draws a precomputed state onto a `CanvasRenderingContext2D`. Property-based tests target `computeFrameState` and run in Node. Only a small set of golden-image tests exercises `drawFrame`, in Chromium via Playwright.
+
 **Schemas:** Zod definitions in `packages/engine` are the source of truth. Generate JSON Schema from them; do not hand-write JSON Schema.
 
 **Client-only hard constraints:**
