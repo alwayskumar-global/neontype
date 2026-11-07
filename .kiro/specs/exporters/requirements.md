@@ -242,18 +242,34 @@ Exporting is deterministic: frame `i` is rendered at `t = i / fps` through the s
 6. THE Exporter SHALL apply the scaling rule of criteria 1 and 2 identically for MP4, PNG sequence, WebM with alpha, GIF, and WebP output formats.
 7. WHEN the same `Project` and the same output `width`×`height` are exported twice within one runtime, THE Exporter SHALL produce byte-identical scaled frame output for every corresponding frame.
 
-## Proposed dependencies
+## Approved dependencies
 
-No dependency is added without explicit approval. Each candidate below must be approved individually; on approval it must also be recorded in `docs/dependencies.md`. Only MIT, Apache-2.0, or BSD licenses are eligible. Sizes are approximate minified footprints and should be re-checked at design time.
+The dependency candidates were fact-checked against the npm registry and decided. Only MIT, Apache-2.0, or BSD (2/3-clause) licenses are eligible; a dual license that includes a disallowed option is rejected. Approved packages are added at implementation time only, pinned to the exact version below (no ranges), and each gets a `docs/dependencies.md` row (name, exact version, license, reason).
 
-| Candidate | Purpose | License (must be MIT/Apache/BSD) | Approx. size | Maintenance | No-dependency alternative |
-| --- | --- | --- | --- | --- | --- |
-| Pure-JS MP4 muxer (e.g. a fragmented-MP4/WebCodecs muxer) | Package encoded H.264 + AAC chunks into an MP4 container | To confirm (MIT expected) | ~15–40 KB | To confirm actively maintained | Hand-written minimal fragmented-MP4 muxer scoped to H.264 + AAC |
-| WebM / EBML muxer | Mux VP9 (+alpha) into a WebM container | To confirm | To confirm | To confirm | Either the MP4 muxer candidate must also mux WebM (choose one muxer for both), or a hand-written minimal EBML/WebM muxer |
-| ZIP writer | Package PNG frames into a ZIP for PNG-sequence export | To confirm (MIT expected) | ~10–30 KB | To confirm | Hand-written stored-entry ZIP writer with CRC-32 (no compression) |
-| GIF encoder | Quantize and encode frames into an animated GIF | To confirm (MIT/BSD expected) | ~15–30 KB | To confirm | Hand-written palette + LZW GIF encoder |
-| WebP encoder | Encode frames into an animated WebP | To confirm (MIT/Apache expected) | ~50–200 KB (often WASM) | To confirm | Encode each frame as a still WebP via canvas `toBlob`/`convertToBlob` (`image/webp`), then wrap the frames in a hand-written RIFF animated-WebP container (VP8X + ANIM + ANMF chunks); a WASM WebP encoder is the dependency option |
-| MP4 box parser (devDependency, test only) | Parse the produced MP4 in the Requirement 13.7 sanity test | To confirm | To confirm | To confirm | Minimal hand-written MP4 box reader in the test helpers |
+### Approved (exact pinned versions)
+
+| Package | Version | License | Reason |
+| --- | --- | --- | --- |
+| mp4-muxer | 5.2.2 | MIT | Mux encoded H.264 video + AAC audio chunks into an MP4 container, client-side, Worker-safe. |
+| webm-muxer | 5.1.4 | MIT | Mux VP9 (with alpha) into a WebM container; same author/API family as `mp4-muxer`. |
+| client-zip | 2.5.1 | MIT | Package PNG frames into a ZIP (stored entries) for the PNG-sequence export; small, Worker-safe, no runtime deps. |
+| gifenc | 1.0.3 | MIT | Quantize and encode frames into an animated GIF. Ships no type declarations — see the note below. |
+
+`gifenc` ships no `.d.ts`. The design SHALL add a local ambient declaration file inside `packages/exporters/src` (for example `packages/exporters/src/types/gifenc.d.ts`); this is NOT a `tsconfig` change and SHALL NOT add an `@types/*` package.
+
+### Rejected
+
+- **mediabunny** — license MPL-2.0 (not on the allowlist).
+- **jszip** — dual `MIT OR GPL-3.0-or-later`; the dual includes a disallowed option.
+- **fflate** — not needed; `client-zip` covers the stored-ZIP use case.
+- **omggif** — not chosen; `gifenc` is the GIF encoder.
+- **mp4box** — not needed; the MP4 sanity-test parser is hand-written (see below).
+- **All WebP encoder packages** (`@jsquash/webp`, `wasm-webp`, `@stacksjs/ts-webp`, `@graysonlang/slim-webp-enc`, `webp-encoder`) — no maintained, allowlist-clean package produces a true animated WebP; the no-dependency path is used instead.
+
+### No dependency (hand-written)
+
+- **Animated WebP** — encode each frame as a still WebP from the canvas (`convertToBlob`/`toBlob` with type `image/webp`), then wrap the frames in a hand-written RIFF animated-WebP container (VP8X + ANIM + ANMF chunks). No WebP package is used.
+- **MP4 sanity-test parser** — a minimal hand-written MP4 box reader lives in the exporters test helpers to satisfy the Requirement 13.7 duration/frame-count check. No MP4 parser package is used.
 
 ## Out of scope
 
