@@ -46,31 +46,31 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Completion:** All commands exit with code 0.
 
 - [ ] 2. Group 2: Errors, PRNG, Easing Primitives
-  - [ ] 2.1 Implement typed error classes
+  - [x] 2.1 Implement typed error classes
     - Create `packages/engine/src/errors.ts` exporting `ParseError extends Error` (`readonly code: "PARSE_ERROR" | "SIZE_LIMIT_EXCEEDED"`, `readonly cause?: unknown`), `MigrationError extends Error` (`readonly code: "FUTURE_VERSION"`, `readonly version: number`), `DuplicateEffectError extends Error` (`readonly effectId: string`), and `InvalidEffectParamsError extends Error` (`readonly effectId: string`, `readonly cause: unknown`).
     - Re-export all four from `src/index.ts`.
     - **Covers:** Requirement 1.7, Requirement 1.8, Requirement 2.3, Requirement 3.2, Requirement 7.2, Requirement 9.5, Requirement 10.5
     - **Completion:** TypeScript compiles `errors.ts` without errors. `instanceof` checks work correctly in a unit test.
 
-  - [ ] 2.2 Implement `createPRNG` (mulberry32 + FNV-1a)
+  - [x] 2.2 Implement `createPRNG` (mulberry32 + FNV-1a)
     - Create `packages/engine/src/prng.ts` with `fnv1a32(input: string): number` (32-bit FNV-1a using `Math.imul`), `createPRNG(seed: number): PRNG` (mulberry32 using `Math.imul`; `next()` returns value in `[0, 1)`), and `derivePRNG(seed, layerId, effectInstanceIndex, granularity, segmentIndex): PRNG` (hashes `JSON.stringify([seed, layerId, effectInstanceIndex, granularity, segmentIndex])` via `fnv1a32`, then calls `createPRNG`).
     - The `PRNG` interface (`{ next(): number }`) is defined and re-exported from this file. `Math.random` MUST NOT be called anywhere in this file.
     - Re-export `createPRNG` and `PRNG` from `src/index.ts`.
     - **Covers:** Requirement 4.1, Requirement 4.2, Requirement 4.3, Requirement 4.4, Requirement 4.5
     - **Completion:** Unit test in `prng.test.ts` asserts `createPRNG(42)` produces the expected first five values against the mulberry32 reference. TypeScript compiles without errors.
 
-  - [ ] 2.3 Write unit tests for `createPRNG`
+  - [x] 2.3 Write unit tests for `createPRNG`
     - Create `packages/engine/src/prng.test.ts` with: a regression test asserting `createPRNG(42)` produces a known fixed sequence of at least five `next()` values; a test asserting every value is in `[0, 1)`; a test asserting `derivePRNG` called twice with the same arguments returns PRNGs that produce identical first values; a test asserting `derivePRNG` with different `layerId` values produces different first values.
     - **Covers:** Requirement 4.1, Requirement 4.2, Requirement 4.3
     - **Completion:** `pnpm vitest run src/prng.test.ts` passes with zero failures.
 
-  - [ ] 2.4 Write property-based test for PRNG determinism (Property 8)
+  - [x] 2.4 Write property-based test for PRNG determinism (Property 8)
     - In `packages/engine/src/prng.test.ts`, add a fast-check property-based test tagged `// Feature: engine-core, Property 8: PRNG determinism`.
     - For any integer seed `s` (using `fc.integer()`), assert that `createPRNG(s)` called twice produces the same first 10 `next()` values.
     - **Covers:** Requirement 4.2, Requirement 11 — Property 8
     - **Completion:** `pnpm vitest run src/prng.test.ts` passes with zero failures.
 
-  - [ ] 2.5 Write property-based test for PRNG layer independence (Property 17)
+  - [-] 2.5 Write property-based test for PRNG layer independence (Property 17)
     - In `packages/engine/src/prng.test.ts`, add a fast-check property-based test tagged `// Feature: engine-core, Property 17: PRNG layer independence`.
     - For any integer `seed`, two distinct non-empty strings `layerA` and `layerB` (via `fc.string({ minLength: 1 })` filtered to be distinct), integer `effectInstanceIndex`, string `granularity`, and integer `segmentIndex`, assert that the first `next()` value of `derivePRNG(seed, layerA, ...)` differs from `derivePRNG(seed, layerB, ...)`.
     - **Covers:** Requirement 11.16 — Property 17

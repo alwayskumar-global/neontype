@@ -67,6 +67,61 @@
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794019031526
       }
+    ],
+    "2.1 Implement typed error classes": [
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794019353831
+      },
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794019473401
+      }
+    ],
+    "2.2 Implement `createPRNG` (mulberry32 + FNV-1a)": [
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794019478474
+      },
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794019678302
+      }
+    ],
+    "2.3 Write unit tests for `createPRNG`": [
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794019697544
+      },
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794019769664
+      }
+    ],
+    "2.4 Write property-based test for PRNG determinism (Property 8)": [
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794019775030
+      },
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794019845746
+      }
+    ],
+    "2.5 Write property-based test for PRNG layer independence (Property 17)": [
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794019851092
+      }
     ]
   }
 }
