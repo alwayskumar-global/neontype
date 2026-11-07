@@ -469,6 +469,121 @@
         "executionId": "84c4c6dd-d74c-4c1f-837e-39d7b48e3ba9",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794033247149
+      },
+      {
+        "executionId": "84c4c6dd-d74c-4c1f-837e-39d7b48e3ba9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794033416008
+      }
+    ],
+    "6.3 Checkpoint — Group 6": [
+      {
+        "executionId": "84c4c6dd-d74c-4c1f-837e-39d7b48e3ba9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794033421489
+      },
+      {
+        "executionId": "84c4c6dd-d74c-4c1f-837e-39d7b48e3ba9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794033438481
+      }
+    ],
+    "6. Group 6: Keyframe Interpolation": [
+      {
+        "executionId": "84c4c6dd-d74c-4c1f-837e-39d7b48e3ba9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794033438512
+      }
+    ],
+    "7.1 Implement `createRegistry` and `EffectDefinition` types": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794034232257
+      },
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794034367404
+      }
+    ],
+    "7.2 Write unit tests for `createRegistry`": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794034374679
+      },
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794034389976
+      }
+    ],
+    "7.3 Implement `typewriter` effect": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794034395691
+      },
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794034514515
+      }
+    ],
+    "7.4 Write unit and property-based tests for `typewriter` effect": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794034521918
+      },
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794034660140
+      }
+    ],
+    "7.5 Implement `fade-slide` effect": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794034665193
+      },
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794034828268
+      }
+    ],
+    "7.6 Write unit and property-based tests for `fade-slide` effect": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794034834139
+      },
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794035101292
+      }
+    ],
+    "7.7 Implement `registerBuiltinEffects` and default registry": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794035106670
+      },
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794035215798
+      }
+    ],
+    "7.8 Extend `arbValidProject` with effect instances and `arbGraphemeText`": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794035222586
       }
     ]
   }

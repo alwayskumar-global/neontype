@@ -24,14 +24,21 @@
  * - `arbTextLayer(canvasDuration): fc.Arbitrary<TextLayer>` — a layer with
  *   `0 <= startSeconds < endSeconds <= canvasDuration` and keyframe tracks whose
  *   local `t` values stay within `endSeconds - startSeconds`. `effectInstances`
- *   is always `[]` for this task.
+ *   carries 0..4 valid instances from `arbEffectInstanceForLayer`.
  * - `arbValidProject: fc.Arbitrary<Project>` — a full project (1..8 layers) with
- *   every layer fitting inside the canvas duration. No effect instances.
+ *   every layer fitting inside the canvas duration. Layers carry effect
+ *   instances referencing the built-in effects.
+ * - `arbGraphemeText: fc.Arbitrary<string>` — a non-empty string mixing ASCII,
+ *   ZWJ emoji sequences, and Tamil characters (used by segmentation PBTs).
  * - `arbOutOfBoundsProject: fc.Arbitrary<unknown>` — a project-like object that
  *   violates exactly one hard limit, so it always fails `safeParse`.
  * - `arbValidEffectPack: fc.Arbitrary<EffectPack>` — a pack whose descriptor
  *   bindings always index into the generated `effectInstances`.
  * - `arbT(project): fc.Arbitrary<number>` — a time in `[0, durationSeconds]`.
+ * - `arbTypewriterParams: fc.Arbitrary<{ startDelay; delayPerCharacter; direction: "forward" }>`
+ *   — typewriter params that always pass `TypewriterParamsSchema` (non-negative
+ *   finite numbers), with `direction` fixed to `"forward"`.
+ * - `arbTypewriterBackwardParams` — same, with `direction` fixed to `"backward"`.
  */
 
 import fc from "fast-check";
@@ -39,6 +46,7 @@ import fc from "fast-check";
 import type { Easing } from "../schemas/keyframe.js";
 import type { Project, TextLayer } from "../schemas/project.js";
 import type { EffectPack } from "../schemas/effect-pack.js";
+import type { EffectInstance } from "../schemas/effect-instance.js";
 
 /** A single keyframe, as produced by `arbKeyframe` / `arbKeyframeTrack`. */
 type Keyframe = { t: number; value: number | [number, number] | string; easing: Easing };
@@ -233,7 +241,12 @@ const arbAnchor: fc.Arbitrary<{ x: number; y: number }> = fc.record({
  * keyframe `t` is within the layer-local range and the track dedupe never has to
  * collapse times in practice.
  *
- * `effectInstances` is always `[]` for Task 3.7.
+ * `effectInstances` holds 0..4 instances from `arbEffectInstanceForLayer`
+ * (Task 7.8) — well under the schema's max of 16. Each instance references a
+ * real built-in effect (`typewriter` / `fade-slide`) with real params, covering
+ * all three granularities. `text` deliberately stays `arbNonEmptyText` (ASCII,
+ * <= 50 chars); the broader `arbGraphemeText` generator is exported separately
+ * for the segmentation PBTs rather than wired into layer text here.
  */
 export function arbTextLayer(canvasDuration: number): fc.Arbitrary<TextLayer> {
   return fc
@@ -271,7 +284,10 @@ export function arbTextLayer(canvasDuration: number): fc.Arbitrary<TextLayer> {
             id: fc.string({ minLength: 1, maxLength: 20 }),
             text: arbNonEmptyText,
             tracks: fc.constant(tracks),
-            effectInstances: fc.constant([] as TextLayer["effectInstances"]),
+            effectInstances: fc.array(arbEffectInstanceForLayer, {
+              minLength: 0,
+              maxLength: 4,
+            }) as fc.Arbitrary<TextLayer["effectInstances"]>,
             fontFamily: fc.string({ minLength: 1, maxLength: 20 }),
             fontSize: fc.double({ min: 1, max: 1000, noNaN: true }),
             fontWeight: arbFontWeight,
@@ -558,3 +574,171 @@ export const arbValidEffectPack: fc.Arbitrary<EffectPack> = fc
 export function arbT(project: Project): fc.Arbitrary<number> {
   return fc.double({ min: 0, max: project.canvas.durationSeconds, noNaN: true });
 }
+
+/**
+ * A non-negative, finite number in `[0, 1000]` for typewriter timing fields.
+ *
+ * `TypewriterParamsSchema` requires `startDelay`/`delayPerCharacter` to be
+ * `.finite().nonnegative()`, so both are drawn from this bounded range — the
+ * `1000` cap keeps values finite and well within the schema's contract while
+ * still covering the full reveal-threshold arithmetic. `normalizeZero` maps
+ * `-0` to `+0` for consistency with the rest of this module.
+ */
+const arbTypewriterTiming: fc.Arbitrary<number> = fc
+  .double({ min: 0, max: 1000, noNaN: true })
+  .map(normalizeZero);
+
+/**
+ * Typewriter params fixed to `direction: "forward"`. Every generated value is
+ * accepted by `TypewriterParamsSchema` (non-negative finite timings), so the
+ * forward opacity property (Property 14) only ever exercises valid params.
+ */
+export const arbTypewriterParams: fc.Arbitrary<{
+  startDelay: number;
+  delayPerCharacter: number;
+  direction: "forward";
+}> = fc.record({
+  startDelay: arbTypewriterTiming,
+  delayPerCharacter: arbTypewriterTiming,
+  direction: fc.constant("forward" as const),
+});
+
+/**
+ * Typewriter params fixed to `direction: "backward"`. Identical timing
+ * generation to `arbTypewriterParams`; used by the backward opacity property
+ * (Property 16).
+ */
+export const arbTypewriterBackwardParams: fc.Arbitrary<{
+  startDelay: number;
+  delayPerCharacter: number;
+  direction: "backward";
+}> = fc.record({
+  startDelay: arbTypewriterTiming,
+  delayPerCharacter: arbTypewriterTiming,
+  direction: fc.constant("backward" as const),
+});
+
+/**
+ * Fade-slide params that always pass `FadeSlideParamsSchema` (Task 7.6).
+ *
+ * The schema requires `durationSeconds` positive finite, `slideDistance`
+ * finite, `slideAxis` `"x" | "y"`, `delayPerSegment` non-negative finite, and
+ * `easing` any `EasingSchema` variant.
+ *
+ * ## Integer-timings decision (completion-point exactness)
+ *
+ * Property 15 evaluates the effect at the completion point
+ * `tLocal = groupIndex * delayPerSegment + durationSeconds`, where the raw
+ * progress is `rawP = (tLocal - groupIndex * delayPerSegment) / durationSeconds`
+ * — exactly `1` in real arithmetic. With arbitrary floating-point timings,
+ * `groupIndex * delay + duration` then subtracting `groupIndex * delay` can lose
+ * precision and yield a `rawP` slightly BELOW `1`. The effect clamps to
+ * `[0, 1]`, so a `rawP >= 1` still gives `eased === 1`, but a `rawP` nudged just
+ * under `1` would leave `eased < 1` and break the "opacity exactly 1" assertion
+ * for a floating-point reason, not a real bug.
+ *
+ * To make the completion-point arithmetic EXACT, `durationSeconds` and
+ * `delayPerSegment` are generated as INTEGERS (`durationSeconds` in `[1, 1000]`,
+ * `delayPerSegment` in `[0, 100]`). With `groupIndex` bounded small in the
+ * property, the product `groupIndex * delayPerSegment` and the sum with
+ * `durationSeconds` stay well within the exact-integer range of IEEE-754 doubles
+ * (far below 2^53), so `rawP` evaluates to exactly `1`. Integer timings still
+ * satisfy the schema: `durationSeconds >= 1` is positive finite and
+ * `delayPerSegment >= 0` is non-negative finite.
+ *
+ * `slideDistance` stays a finite double (normalized `-0` → `+0`), and `easing`
+ * reuses `arbEasing` — every easing variant returns exactly its `b` boundary at
+ * `p = 1`, so `eased === 1` at the completion point regardless of easing.
+ */
+export const arbFadeSlideParams: fc.Arbitrary<{
+  durationSeconds: number;
+  slideDistance: number;
+  slideAxis: "x" | "y";
+  delayPerSegment: number;
+  easing: Easing;
+}> = fc.record({
+  durationSeconds: fc.integer({ min: 1, max: 1000 }),
+  slideDistance: fc.double({ min: -10000, max: 10000, noNaN: true }).map(normalizeZero),
+  slideAxis: fc.constantFrom("x" as const, "y" as const),
+  delayPerSegment: fc.integer({ min: 0, max: 100 }),
+  easing: arbEasing,
+});
+
+/**
+ * An `EffectInstance` referencing one of the two built-in effects with real,
+ * schema-valid params (Task 7.8).
+ *
+ * The `effectId` is drawn from the built-ins (`typewriter`, `fade-slide`) and
+ * drives — via `.chain` — which param arbitrary supplies `params`, so the
+ * params always match the chosen effect's own schema:
+ * - `typewriter` → `arbTypewriterParams` (forward) or `arbTypewriterBackwardParams`
+ *   (backward),
+ * - `fade-slide` → `arbFadeSlideParams`.
+ *
+ * `granularity` is drawn independently from all three settings (`character`,
+ * `word`, `line`) so the generator covers every granularity.
+ *
+ * Each produced value satisfies `EffectInstanceSchema`: `effectId` is a
+ * non-empty kebab-case string, `granularity` is one of the three literals, and
+ * `params` is a plain record of defined values. Because `effectInstances` is
+ * bounded to 0..4 per layer (well under the schema's max of 16) and every
+ * instance is schema-valid, extending `arbTextLayer` with this generator keeps
+ * every generated project passing `ProjectSchema.safeParse`.
+ */
+export const arbEffectInstanceForLayer: fc.Arbitrary<EffectInstance> = fc
+  .constantFrom("typewriter" as const, "fade-slide" as const)
+  .chain((effectId) => {
+    const params: fc.Arbitrary<Record<string, unknown>> =
+      effectId === "typewriter"
+        ? fc.oneof(arbTypewriterParams, arbTypewriterBackwardParams)
+        : arbFadeSlideParams;
+    return fc.record({
+      effectId: fc.constant(effectId),
+      granularity: fc.constantFrom(
+        "character" as const,
+        "word" as const,
+        "line" as const,
+      ),
+      params,
+    });
+  });
+
+/**
+ * A non-empty string mixing ASCII words, ZWJ emoji sequences, and Tamil
+ * grapheme clusters (Task 7.8).
+ *
+ * The generator joins 1..12 segments drawn from a fixed pool that deliberately
+ * spans three grapheme regimes so segmentation PBTs (later tasks) exercise
+ * multi-code-point clusters:
+ * - ASCII letters / words (single-code-point clusters),
+ * - ZWJ emoji sequences such as `"👩‍💻"` and `"👨‍👩‍👧"` (a single grapheme cluster
+ *   spanning multiple code points joined by U+200D),
+ * - Tamil clusters such as `"வ"`, `"ண"`, `"க்"`, `"கம்"`, `"தமிழ்"` (base +
+ *   combining marks forming one cluster).
+ *
+ * At least one segment is always produced (`minLength: 1`) and every pool entry
+ * is non-empty, so the result is always a non-empty string. The segment count
+ * is capped at 12 and each pool entry is short, keeping the total comfortably
+ * within the schema's 2000-char text limit while staying fast to generate. This
+ * generator is exported for the segmentation PBTs and is intentionally NOT wired
+ * into `arbTextLayer.text` (which stays `arbNonEmptyText`).
+ */
+export const arbGraphemeText: fc.Arbitrary<string> = fc
+  .array(
+    fc.constantFrom(
+      "a",
+      "z",
+      "Hi",
+      "World",
+      "motion",
+      "👩‍💻",
+      "👨‍👩‍👧",
+      "வ",
+      "ண",
+      "க்",
+      "கம்",
+      "தமிழ்",
+    ),
+    { minLength: 1, maxLength: 12 },
+  )
+  .map((segments) => segments.join(""));

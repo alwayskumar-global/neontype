@@ -208,41 +208,41 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
-- [ ] 6. Group 6: Keyframe Interpolation
+- [x] 6. Group 6: Keyframe Interpolation
   - [x] 6.1 Implement `interpolateTrack`
     - Create `packages/engine/src/interpolate.ts` exporting `interpolateTrack(track: KeyframeTrack, tLocal: number): KeyframeValue`: for `tLocal` before the first keyframe returns the first value; after the last returns the last value; otherwise calls `evaluate(keyframe.easing, a, b, p)` where `p = (tLocal - kf_i.t) / (kf_{i+1}.t - kf_i.t)`. For `color` tracks, interpolate per-channel sRGB: parse each hex color to R, G, B integers; interpolate each channel in `[0, 255]`; round to nearest integer (standard half-up); re-encode as `#rrggbb`.
     - **Covers:** Requirement 5.11, Requirement 1.11
     - **Completion:** Unit tests assert: at `tLocal` before first keyframe returns first value; after last keyframe returns last value; at exact keyframe boundary returns that keyframe's value; color track interpolation at midpoint of `#000000` → `#ffffff` returns the documented expected value.
 
-  - [-] 6.2 Write unit tests for keyframe interpolation
+  - [x] 6.2 Write unit tests for keyframe interpolation
     - Create `packages/engine/src/interpolate.test.ts` with: tests for before-first, after-last, and at-exact-boundary conditions for a numeric track; test for `color` track at `p=0.5` between `#000000` and `#ffffff` asserting correct per-channel rounding; test for `position` track returning a `[number, number]` tuple at an interpolated time; test for `step` easing returning exactly `N` discrete values across the interval.
     - **Covers:** Requirement 5.11, Requirement 1.11, Requirement 6.1, Requirement 6.2, Requirement 6.3, Requirement 6.4, Requirement 6.6
     - **Completion:** `pnpm vitest run src/interpolate.test.ts` passes with zero failures.
     - Commit: `feat(engine-core): implement keyframe interpolation with color channel math`
 
-  - [ ] 6.3 Checkpoint — Group 6
+  - [x] 6.3 Checkpoint — Group 6
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 7. Group 7: Effect Registry and Reference Effects
-  - [ ] 7.1 Implement `createRegistry` and `EffectDefinition` types
+  - [x] 7.1 Implement `createRegistry` and `EffectDefinition` types
     - Create `packages/engine/src/registry.ts` exporting `SegmentOverrides` interface, `ApplyEffectArgs` interface, `EffectDefinition` interface, `EffectRegistry` interface (with `register` and `get` methods), and `createRegistry(): EffectRegistry` (backed by a `Map<string, EffectDefinition>`; `register` throws `DuplicateEffectError` if id already registered; `get` returns `undefined` for unknown ids).
     - Re-export `createRegistry`, `EffectDefinition`, `EffectRegistry`, `SegmentOverrides`, `ApplyEffectArgs` from `src/index.ts`.
     - **Covers:** Requirement 7.1, Requirement 7.2, Requirement 7.3, Requirement 7.4
     - **Completion:** Unit test in `registry.test.ts` asserts: registering same id twice throws `DuplicateEffectError`; `get` on unknown id returns `undefined`; a registered effect is retrieved by id.
 
-  - [ ] 7.2 Write unit tests for `createRegistry`
+  - [x] 7.2 Write unit tests for `createRegistry`
     - Create `packages/engine/src/registry.test.ts` with: test to register an effect, retrieve it with `get`, assert deep equality; test to register same id twice and assert `DuplicateEffectError` is thrown; test that `get("unknown-id")` returns `undefined`; test that two separate registries are independent.
     - **Covers:** Requirement 7.1, Requirement 7.2, Requirement 7.3
     - **Completion:** `pnpm vitest run src/registry.test.ts` passes with zero failures.
 
-  - [ ] 7.3 Implement `typewriter` effect
+  - [x] 7.3 Implement `typewriter` effect
     - Create `packages/engine/src/effects/typewriter/schema.ts` exporting `TypewriterParamsSchema` (Zod object: `startDelay` non-negative default `0`, `delayPerCharacter` non-negative, `direction` `"forward" | "backward"`).
     - Create `packages/engine/src/effects/typewriter/index.ts` exporting `register(registry: EffectRegistry): void`. The `applyEffect` function: for `"forward"` returns `{ opacity: tLocal >= params.startDelay + groupIndex * params.delayPerCharacter ? 1 : 0 }`; for `"backward"` returns `{ opacity: tLocal >= params.startDelay + (groupCount - 1 - groupIndex) * params.delayPerCharacter ? 1 : 0 }`. If params fail `TypewriterParamsSchema.safeParse`, throw `InvalidEffectParamsError`. The module MUST NOT call `register` at load time.
     - **Covers:** Requirement 8.1, Requirement 8.2, Requirement 9.1, Requirement 9.2, Requirement 9.3, Requirement 9.4, Requirement 9.5
     - **Completion:** Unit tests in `typewriter.test.ts` assert: forward opacity below and above threshold; backward opacity; `InvalidEffectParamsError` thrown for bad params.
 
-  - [ ] 7.4 Write unit and property-based tests for `typewriter` effect
+  - [x] 7.4 Write unit and property-based tests for `typewriter` effect
     - Add `arbTypewriterParams` and `arbTypewriterBackwardParams` generators to `testing/arbitraries.ts` as part of this task.
     - Create `packages/engine/src/effects/typewriter/typewriter.test.ts` with unit tests (forward/backward opacity at specific `tLocal` values; `InvalidEffectParamsError` for invalid params) and two property-based tests:
     - Property-based test tagged `// Feature: engine-core, Property 14: Typewriter opacity correctness (forward direction)`: using `arbTypewriterParams` (direction: `"forward"`) × `fc.nat()` × `fc.float({ min: 0, noNaN: true })`, assert the opacity rule `tLocal >= params.startDelay + groupIndex * params.delayPerCharacter` returns `1`, otherwise `0`.
@@ -250,25 +250,25 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 9.3, Requirement 9.4, Requirement 9.5, Requirement 11.15 — Property 14, Requirement 11 — Property 16
     - **Completion:** `pnpm vitest run src/effects/typewriter/typewriter.test.ts` passes with zero failures.
 
-  - [ ] 7.5 Implement `fade-slide` effect
+  - [x] 7.5 Implement `fade-slide` effect
     - Create `packages/engine/src/effects/fade-slide/schema.ts` exporting `FadeSlideParamsSchema` (Zod object: `durationSeconds` positive number, `slideDistance` number in px, `slideAxis` `"x" | "y"`, `delayPerSegment` non-negative number, `easing: EasingSchema`).
     - Create `packages/engine/src/effects/fade-slide/index.ts` exporting `register(registry: EffectRegistry): void`. The `applyEffect` function: computes `p = clamp((tLocal - groupIndex * params.delayPerSegment) / params.durationSeconds, 0, 1)`, then `eased = evaluate(params.easing, 0, 1, p)`, returns `{ opacity: eased, positionOffset: slideAxis === "x" ? [params.slideDistance * (1 - eased), 0] : [0, params.slideDistance * (1 - eased)] }`. When `eased === 1`, opacity is exactly `1` and offset is exactly `[0, 0]`. If params fail `FadeSlideParamsSchema.safeParse`, throw `InvalidEffectParamsError`. The module MUST NOT call `register` at load time.
     - **Covers:** Requirement 8.1, Requirement 8.2, Requirement 10.1, Requirement 10.2, Requirement 10.3, Requirement 10.4, Requirement 10.5
     - **Completion:** Unit tests assert: `p=0` → full offset and opacity 0; `p=1` → zero offset and opacity 1; `InvalidEffectParamsError` for bad params.
 
-  - [ ] 7.6 Write unit and property-based tests for `fade-slide` effect
+  - [x] 7.6 Write unit and property-based tests for `fade-slide` effect
     - Add the `arbFadeSlideParams` generator to `testing/arbitraries.ts` as part of this task.
     - Create `packages/engine/src/effects/fade-slide/fade-slide.test.ts` with unit tests (`p=0` full offset, `p=1` zero offset; `InvalidEffectParamsError`; both `slideAxis` variants produce correct offset direction) and a property-based test tagged `// Feature: engine-core, Property 15: Fade-slide boundary condition`: using `arbFadeSlideParams`, for any params, assert `applyEffect` called at the completion point (`tLocal = groupIndex * delayPerSegment + durationSeconds`) returns opacity exactly `1` and position offset exactly `[0, 0]`.
     - **Covers:** Requirement 10.3, Requirement 10.4, Requirement 10.5, Requirement 11 — Property 15
     - **Completion:** `pnpm vitest run src/effects/fade-slide/fade-slide.test.ts` passes with zero failures.
 
-  - [ ] 7.7 Implement `registerBuiltinEffects` and default registry
+  - [x] 7.7 Implement `registerBuiltinEffects` and default registry
     - Create `packages/engine/src/effects/index.ts` exporting `registerBuiltinEffects(registry: EffectRegistry): void` (imports and calls `register` from `typewriter/index.ts` and `fade-slide/index.ts`) and `builtinRegistry: EffectRegistry` (module-level constant: `createRegistry()` with `registerBuiltinEffects` called on it). The registry is not injected by module-load side effects on the registry module itself.
     - Re-export `registerBuiltinEffects` and `builtinRegistry` from `src/index.ts`.
     - **Covers:** Requirement 7.6, Requirement 7.7, Requirement 8.3
     - **Completion:** Unit test asserts `builtinRegistry.get("typewriter")` and `builtinRegistry.get("fade-slide")` both return defined `EffectDefinition` objects.
 
-  - [ ] 7.8 Extend `arbValidProject` with effect instances and `arbGraphemeText`
+  - [-] 7.8 Extend `arbValidProject` with effect instances and `arbGraphemeText`
     - Extend `arbValidProject` (and `arbTextLayer`) in `testing/arbitraries.ts` so generated layers include `effectInstances` referencing the built-in effects (`typewriter`, `fade-slide`) with valid params drawn from the effect-param arbitraries, covering all three granularities (`character`, `word`, `line`).
     - Add `arbGraphemeText` generator mixing ASCII, ZWJ emoji sequences, and Tamil characters.
     - Update `arbitraries.test.ts` smoke test to assert extended `arbValidProject` values still pass `ProjectSchema.safeParse`.

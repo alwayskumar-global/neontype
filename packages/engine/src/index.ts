@@ -34,3 +34,13 @@ export type { MigrationFn, MigrationMap } from "./migrate.js";
 
 export { FakeMetricsProvider, CanvasMetricsProvider } from "./metrics.js";
 export type { FontSpec, TextMetricsProvider } from "./metrics.js";
+
+export { createRegistry } from "./registry.js";
+export type {
+  EffectDefinition,
+  EffectRegistry,
+  SegmentOverrides,
+  ApplyEffectArgs,
+} from "./registry.js";
+
+export { registerBuiltinEffects, builtinRegistry } from "./effects/index.js";
