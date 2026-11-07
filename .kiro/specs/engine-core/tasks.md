@@ -186,7 +186,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
-- [ ] 5. Group 5: Metrics Providers and Segmentation / Layout
+- [x] 5. Group 5: Metrics Providers and Segmentation / Layout
   - [x] 5.1 Implement `TextMetricsProvider` interface, `FakeMetricsProvider`, and `CanvasMetricsProvider`
     - Create `packages/engine/src/metrics.ts` exporting: `FontSpec` interface (`{ fontFamily, fontSize, fontWeight, letterSpacing }`), `TextMetricsProvider` interface (`{ measure(text, fontSpec): { width, ascent, descent } }`), `FakeMetricsProvider` (deterministic test double: `width = text.length * fontSize * 0.6`, `ascent = fontSize * 0.8`, `descent = fontSize * 0.2`; no DOM access), and `CanvasMetricsProvider` class (backed by `CanvasRenderingContext2D.measureText`; used in browser contexts only).
     - Re-export all from `src/index.ts`.
@@ -198,23 +198,23 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 5.9, Requirement 11.12
     - **Completion:** Unit tests assert: for `"ab\ncd"`, charIndexes are `[0,1,2,3,4]` and lineIndexes are `[0,0,0,1,1]`; for a ZWJ emoji sequence, the entire sequence is a single `SegmentToken`.
 
-  - [-] 5.3 Implement layout geometry computation with memoization (`layout.ts`)
+  - [x] 5.3 Implement layout geometry computation with memoization (`layout.ts`)
     - Create `packages/engine/src/layout.ts` exporting `LayoutGeometry` interface (`{ layoutX, layoutY, width, height }`) and `layoutSegments(tokens, layer, metricsProvider, cache): LayoutGeometry[]`. Cache key is `JSON.stringify([layer.text, layer.fontFamily, layer.fontSize, layer.fontWeight, layer.letterSpacing, layer.lineHeight, layer.maxWidth])`. Cache hit: return stored array directly. Cache miss: compute per-cluster layout (advance `layoutX` by `width + letterSpacing`; break to new line when `layoutX + nextWidth > maxWidth` or at `\n`; `layoutY` advances by `fontSize * lineHeight` per line), freeze each `LayoutGeometry` object (`Object.freeze`), insert into cache. Origin `(0,0)` is the top-left of the first character.
     - **Covers:** Requirement 5.9, Requirement 15.1, Requirement 15.2
     - **Completion:** Unit test asserts identical layer params with a warm cache skip calling `metricsProvider.measure`; layout of `"ab"` produces two segments with `layoutX[1] = layoutX[0] + width[0] + letterSpacing`.
     - Commit: `feat(engine-core): implement metrics providers, segmentation, and layout with cache`
 
-  - [ ] 5.4 Checkpoint — Group 5
+  - [x] 5.4 Checkpoint — Group 5
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 6. Group 6: Keyframe Interpolation
-  - [ ] 6.1 Implement `interpolateTrack`
+  - [x] 6.1 Implement `interpolateTrack`
     - Create `packages/engine/src/interpolate.ts` exporting `interpolateTrack(track: KeyframeTrack, tLocal: number): KeyframeValue`: for `tLocal` before the first keyframe returns the first value; after the last returns the last value; otherwise calls `evaluate(keyframe.easing, a, b, p)` where `p = (tLocal - kf_i.t) / (kf_{i+1}.t - kf_i.t)`. For `color` tracks, interpolate per-channel sRGB: parse each hex color to R, G, B integers; interpolate each channel in `[0, 255]`; round to nearest integer (standard half-up); re-encode as `#rrggbb`.
     - **Covers:** Requirement 5.11, Requirement 1.11
     - **Completion:** Unit tests assert: at `tLocal` before first keyframe returns first value; after last keyframe returns last value; at exact keyframe boundary returns that keyframe's value; color track interpolation at midpoint of `#000000` → `#ffffff` returns the documented expected value.
 
-  - [ ] 6.2 Write unit tests for keyframe interpolation
+  - [-] 6.2 Write unit tests for keyframe interpolation
     - Create `packages/engine/src/interpolate.test.ts` with: tests for before-first, after-last, and at-exact-boundary conditions for a numeric track; test for `color` track at `p=0.5` between `#000000` and `#ffffff` asserting correct per-channel rounding; test for `position` track returning a `[number, number]` tuple at an interpolated time; test for `step` easing returning exactly `N` discrete values across the interval.
     - **Covers:** Requirement 5.11, Requirement 1.11, Requirement 6.1, Requirement 6.2, Requirement 6.3, Requirement 6.4, Requirement 6.6
     - **Completion:** `pnpm vitest run src/interpolate.test.ts` passes with zero failures.
