@@ -28,3 +28,6 @@ export type { EffectPack } from "./schemas/effect-pack.js";
 export { CURRENT_PROJECT_VERSION } from "./schemas/constants.js";
 
 export { serializeProject, parseProject } from "./serialize.js";
+
+export { migrateProject } from "./migrate.js";
+export type { MigrationFn, MigrationMap } from "./migrate.js";

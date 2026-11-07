@@ -98,7 +98,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
-- [ ] 3. Group 3: Schemas and Parse / Serialize
+- [x] 3. Group 3: Schemas and Parse / Serialize
   - [x] 3.1 Implement `EasingSchema`, `KeyframeSchema`, and `KeyframeTrackSchema`
     - Create `packages/engine/src/schemas/keyframe.ts` exporting: `EasingSchema` (Zod union of `"linear"`, `"easeIn"`, `"easeOut"`, `"easeInOut"`, `CubicBezierSchema` with all control points validated to `[0, 1]`, and `StepSchema` with `steps` as positive integer); `KeyframeSchema` (Zod object with `t` non-negative number, `value` union of tuple/number/hex-color, and `easing: EasingSchema`); `KeyframeTrackSchema` (Zod object with `property` union of six property literals and `keyframes` array min 1 max 500, with `.superRefine()` enforcing strictly increasing `t` values and value types matching the declared property).
     - Update `easing.ts` to import the `Easing` type from this file.
@@ -157,25 +157,25 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 11.11 — Property 12
     - **Completion:** `pnpm vitest run src/schemas/project.test.ts` passes with zero failures.
 
-  - [-] 3.11 Write property-based test for invalid-input rejection (Property 13)
+  - [x] 3.11 Write property-based test for invalid-input rejection (Property 13)
     - In `packages/engine/src/schemas/project.test.ts`, add a fast-check property-based test tagged `// Feature: engine-core, Property 13: Invalid-input rejection is safe`.
     - Using `fc.anything()`, assert that `ProjectSchema.safeParse` returns `{ success: false }` and does not throw for any JSON value that is not a valid `Project`.
     - **Covers:** Requirement 11.6 — Property 13
     - **Completion:** `pnpm vitest run src/schemas/project.test.ts` passes with zero failures.
     - Commit: `feat(engine-core): implement schemas, serialization, and PBTs (Properties 1, 2, 12, 13)`
 
-  - [ ] 3.12 Checkpoint — Group 3
+  - [x] 3.12 Checkpoint — Group 3
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 4. Group 4: Migration
-  - [ ] 4.1 Implement `migrateProject` and `MigrationMap`
+  - [x] 4.1 Implement `migrateProject` and `MigrationMap`
     - Create `packages/engine/src/migrate.ts` exporting `MigrationFn`, `MigrationMap` types, and `migrateProject(raw: unknown, migrations?: MigrationMap): Project | MigrationError`: reads `schemaVersion` from raw; if `> CURRENT_PROJECT_VERSION` returns `MigrationError` without throwing; if equal runs `ProjectSchema.safeParse` directly; if less applies each migration step from version N to `CURRENT_PROJECT_VERSION` in order (using `migrations` map override when provided). Since `CURRENT_PROJECT_VERSION` is `1`, the initial implementation handles `schemaVersion === 1` and `schemaVersion > 1`.
     - Re-export `migrateProject`, `MigrationFn`, `MigrationMap` from `src/index.ts`.
     - **Covers:** Requirement 2.1, Requirement 2.2, Requirement 2.3, Requirement 2.4, Requirement 2.6
     - **Completion:** Unit test asserts `migrateProject` with `schemaVersion > CURRENT_PROJECT_VERSION` returns a `MigrationError`; with a valid version-1 document returns a valid `Project`.
 
-  - [ ] 4.2 Create synthetic version-1 fixture and fixture migration tests
+  - [-] 4.2 Create synthetic version-1 fixture and fixture migration tests
     - Create `packages/engine/src/testing/fixtures/project-v1.json` — a minimal but complete committed JSON fixture at `schemaVersion: 1` satisfying all `ProjectSchema` constraints (at least one layer, one keyframe track, one effect instance).
     - Create `packages/engine/src/migrate.test.ts` with: a test that reads `project-v1.json`, calls `migrateProject`, and asserts the result passes `ProjectSchema.safeParse`; a test exercising `migrateProject` with a custom `MigrationMap` for synthetic version-0 → version-1 migration; a test asserting `migrateProject({ schemaVersion: 999 })` returns a `MigrationError` with `code: "FUTURE_VERSION"`.
     - **Covers:** Requirement 2.5, Requirement 11.5

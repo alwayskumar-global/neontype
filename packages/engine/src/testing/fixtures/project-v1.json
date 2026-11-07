@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "canvas": { "width": 1920, "height": 1080, "fps": 30, "durationSeconds": 10 },
+  "background": "#000000",
+  "seed": 42,
+  "layers": [
+    {
+      "id": "layer-1",
+      "text": "Hello",
+      "tracks": [
+        {
+          "property": "opacity",
+          "keyframes": [
+            { "t": 0, "value": 0, "easing": "linear" },
+            { "t": 1, "value": 1, "easing": "easeInOut" }
+          ]
+        }
+      ],
+      "effectInstances": [
+        {
+          "effectId": "typewriter",
+          "granularity": "character",
+          "params": { "delayPerCharacter": 0.05 }
+        }
+      ],
+      "fontFamily": "Inter",
+      "fontSize": 48,
+      "fontWeight": "700",
+      "fill": "#ff00aa",
+      "align": "center",
+      "letterSpacing": 0,
+      "lineHeight": 1.2,
+      "maxWidth": 1280,
+      "startSeconds": 0,
+      "endSeconds": 2,
+      "anchor": { "x": 960, "y": 540 }
+    }
+  ]
+}

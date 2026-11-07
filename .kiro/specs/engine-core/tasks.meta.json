@@ -313,6 +313,54 @@
         "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794030475265
+      },
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030619062
+      }
+    ],
+    "3.12 Checkpoint — Group 3": [
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030624156
+      },
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030642215
+      }
+    ],
+    "3. Group 3: Schemas and Parse / Serialize": [
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030642284
+      }
+    ],
+    "4.1 Implement `migrateProject` and `MigrationMap`": [
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030665260
+      },
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030810950
+      }
+    ],
+    "4.2 Create synthetic version-1 fixture and fixture migration tests": [
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030816616
+      },
+      {
+        "executionId": "9d600c13-6c3b-4b0d-a3fa-3fb3acbe8eb9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794031152111
       }
     ]
   }
