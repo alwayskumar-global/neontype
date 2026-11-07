@@ -188,6 +188,14 @@ interface BaseSegment {
 
 interface LayerState {
   layerId: string;
+  fill: HexColor;          // layer fill color, copied verbatim from the layer
+  fontFamily: string;      // copied verbatim from the layer
+  fontSize: number;        // px, copied verbatim from the layer
+  fontWeight: string;      // copied verbatim from the layer
+  align: "left" | "center" | "right"; // copied verbatim from the layer
+  anchor: { x: number; y: number };   // fresh plain object copied from the layer
+  letterSpacing: number;   // px, copied verbatim from the layer
+  lineHeight: number;      // multiplier, copied verbatim from the layer
   transform: {
     positionOffset: [number, number]; // px offset from anchor, from position track; default [0,0]
     scale: number;
@@ -202,6 +210,7 @@ interface LayerState {
 interface FrameState {
   canvasWidth: number;
   canvasHeight: number;
+  background: HexColor | "transparent"; // project background, copied verbatim
   layers: LayerState[];
   warnings: EngineWarning[];
 }

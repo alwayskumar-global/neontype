@@ -297,7 +297,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 5.5, Requirement 5.6, Requirement 5.7, Requirement 5.8, Requirement 5.9, Requirement 5.10, Requirement 5.13, Requirement 5.14
     - **Completion:** `pnpm vitest run src/compute.test.ts` passes with zero failures.
 
-  - [-] 8.3 Write property-based tests for `computeFrameState` (Properties 3, 4, 5, 6, 9, 10, 11)
+  - [ ] 8.3 Write property-based tests for `computeFrameState` (Properties 3, 4, 5, 6, 9, 10, 11)
     - In `packages/engine/src/compute.test.ts`, add the following fast-check property-based tests:
     - Property 3 tagged `// Feature: engine-core, Property 3: computeFrameState total function` — for any `arbValidProject` and `arbT(project)`, assert `computeFrameState` does not throw and returns a `FrameState`.
     - Property 4 tagged `// Feature: engine-core, Property 4: computeFrameState determinism` — for any `arbValidProject` and `arbT`, assert two sequential calls return deeply equal results.
@@ -310,12 +310,12 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Completion:** `pnpm vitest run src/compute.test.ts` passes with zero failures.
     - Commit: `feat(engine-core): implement computeFrameState with full PBT suite (Properties 3–6, 9–11)`
 
-  - [ ] 8.4 Checkpoint — Group 8
+  - [x] 8.4 Checkpoint — Group 8
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 9. Group 9: drawFrame and renderFrame
-  - [ ] 9.1 Implement `drawFrame`
+  - [-] 9.1 Implement `drawFrame`
     - Create `packages/engine/src/draw.ts` exporting `drawFrame(ctx: CanvasRenderingContext2D, state: FrameState): void`:
     - Clear background: if `"transparent"` call `ctx.clearRect(0, 0, state.canvasWidth, state.canvasHeight)`; otherwise set `ctx.fillStyle` and call `ctx.fillRect`.
     - Per layer in order: (a) `ctx.save()`; (b) translate to anchor + positionOffset; (c) rotate about layer center; (d) scale about layer center; (e) `ctx.globalAlpha = transform.opacity`; (f) per segment: `ctx.save()`, translate to layoutX/layoutY + effectOverrides positionOffset, apply segment rotation/scale about segment center, set `ctx.globalAlpha = clamp(layerOpacity * (effectOverrides.opacity ?? 1), 0, 1)`, set `ctx.filter = blur > 0 ? \`blur(${blur}px)\` : 'none'` (only when needed), set fill color (effectOverrides.color → colorOverride → layer.fill), call `ctx.fillText(segment.text, 0, 0)`, `ctx.restore()`; (g) `ctx.restore()`.
@@ -323,56 +323,56 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 5.2, Requirement 5.9, Requirement 5.12
     - **Completion:** Unit test in `draw.test.ts` using a spy `CanvasRenderingContext2D` mock asserts: `clearRect` called for transparent background; `fillRect` called for hex background; `ctx.filter` set when blur > 0 and reset to `'none'` otherwise; `fillText` called once per segment.
 
-  - [ ] 9.2 Write unit tests for `drawFrame`
+  - [~] 9.2 Write unit tests for `drawFrame`
     - Create `packages/engine/src/draw.test.ts` with a spy `CanvasRenderingContext2D` (all required methods as `vi.fn()`): test transparent background → `ctx.clearRect` called, `ctx.fillRect` not called; test hex background → `ctx.fillStyle` set and `ctx.fillRect` called; test blur > 0 → `ctx.filter` set to `'blur(Npx)'`; test blur = 0 → `ctx.filter` set to `'none'`; test `fillText` called once per segment; test `ctx.save` and `ctx.restore` called in balanced pairs.
     - **Covers:** Requirement 5.2, Requirement 5.12
     - **Completion:** `pnpm vitest run src/draw.test.ts` passes with zero failures.
 
-  - [ ] 9.3 Implement `renderFrame`
+  - [~] 9.3 Implement `renderFrame`
     - Create `packages/engine/src/render.ts` exporting `renderFrame(project: Project, t: number, opts?: RenderOpts): void`: extract `ctx` from `opts`; if `opts.metricsProvider` not provided construct `new CanvasMetricsProvider(ctx)`; call `computeFrameState(project, t, { metricsProvider, registry: opts?.registry, layoutCache: opts?.layoutCache })`; call `drawFrame(ctx, state)`. `RenderOpts` interface: `{ ctx: CanvasRenderingContext2D; metricsProvider?: TextMetricsProvider; registry?: EffectRegistry; layoutCache?: Map<string, LayoutGeometry[]> }`.
     - Re-export `renderFrame` and `RenderOpts` from `src/index.ts`.
     - **Covers:** Requirement 5.3
     - **Completion:** TypeScript compiles `render.ts` without errors. A unit test stubs `computeFrameState` and `drawFrame` and asserts both are called with the correct arguments.
     - Commit: `feat(engine-core): implement drawFrame and renderFrame`
 
-  - [ ] 9.4 Checkpoint — Group 9
+  - [~] 9.4 Checkpoint — Group 9
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 10. Group 10: Arbitraries and Full Property-Based Test Suite
-  - [ ] 10.1 Validate and consolidate arbitraries
+  - [~] 10.1 Validate and consolidate arbitraries
     - Consolidate and validate the generators already created across Groups 3 and 7 in `packages/engine/src/testing/arbitraries.ts`; do NOT create any generators from scratch. Re-run the arbitraries smoke test, confirm all generators satisfy their corresponding Zod schemas, and fix any constraint drift (keyframe `t` range, `endSeconds > startSeconds`, etc.). Run `fc.check(fc.property(arbValidProject, p => ProjectSchema.safeParse(p).success))` and the same for `arbValidEffectPack`, asserting both pass.
     - **Covers:** Requirement 11.7
     - **Completion:** `pnpm vitest run src/testing/arbitraries.test.ts` passes with zero failures.
 
-  - [ ] 10.2 Integrate and consolidate all 17 property-based tests
+  - [~] 10.2 Integrate and consolidate all 17 property-based tests
     - Re-run all existing property-based test files (`compute.test.ts`, `serialize.test.ts`, `schemas/project.test.ts`, `prng.test.ts`, `easing.test.ts`, `effects/typewriter/typewriter.test.ts`, `effects/fade-slide/fade-slide.test.ts`) using the now-complete `arbValidProject` and `arbValidEffectPack` generators, replacing any temporary inline stubs. Confirm all 17 properties listed in the design are present and tagged with their property numbers: Properties 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, and 17.
     - **Covers:** Requirement 11.1, Requirement 11.2, Requirement 11.4, Requirement 11.6, Requirement 11.9, Requirement 11.10, Requirement 11.11, Requirement 11.12, Requirement 11.13, Requirement 11.14
     - **Completion:** `pnpm vitest run` passes with all 17 property tests present and tagged. Zero failures.
     - Commit: `feat(engine-core): complete arbitraries and validate all 17 PBT properties`
 
-  - [ ] 10.3 Checkpoint — Group 10
+  - [~] 10.3 Checkpoint — Group 10
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 11. Group 11: JSON Schema Generation Script and Staleness Test
-  - [ ] 11.1 Implement `generate-schemas.ts` build script
+  - [~] 11.1 Implement `generate-schemas.ts` build script
     - Create `packages/engine/scripts/generate-schemas.ts`: import `ProjectSchema`, `EffectPackSchema`, and each built-in effect's `paramSchema` from the engine package; call `z.toJSONSchema(schema)` (Zod v4 native — `zod-to-json-schema` MUST NOT be used) for each schema; write resulting JSON to `packages/engine/schema/project.json`, `packages/engine/schema/effect-pack.json`, and `packages/engine/schema/<effectId>-params.json` for each built-in effect. Add a `"generate-schemas"` script entry to `packages/engine/package.json`. Run the script once to produce and commit the initial `schema/*.json` files.
     - **Covers:** Requirement 3.3, Requirement 3.4, Requirement 3.5, Requirement 14.1
     - **Completion:** `pnpm --filter @studio/engine generate-schemas` exits with code 0 and writes `schema/project.json` and `schema/effect-pack.json`.
 
-  - [ ] 11.2 Write JSON Schema staleness test and AJV validation test
+  - [~] 11.2 Write JSON Schema staleness test and AJV validation test
     - In `packages/engine/src/schemas/schema-staleness.test.ts`: add a staleness test that imports the generation logic as a module function, runs it in memory, and deep-compares output against committed files in `packages/engine/schema/` — fails with a clear message if they differ; add an AJV validation test that compiles each generated JSON Schema file and validates a corpus of at least five valid documents from the arbitraries — asserts all validate successfully.
     - **Covers:** Requirement 3.5, Requirement 3.7
     - **Completion:** `pnpm vitest run src/schemas/schema-staleness.test.ts` passes with zero failures. Manually mutating `schema/project.json` causes the staleness test to fail.
     - Commit: `feat(engine-core): add JSON Schema generation script and staleness test`
 
-  - [ ] 11.3 Checkpoint — Group 11
+  - [~] 11.3 Checkpoint — Group 11
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 12. Group 12: Playwright Visual Test Setup
-  - [ ] 12.1 Create Vite visual test app
+  - [~] 12.1 Create Vite visual test app
     - Create `packages/engine/tests/visual/app/index.html` with a single `<canvas id="canvas" width="800" height="450">` and a module script tag.
     - Create `packages/engine/tests/visual/app/main.ts` importing `drawFrame` from `@studio/engine`, self-hosting OFL fonts (Noto Sans, Noto Sans Tamil) via CSS `@font-face` declarations pointing to `../fonts/`, awaiting `document.fonts.ready`, and exposing `window.fontsReady = true` and `window.render = (state) => { const ctx = canvas.getContext("2d"); drawFrame(ctx, state); }`.
     - Create `packages/engine/tests/visual/app/vite.config.ts` with `root: "tests/visual/app"` and `server.port: 5173`.
@@ -380,13 +380,13 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 12.1, Requirement 12.4, Requirement 12.5
     - **Completion:** TypeScript in `main.ts` compiles without errors. Directory structure matches the design spec.
 
-  - [ ] 12.2 Create `generate-visual-fixtures.ts` and commit fixture JSON
+  - [~] 12.2 Create `generate-visual-fixtures.ts` and commit fixture JSON
     - Create `packages/engine/scripts/generate-visual-fixtures.ts` constructing at least three representative projects: (1) a project with a single layer using the `typewriter` effect and ASCII text; (2) a project with a single layer using the `fade-slide` effect; (3) a project with a single layer using the `typewriter` effect and Tamil text (`"வணக்கம்"`) with `fontFamily: "Noto Sans Tamil"`. For each, call `computeFrameState(project, t, { metricsProvider: FakeMetricsProvider })` and write each `FrameState` to `tests/visual/fixtures/<name>.json`.
     - Run the script once and commit the resulting fixture JSON files.
     - **Covers:** Requirement 12.4, Requirement 12.5
     - **Completion:** `pnpm --filter @studio/engine generate-visual-fixtures` exits with code 0 and writes at least three JSON files to `tests/visual/fixtures/`.
 
-  - [ ] 12.3 Configure Playwright and write golden-image tests
+  - [~] 12.3 Configure Playwright and write golden-image tests
     - Run `pnpm exec playwright install chromium` to install the Chromium browser binary before the first Playwright run.
     - Create `packages/engine/playwright.config.ts` with `projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }]` (Chromium only — no Firefox or WebKit), `webServer: { command: "vite tests/visual/app --port 5173", port: 5173, reuseExistingServer: !process.env.CI }`, `testDir: "tests/visual"`, and `snapshotDir: "tests/visual/__snapshots__"`.
     - Create `packages/engine/tests/visual/draw-frame.spec.ts`: for each committed fixture in `tests/visual/fixtures/`, navigate to `http://localhost:5173`, wait for `window.fontsReady`, call `page.evaluate(fixture => window.render(fixture), fixtureJson)`, capture canvas screenshot, compare to golden PNG with `{ maxDiffPixelRatio: 0.001 }`. On mismatch, include the diff path in the failure output. The test MUST NOT call `computeFrameState` or `renderFrame`.
@@ -394,46 +394,46 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Completion:** `pnpm --filter @studio/engine exec playwright test --project=chromium` writes golden PNGs on first run and passes on subsequent runs with zero pixel-diff failures.
     - Commit: `feat(engine-core): Playwright golden-image tests for drawFrame (typewriter, fade-slide, Tamil)`
 
-  - [ ] 12.4 Checkpoint — Group 12
+  - [~] 12.4 Checkpoint — Group 12
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 13. Group 13: ESLint Enforcement, Kiro Hook, and CONTRIBUTING.md
-  - [ ] 13.1 Verify ESLint `no-restricted-properties` rule covers all banned calls
+  - [~] 13.1 Verify ESLint `no-restricted-properties` rule covers all banned calls
     - Add `packages/engine/src/__tests__/eslint-purity.test.ts`: write a temporary TypeScript snippet calling `Math.random()`, `Date.now()`, and `performance.now()`; programmatically invoke the ESLint `Linter` on the snippet with `eslint.config.js` rules loaded; assert exactly three ESLint errors are produced, each identifying the correct property name.
     - **Covers:** Requirement 13.1, Requirement 13.3
     - **Completion:** `pnpm vitest run src/__tests__/eslint-purity.test.ts` passes with zero failures.
 
-  - [ ] 13.2 Create Kiro `PostFileSave` hook for ESLint
+  - [~] 13.2 Create Kiro `PostFileSave` hook for ESLint
     - Do NOT hand-author a hook JSON file with an invented schema. Instead, create the hook through Kiro's Hooks UI: trigger on file save matching `packages/engine/src/**`, with an action that runs the lint script (`pnpm --filter @studio/engine lint`), reporting only (does not block saves). Keep whatever file Kiro generates under `.kiro/hooks/`.
     - **Covers:** Requirement 13.2
     - **Completion:** The hook appears in the Kiro Hooks panel and fires when a file under `packages/engine/src/` is saved (verified with a test save).
 
-  - [ ] 13.3 Write `packages/engine/CONTRIBUTING.md`
+  - [~] 13.3 Write `packages/engine/CONTRIBUTING.md`
     - Create `packages/engine/CONTRIBUTING.md` documenting: (1) directory structure — `src/effects/<kebab-id>/` with `index.ts`, `schema.ts`, and `*.test.ts`; (2) registration pattern — `index.ts` exports `register(registry: EffectRegistry): void`, MUST NOT call `register` at module load time; (3) test requirements — at least one unit test and one property-based test using `computeFrameState` with a fresh `createRegistry()`, `FakeMetricsProvider`, and `fc.assert`; (4) ESLint purity rules — `Math.random`, `Date.now`, `performance.now` are banned in `src/**`; use `createPRNG` for randomness; (5) commit conventions — Conventional Commits format; reference spec task id in commit message.
     - **Covers:** Requirement 8.4
     - **Completion:** `CONTRIBUTING.md` exists and contains all five sections listed above.
     - Commit: `feat(engine-core): ESLint purity test, Kiro hook, and CONTRIBUTING.md`
 
-  - [ ] 13.4 Checkpoint — Group 13
+  - [~] 13.4 Checkpoint — Group 13
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 14. Group 14: Benchmark
-  - [ ] 14.1 Wire root `pnpm test` workspace-check script
+  - [~] 14.1 Wire root `pnpm test` workspace-check script
     - Add a `"test"` script to the ROOT `package.json` that runs, in sequence, the full workspace checks: typecheck (`tsc --noEmit` across the workspace or `pnpm -r exec tsc --noEmit`), lint (`pnpm -r lint`), and `pnpm -r vitest run`.
     - Ensure `packages/engine/package.json` has a `"lint"` script and a test script so the recursive commands pick it up.
     - **Covers:** Requirement 11.8
     - **Completion:** Running `pnpm test` from the repo root runs typecheck, lint, and the full Vitest suite; all pass with zero errors.
 
-  - [ ] 14.2 Implement `compute.bench.ts` performance benchmark
+  - [~] 14.2 Implement `compute.bench.ts` performance benchmark
     - Create `packages/engine/src/compute.bench.ts` using Vitest's `bench` API.
     - Define a `project200` fixture at file top: a project with one text layer containing exactly 200 characters and two character-granularity effects (`typewriter` and `fade-slide`).
     - Write a benchmark: `bench("computeFrameState — 200 chars, 2 effects, cold cache", () => { computeFrameState(project200, 0.5, { metricsProvider: FakeMetricsProvider, layoutCache: new Map() }); }, { time: 500 })`. A fresh `Map` for `layoutCache` MUST be created inside each iteration to ensure a cold cache. Include a comment `// Target: < 4 ms mean`.
     - **Covers:** Requirement 15.3, Requirement 15.4
     - **Completion:** `pnpm vitest bench src/compute.bench.ts` runs without error and reports a mean time.
 
-  - [ ] 14.3 Checkpoint — Group 14 (Final)
+  - [~] 14.3 Checkpoint — Group 14 (Final)
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0, zero test failures, and zero lint errors. The full `packages/engine` implementation is complete.
     - Commit: `feat(engine-core): add computeFrameState benchmark (compute.bench.ts)`

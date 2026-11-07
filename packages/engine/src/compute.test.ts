@@ -388,6 +388,72 @@ describe("computeFrameState — -0 normalisation (R5.14)", () => {
   });
 });
 
+describe("computeFrameState — background and layer text style carried verbatim", () => {
+  it("copies a hex project background verbatim onto state.background", () => {
+    const layer = makeLayer();
+    const project = makeProject([layer], { background: "#1a2b3c" });
+
+    const state = computeFrameState(project, 1, opts);
+
+    expect(state.background).toBe("#1a2b3c");
+  });
+
+  it('copies a "transparent" project background verbatim onto state.background', () => {
+    const layer = makeLayer();
+    const project = makeProject([layer], { background: "transparent" });
+
+    const state = computeFrameState(project, 1, opts);
+
+    expect(state.background).toBe("transparent");
+  });
+
+  it("copies each layer text-style field verbatim from the source layer", () => {
+    const layer = makeLayer({
+      fill: "#abcdef",
+      fontFamily: "Instrument Sans",
+      fontSize: 42,
+      fontWeight: "700",
+      align: "center",
+      letterSpacing: 3,
+      lineHeight: 1.5,
+      anchor: { x: 120, y: -45 },
+    });
+    const project = makeProject([layer]);
+
+    const state = computeFrameState(project, 1, opts);
+    const ls = state.layers[0];
+
+    expect(ls.fill).toBe("#abcdef");
+    expect(ls.fontFamily).toBe("Instrument Sans");
+    expect(ls.fontSize).toBe(42);
+    expect(ls.fontWeight).toBe("700");
+    expect(ls.align).toBe("center");
+    expect(ls.letterSpacing).toBe(3);
+    expect(ls.lineHeight).toBe(1.5);
+    expect(ls.anchor).toEqual({ x: 120, y: -45 });
+  });
+
+  it("emits anchor as a fresh plain object, not the schema reference", () => {
+    const layer = makeLayer({ anchor: { x: 5, y: 7 } });
+    const project = makeProject([layer]);
+
+    const state = computeFrameState(project, 1, opts);
+
+    // A fresh object with the same values, decoupled from the source layer.
+    expect(state.layers[0].anchor).not.toBe(layer.anchor);
+    expect(state.layers[0].anchor).toEqual({ x: 5, y: 7 });
+  });
+
+  it("produces a JSON-serialisable FrameState (round-trips deep-equal, no undefined)", () => {
+    const layer = makeLayer({ fill: "#112233", anchor: { x: 10, y: 20 } });
+    const project = makeProject([layer], { background: "#445566" });
+
+    const state = computeFrameState(project, 1, opts);
+
+    expect(JSON.parse(JSON.stringify(state))).toEqual(state);
+  });
+});
+
 describe("computeFrameState — tLocal and sanity (R5.9, R5.11)", () => {
   it("interpolates tracks at layer-local time (tLocal), not global t", () => {
     const opacityTrack = {

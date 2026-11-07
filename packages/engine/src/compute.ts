@@ -72,6 +72,22 @@ export interface BaseSegment {
 /** The interpolated per-layer transform plus its resolved segments. */
 export interface LayerState {
   layerId: string;
+  /** Fill color `#rrggbb`; copied verbatim from the layer. */
+  fill: string;
+  /** Font family; copied verbatim from the layer. */
+  fontFamily: string;
+  /** Font size in px; copied verbatim from the layer. */
+  fontSize: number;
+  /** Font weight (e.g. `"400"`, `"bold"`); copied verbatim from the layer. */
+  fontWeight: string;
+  /** Horizontal text alignment; copied verbatim from the layer. */
+  align: "left" | "center" | "right";
+  /** Layer anchor in canvas coordinates; a fresh plain `{ x, y }` copied from the layer. */
+  anchor: { x: number; y: number };
+  /** Per-cluster letter spacing in px; copied verbatim from the layer. */
+  letterSpacing: number;
+  /** Line height multiplier; copied verbatim from the layer. */
+  lineHeight: number;
   transform: {
     /** From the `position` track; default `[0, 0]`. */
     positionOffset: [number, number];
@@ -93,6 +109,12 @@ export interface LayerState {
 export interface FrameState {
   canvasWidth: number;
   canvasHeight: number;
+  /**
+   * The project background: either the literal `"transparent"` or a `#rrggbb`
+   * hex string, copied verbatim from `project.background`. Kept as a plain
+   * string so `FrameState` stays JSON-serialisable.
+   */
+  background: string;
   layers: LayerState[];
   warnings: EngineWarning[];
 }
@@ -542,13 +564,29 @@ export function computeFrameState(
       segments[i].effectOverrides = finalizeOverrides(accumulators[i]);
     }
 
-    layers.push({ layerId: layer.id, transform, segments });
+    // Copy the layer's text-style fields verbatim (no computation) so drawFrame
+    // can be a pure painter. anchor is copied as a fresh plain { x, y } object
+    // rather than the schema reference, keeping FrameState JSON-serialisable.
+    layers.push({
+      layerId: layer.id,
+      fill: layer.fill,
+      fontFamily: layer.fontFamily,
+      fontSize: layer.fontSize,
+      fontWeight: layer.fontWeight,
+      align: layer.align,
+      anchor: { x: layer.anchor.x, y: layer.anchor.y },
+      letterSpacing: layer.letterSpacing,
+      lineHeight: layer.lineHeight,
+      transform,
+      segments,
+    });
   }
 
   // Step 5: assemble and normalise -0 → +0 across the whole FrameState.
   const state: FrameState = {
     canvasWidth: project.canvas.width,
     canvasHeight: project.canvas.height,
+    background: project.background,
     layers,
     warnings,
   };

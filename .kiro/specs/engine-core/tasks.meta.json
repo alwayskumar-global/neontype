@@ -639,6 +639,180 @@
         "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794036010004
+      },
+      {
+        "executionId": "1ae75c6f-1725-4dde-badd-55af7165fe49",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794038838250
+      }
+    ],
+    "8.4 Checkpoint — Group 8": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036286551
+      },
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036292977
+      },
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036306938
+      }
+    ],
+    "9.1 Implement `drawFrame`": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036286675
+      },
+      {
+        "executionId": "1ae75c6f-1725-4dde-badd-55af7165fe49",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794038838345
+      }
+    ],
+    "9.2 Write unit tests for `drawFrame`": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036286818
+      }
+    ],
+    "9.3 Implement `renderFrame`": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036286982
+      }
+    ],
+    "9.4 Checkpoint — Group 9": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036287133
+      }
+    ],
+    "10.1 Validate and consolidate arbitraries": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036287217
+      }
+    ],
+    "10.2 Integrate and consolidate all 17 property-based tests": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036287337
+      }
+    ],
+    "10.3 Checkpoint — Group 10": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036287410
+      }
+    ],
+    "11.1 Implement `generate-schemas.ts` build script": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036287472
+      }
+    ],
+    "11.2 Write JSON Schema staleness test and AJV validation test": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036287535
+      }
+    ],
+    "11.3 Checkpoint — Group 11": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036287618
+      }
+    ],
+    "12.1 Create Vite visual test app": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036287722
+      }
+    ],
+    "12.2 Create `generate-visual-fixtures.ts` and commit fixture JSON": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036287935
+      }
+    ],
+    "12.3 Configure Playwright and write golden-image tests": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036288079
+      }
+    ],
+    "12.4 Checkpoint — Group 12": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036288229
+      }
+    ],
+    "13.1 Verify ESLint `no-restricted-properties` rule covers all banned calls": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036288327
+      }
+    ],
+    "13.2 Create Kiro `PostFileSave` hook for ESLint": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036288434
+      }
+    ],
+    "13.3 Write `packages/engine/CONTRIBUTING.md`": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036288606
+      }
+    ],
+    "13.4 Checkpoint — Group 13": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036288717
+      }
+    ],
+    "14.1 Wire root `pnpm test` workspace-check script": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036288766
+      }
+    ],
+    "14.2 Implement `compute.bench.ts` performance benchmark": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036288815
+      }
+    ],
+    "14.3 Checkpoint — Group 14 (Final)": [
+      {
+        "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794036288882
       }
     ]
   }
