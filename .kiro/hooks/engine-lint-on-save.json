@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Engine lint on save",
+      "trigger": "PostFileSave",
+      "action": {
+        "type": "command",
+        "command": "pnpm --filter @studio/engine lint"
+      },
+      "description": "Runs the engine ESLint purity and style check when a source file in packages/engine/src is saved. Report only, edits nothing.",
+      "matcher": "engine/src/",
+      "enabled": true
+    }
+  ]
+}
