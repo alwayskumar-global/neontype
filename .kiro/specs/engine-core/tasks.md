@@ -45,7 +45,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - Run `pnpm --filter @studio/engine lint` (zero errors).
     - **Completion:** All commands exit with code 0.
 
-- [ ] 2. Group 2: Errors, PRNG, Easing Primitives
+- [x] 2. Group 2: Errors, PRNG, Easing Primitives
   - [x] 2.1 Implement typed error classes
     - Create `packages/engine/src/errors.ts` exporting `ParseError extends Error` (`readonly code: "PARSE_ERROR" | "SIZE_LIMIT_EXCEEDED"`, `readonly cause?: unknown`), `MigrationError extends Error` (`readonly code: "FUTURE_VERSION"`, `readonly version: number`), `DuplicateEffectError extends Error` (`readonly effectId: string`), and `InvalidEffectParamsError extends Error` (`readonly effectId: string`, `readonly cause: unknown`).
     - Re-export all four from `src/index.ts`.
@@ -87,77 +87,77 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 6.1, Requirement 6.2, Requirement 6.3, Requirement 6.4, Requirement 6.5, Requirement 6.6
     - **Completion:** `pnpm vitest run src/easing.test.ts` passes with zero failures.
 
-  - [-] 2.8 Write property-based test for easing invariant (Property 7)
+  - [x] 2.8 Write property-based test for easing invariant (Property 7)
     - In `packages/engine/src/easing.test.ts`, add a fast-check property-based test tagged `// Feature: engine-core, Property 7: Easing invariant — finite output`.
     - For any `Easing` value, any `a` and `b` (`fc.float({ noNaN: true, noDefaultInfinity: true })`), and any `p` in `[0, 1]` (`fc.float({ min: 0, max: 1, noNaN: true })`), assert `evaluate(easing, a, b, p)` returns a finite number (no `NaN` or `Infinity`).
     - **Covers:** Requirement 6.5, Requirement 11.3 — Property 7
     - **Completion:** `pnpm vitest run src/easing.test.ts` passes with zero failures.
     - Commit: `feat(engine-core): implement easing evaluation with unit and property tests`
 
-  - [ ] 2.9 Checkpoint — Group 2
+  - [x] 2.9 Checkpoint — Group 2
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 3. Group 3: Schemas and Parse / Serialize
-  - [ ] 3.1 Implement `EasingSchema`, `KeyframeSchema`, and `KeyframeTrackSchema`
+  - [x] 3.1 Implement `EasingSchema`, `KeyframeSchema`, and `KeyframeTrackSchema`
     - Create `packages/engine/src/schemas/keyframe.ts` exporting: `EasingSchema` (Zod union of `"linear"`, `"easeIn"`, `"easeOut"`, `"easeInOut"`, `CubicBezierSchema` with all control points validated to `[0, 1]`, and `StepSchema` with `steps` as positive integer); `KeyframeSchema` (Zod object with `t` non-negative number, `value` union of tuple/number/hex-color, and `easing: EasingSchema`); `KeyframeTrackSchema` (Zod object with `property` union of six property literals and `keyframes` array min 1 max 500, with `.superRefine()` enforcing strictly increasing `t` values and value types matching the declared property).
     - Update `easing.ts` to import the `Easing` type from this file.
     - **Covers:** Requirement 1.3, Requirement 1.4, Requirement 1.5
     - **Completion:** Unit test asserts `KeyframeTrackSchema.safeParse` rejects a track with non-strictly-increasing `t` values and a mismatched value type; accepts a valid track.
 
-  - [ ] 3.2 Implement `EffectInstanceSchema`
+  - [x] 3.2 Implement `EffectInstanceSchema`
     - Create `packages/engine/src/schemas/effect-instance.ts` exporting `EffectInstanceSchema` — Zod object with `effectId` (non-empty kebab-case string), `granularity` (union of `"character"`, `"word"`, `"line"`), and `params` (`z.record(z.unknown())`).
     - **Covers:** Requirement 1.6
     - **Completion:** `EffectInstanceSchema.safeParse` accepts a valid instance and rejects one with an empty `effectId`.
 
-  - [ ] 3.3 Implement `TextLayerSchema`, `ProjectSchema`, and constants
+  - [x] 3.3 Implement `TextLayerSchema`, `ProjectSchema`, and constants
     - Create `packages/engine/src/schemas/project.ts` exporting: `HexColorSchema` (`z.string().regex(/^#[0-9a-fA-F]{6}$/)`), `BackgroundSchema` (union of `HexColorSchema` and `z.literal("transparent")`), `TextLayerSchema` (all fields from Requirement 1.2 with `.superRefine()` for `startSeconds >= 0`, `endSeconds > startSeconds`, and per-keyframe `t <= endSeconds - startSeconds`), and `ProjectSchema` (all fields from Requirement 1.1 with `.superRefine()` for `layer.endSeconds <= canvas.durationSeconds` and keyframe `t` upper bound for every layer).
     - Create `packages/engine/src/schemas/constants.ts` exporting `CURRENT_PROJECT_VERSION = 1`.
     - Re-export all schemas and the constant from `src/index.ts`.
     - **Covers:** Requirement 1.1, Requirement 1.2, Requirement 1.7, Requirement 1.10, Requirement 1.11, Requirement 1.12, Requirement 1.13
     - **Completion:** Unit tests assert a valid project parses successfully; a layer with `startSeconds >= endSeconds` is rejected; a keyframe with `t > layer.endSeconds - layer.startSeconds` is rejected; a `cubicBezier` with a control point outside `[0, 1]` is rejected.
 
-  - [ ] 3.4 Implement `EffectPackSchema`
+  - [x] 3.4 Implement `EffectPackSchema`
     - Create `packages/engine/src/schemas/effect-pack.ts` exporting `EffectPackSchema` — Zod object with all fields from Requirement 3.1, with `.superRefine()` validating each `paramDescriptor.binding.effectInstanceIndex` is within bounds of `effectInstances`. The schema must not invoke `eval` or `Function`.
     - **Covers:** Requirement 3.1, Requirement 3.2, Requirement 3.8, Requirement 3.9, Requirement 3.10
     - **Completion:** `EffectPackSchema.safeParse` rejects a document with an out-of-bounds `effectInstanceIndex` and accepts a valid pack.
 
-  - [ ] 3.5 Implement `serializeProject` and `parseProject`
+  - [x] 3.5 Implement `serializeProject` and `parseProject`
     - Create `packages/engine/src/serialize.ts` exporting: `serializeProject(project: Project): string` (returns `JSON.stringify(project)`) and `parseProject(json: string): Project | ParseError` (checks `new TextEncoder().encode(json).byteLength > 5_242_880` first returning `ParseError` with `code: "SIZE_LIMIT_EXCEEDED"` without throwing; then calls `ProjectSchema.safeParse(JSON.parse(json))`; returns typed `Project` on success or `ParseError` with `code: "PARSE_ERROR"` on failure; never throws).
     - Re-export both from `src/index.ts`.
     - **Covers:** Requirement 1.8, Requirement 1.9
     - **Completion:** Unit test asserts a round-trip of a known valid project returns a deeply equal object; a 5 MB + 1 byte string is rejected with `code: "SIZE_LIMIT_EXCEEDED"`; malformed JSON is rejected with `code: "PARSE_ERROR"`.
 
-  - [ ] 3.6 Write unit tests for schemas and serialization
+  - [x] 3.6 Write unit tests for schemas and serialization
     - Create `packages/engine/src/schemas/project.test.ts` and `packages/engine/src/serialize.test.ts` with comprehensive unit tests covering: valid project fixture passes `ProjectSchema.safeParse`; various invalid fixtures (missing required fields, out-of-range values, cross-field violations) each return `{ success: false }`; `serializeProject` → `parseProject` round-trip returns deeply equal value; size-limit boundary (exactly 5,242,880 bytes passes; 5,242,881 bytes returns `SIZE_LIMIT_EXCEEDED`); `EffectPackSchema` rejects out-of-bounds `effectInstanceIndex`.
     - **Covers:** Requirement 1.7, Requirement 1.8, Requirement 1.12, Requirement 1.13, Requirement 3.2, Requirement 3.6, Requirement 3.10
     - **Completion:** `pnpm vitest run src/schemas/project.test.ts src/serialize.test.ts` passes with zero failures.
 
-  - [ ] 3.7 Build core fast-check arbitraries
+  - [x] 3.7 Build core fast-check arbitraries
     - Create `packages/engine/src/testing/arbitraries.ts` exporting the CORE generators: `arbHexColor`, `arbEasing`, `arbKeyframe(property)`, `arbKeyframeTrack`, `arbTextLayer(canvasDuration)` (WITHOUT effectInstances for now — layers generate an empty `effectInstances: []`), `arbValidProject` (WITHOUT effect instances), `arbOutOfBoundsProject`, `arbValidEffectPack`, and `arbT(project)`. Generators must satisfy all cross-field Zod constraints (keyframe `t` range, `endSeconds > startSeconds`, numeric range limits on anchor/positionOffset/fontSize/letterSpacing/lineHeight).
     - Create `packages/engine/src/testing/arbitraries.test.ts` with a smoke test: `fc.assert(fc.property(arbValidProject, p => ProjectSchema.safeParse(p).success))` and the same for `arbValidEffectPack` — assert every generated value passes `safeParse`.
     - **Covers:** Requirement 11.7
     - **Completion:** `pnpm vitest run src/testing/arbitraries.test.ts` passes with zero failures.
 
-  - [ ] 3.8 Write property-based test for project serialize/parse round-trip (Property 1)
+  - [x] 3.8 Write property-based test for project serialize/parse round-trip (Property 1)
     - In `packages/engine/src/serialize.test.ts`, add a fast-check property-based test tagged `// Feature: engine-core, Property 1: Project serialize/parse round-trip`.
     - Using `arbValidProject`, assert that `parseProject(serializeProject(p))` returns a value deeply equal to `p` for any valid `Project`.
     - **Covers:** Requirement 1.9, Requirement 11.4 — Property 1
     - **Completion:** `pnpm vitest run src/serialize.test.ts` passes with zero failures.
 
-  - [ ] 3.9 Write property-based test for EffectPack JSON round-trip (Property 2)
+  - [x] 3.9 Write property-based test for EffectPack JSON round-trip (Property 2)
     - In `packages/engine/src/schemas/effect-pack.test.ts`, add a fast-check property-based test tagged `// Feature: engine-core, Property 2: EffectPack JSON round-trip`.
     - Using `arbValidEffectPack`, assert that `EffectPackSchema.safeParse(JSON.parse(JSON.stringify(ep)))` succeeds and produces a value deeply equal to `ep` for any valid `EffectPack`.
     - **Covers:** Requirement 3.6, Requirement 11 — Property 2
     - **Completion:** `pnpm vitest run src/schemas/effect-pack.test.ts` passes with zero failures.
 
-  - [ ] 3.10 Write property-based test for hard-limits rejection (Property 12)
+  - [x] 3.10 Write property-based test for hard-limits rejection (Property 12)
     - In `packages/engine/src/schemas/project.test.ts`, add a fast-check property-based test tagged `// Feature: engine-core, Property 12: Hard-limits rejection`.
     - Using `arbOutOfBoundsProject` (generates project-like objects where at least one of canvas dimensions, fps, durationSeconds, layer count, text length, keyframe count, or effect-instance count exceeds defined hard limits), assert that `ProjectSchema.safeParse` returns `{ success: false }` and does not throw.
     - **Covers:** Requirement 11.11 — Property 12
     - **Completion:** `pnpm vitest run src/schemas/project.test.ts` passes with zero failures.
 
-  - [ ] 3.11 Write property-based test for invalid-input rejection (Property 13)
+  - [-] 3.11 Write property-based test for invalid-input rejection (Property 13)
     - In `packages/engine/src/schemas/project.test.ts`, add a fast-check property-based test tagged `// Feature: engine-core, Property 13: Invalid-input rejection is safe`.
     - Using `fc.anything()`, assert that `ProjectSchema.safeParse` returns `{ success: false }` and does not throw for any JSON value that is not a valid `Project`.
     - **Covers:** Requirement 11.6 — Property 13

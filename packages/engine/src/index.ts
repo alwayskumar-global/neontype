@@ -7,3 +7,24 @@ export {
 
 export { createPRNG } from "./prng.js";
 export type { PRNG } from "./prng.js";
+
+export { EasingSchema, KeyframeSchema, KeyframeTrackSchema } from "./schemas/keyframe.js";
+export type { Easing } from "./schemas/keyframe.js";
+
+export { EffectInstanceSchema } from "./schemas/effect-instance.js";
+export type { EffectInstance } from "./schemas/effect-instance.js";
+
+export {
+  HexColorSchema,
+  BackgroundSchema,
+  TextLayerSchema,
+  ProjectSchema,
+} from "./schemas/project.js";
+export type { Project, TextLayer } from "./schemas/project.js";
+
+export { EffectPackSchema } from "./schemas/effect-pack.js";
+export type { EffectPack } from "./schemas/effect-pack.js";
+
+export { CURRENT_PROJECT_VERSION } from "./schemas/constants.js";
+
+export { serializeProject, parseProject } from "./serialize.js";

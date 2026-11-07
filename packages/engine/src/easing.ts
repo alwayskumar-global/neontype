@@ -11,20 +11,14 @@
  * `performance.now`. All outputs are finite for any valid `(a, b, p)` with `p`
  * in [0, 1].
  *
- * NOTE: the `Easing` type is defined locally here for now. A later task
- * introduces `EasingSchema` in `schemas/keyframe.ts` and re-points this type to
- * the schema-derived type; the shape below matches the design exactly so that
- * swap is seamless.
+ * The `Easing` type is derived from `EasingSchema` in `schemas/keyframe.ts`,
+ * which is the single source of truth for both the runtime schema and this
+ * type.
  */
 
-/** A named or parameterised interpolation curve. */
-export type Easing =
-  | "linear"
-  | "easeIn"
-  | "easeOut"
-  | "easeInOut"
-  | { type: "cubicBezier"; x1: number; y1: number; x2: number; y2: number }
-  | { type: "step"; steps: number };
+import type { Easing } from "./schemas/keyframe.js";
+
+export type { Easing };
 
 /** Clamps `p` into the closed unit interval [0, 1]. */
 function clampProgress(p: number): number {

@@ -157,6 +157,162 @@
         "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794020205336
+      },
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794020323054
+      }
+    ],
+    "2.9 Checkpoint — Group 2": [
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794020328242
+      },
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794020344505
+      }
+    ],
+    "2. Group 2: Errors, PRNG, Easing Primitives": [
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794020344547
+      }
+    ],
+    "3.1 Implement `EasingSchema`, `KeyframeSchema`, and `KeyframeTrackSchema`": [
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794021652043
+      },
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794021801089
+      }
+    ],
+    "3.2 Implement `EffectInstanceSchema`": [
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794021805996
+      },
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794021905855
+      }
+    ],
+    "3.3 Implement `TextLayerSchema`, `ProjectSchema`, and constants": [
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794021911290
+      },
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794022101806
+      }
+    ],
+    "3.4 Implement `EffectPackSchema`": [
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794022106854
+      },
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794022239317
+      }
+    ],
+    "3.5 Implement `serializeProject` and `parseProject`": [
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794022244397
+      },
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794022358659
+      }
+    ],
+    "3.6 Write unit tests for schemas and serialization": [
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794022364384
+      },
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794022529932
+      }
+    ],
+    "3.7 Build core fast-check arbitraries": [
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794022535022
+      },
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794022806361
+      }
+    ],
+    "3.8 Write property-based test for project serialize/parse round-trip (Property 1)": [
+      {
+        "executionId": "cd1a4e81-bbcb-4815-b283-762d1bdf376f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794022812771
+      },
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030133488
+      },
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030285310
+      }
+    ],
+    "3.9 Write property-based test for EffectPack JSON round-trip (Property 2)": [
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030290527
+      },
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030373632
+      }
+    ],
+    "3.10 Write property-based test for hard-limits rejection (Property 12)": [
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030378889
+      },
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030469621
+      }
+    ],
+    "3.11 Write property-based test for invalid-input rejection (Property 13)": [
+      {
+        "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794030475265
       }
     ]
   }
