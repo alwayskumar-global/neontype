@@ -133,6 +133,41 @@
         "chatSessionId": "sess_effect_presets_impl",
         "timestamp": 1794059036576
       }
+    ],
+    "5.1 Implement `scale-bounce` effect with unit and property tests": [
+      {
+        "executionId": "70bbeb53-f99c-449b-83bc-394daf591fef",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059250092
+      }
+    ],
+    "5.2 Implement `spotlight` effect with unit and property tests": [
+      {
+        "executionId": "70bbeb53-f99c-449b-83bc-394daf591fef",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059250092
+      }
+    ],
+    "5.3 Implement `wave` effect with unit and property tests": [
+      {
+        "executionId": "70bbeb53-f99c-449b-83bc-394daf591fef",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059250092
+      }
+    ],
+    "5.4 Checkpoint \u2014 Group 3c": [
+      {
+        "executionId": "70bbeb53-f99c-449b-83bc-394daf591fef",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059250092
+      }
+    ],
+    "5. Group 3c: scale-bounce, spotlight, wave": [
+      {
+        "executionId": "70bbeb53-f99c-449b-83bc-394daf591fef",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059250092
+      }
     ]
   }
 }

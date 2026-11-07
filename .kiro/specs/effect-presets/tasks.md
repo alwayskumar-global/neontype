@@ -101,27 +101,27 @@ This plan converts the `effect-presets` design into an ordered series of coding 
     - Run `pnpm --filter @studio/engine exec tsc --noEmit`, `pnpm --filter @studio/engine lint`, and `pnpm vitest run src/effects` (from `packages/engine`).
     - **Completion:** All three commands exit with code 0 and zero failures.
 
-- [ ] 5. Group 3c: scale-bounce, spotlight, wave
-  - [ ] 5.1 Implement `scale-bounce` effect with unit and property tests
+- [x] 5. Group 3c: scale-bounce, spotlight, wave
+  - [x] 5.1 Implement `scale-bounce` effect with unit and property tests
     - Create `packages/engine/src/effects/scale-bounce/schema.ts` (`startDelay`, `durationSeconds`, `delayPerGroup`, `startScale`, `bounces` integer; `.finite()`, hard min/max per Requirement 10.2, defaults), `index.ts` (compute `p`; for `bounces >= 1` `scale = 1 + (startScale - 1) * (1 - p) * cos(PI * (2*bounces + 0.5) * p)`; for `bounces == 0` `scale = evaluate("easeOut", startScale, 1, p)`; explicit `scale = 1` at `p == 1`; `opacity = clamp(p / 0.05, 0, 1)`; `scale` clamped to `[0,100]`; `register`; throws `InvalidEffectParamsError`), and `scale-bounce.test.ts`.
     - Tests: unit at `p = 0` (`scale = startScale`, `opacity 0`), `p = 1` (`opacity 1`, `scale 1`), `p = 0.5`; `bounces = 0` monotone no-overshoot branch; the overshoot-interval-count test over `startScale = 0`, `bounces in 1..10` asserting the count of `p`-intervals where `scale > 1 + 1e-9` equals `bounces` and successive extremum deviations strictly decrease; `InvalidEffectParamsError`. Property tests using `arbScaleBounceParams`: Property 1 determinism, Property 2 bounded, Property 3 terminal identity, Property 7 scale-bounce envelope/count/terminal.
     - **Covers:** Requirement 1.1, Requirement 1.2, Requirement 1.3, Requirement 1.5, Requirement 1.7, Requirement 1.9, Requirement 1.10, Requirement 2.5, Requirement 10.1, Requirement 10.2, Requirement 10.3, Requirement 10.4, Requirement 10.5, Requirement 10.6, Requirement 10.7, Requirement 10.8, Requirement 10.9, Requirement 10.10, Requirement 16.1, Requirement 16.2, Requirement 16.3, Requirement 16.5
     - **Completion:** `pnpm vitest run src/effects/scale-bounce` (from `packages/engine`) passes with zero failures.
 
-  - [ ] 5.2 Implement `spotlight` effect with unit and property tests
+  - [x] 5.2 Implement `spotlight` effect with unit and property tests
     - Create `packages/engine/src/effects/spotlight/schema.ts` (`startDelay`, `durationSeconds`, `radius`, `dimOpacity`, `settleAtEnd` boolean; `.finite()`, hard min/max per Requirement 11.3, defaults), `index.ts` (`s = clamp((t - startDelay)/durationSeconds, 0, 1)`; `groupCount <= 1` → `opacity 1`; else `f = s * (groupCount - 1)`, `d = abs(groupIndex - f)`, `opacity = d <= radius ? 1 : clamp(1 - (d - radius) * (1 - dimOpacity), dimOpacity, 1)`; `settleAtEnd && s >= 1` → `opacity 1`; `settleAtEnd === false` keeps dimming after sweep; `register`; throws `InvalidEffectParamsError`), and `spotlight.test.ts`.
     - Tests: unit sampling the focus sweep at `s = 0`, `s = 0.5`, `s = 1`; `groupCount = 1` → `opacity 1`; both `settleAtEnd` values (true → terminal identity at `s >= 1`; false → continues dimming); `InvalidEffectParamsError`. Property tests using `arbSpotlightParams`: Property 1 determinism, Property 2 bounded (`opacity` in `[dimOpacity, 1]` ⊂ `[0,1]`), Property 3 terminal identity under `settleAtEnd = true`.
     - **Covers:** Requirement 1.1, Requirement 1.2, Requirement 1.3, Requirement 1.5, Requirement 1.7, Requirement 1.9, Requirement 1.10, Requirement 2.5, Requirement 11.1, Requirement 11.2, Requirement 11.3, Requirement 11.4, Requirement 11.5, Requirement 11.6, Requirement 11.7, Requirement 11.8, Requirement 16.1, Requirement 16.2, Requirement 16.3, Requirement 16.5
     - **Completion:** `pnpm vitest run src/effects/spotlight` (from `packages/engine`) passes with zero failures.
 
-  - [ ] 5.3 Implement `wave` effect with unit and property tests
+  - [x] 5.3 Implement `wave` effect with unit and property tests
     - Create `packages/engine/src/effects/wave/schema.ts` (`periodSeconds`, `amplitude`, `axis` `x`|`y` default `y`, `phasePerGroup`; `.finite()`, hard min/max per Requirement 12.2, defaults), `index.ts` (`theta = 2 * PI * (t / periodSeconds) + groupIndex * phasePerGroup`; `m = amplitude * sin(theta)`; `positionOffset = axis === "x" ? [m, 0] : [0, m]` clamped per axis to `[-32000, 32000]`; looping — no terminal identity; `register`; throws `InvalidEffectParamsError`), and `wave.test.ts`.
     - Tests: unit sampling `positionOffset` across one period on each axis; `InvalidEffectParamsError`. Property tests using `arbWaveParams`: Property 1 determinism, Property 2 bounded, Property 4 loop-period (`positionOffset(t) == positionOffset(t + periodSeconds)`).
     - **Covers:** Requirement 1.1, Requirement 1.2, Requirement 1.3, Requirement 1.5, Requirement 1.7, Requirement 1.9, Requirement 1.10, Requirement 2.8, Requirement 12.1, Requirement 12.2, Requirement 12.3, Requirement 12.4, Requirement 12.5, Requirement 12.6, Requirement 16.1, Requirement 16.2, Requirement 16.3
     - **Completion:** `pnpm vitest run src/effects/wave` (from `packages/engine`) passes with zero failures.
     - Commit: `feat(effect-presets): add scale-bounce, spotlight, wave effects`
 
-  - [ ] 5.4 Checkpoint — Group 3c
+  - [x] 5.4 Checkpoint — Group 3c
     - Run `pnpm --filter @studio/engine exec tsc --noEmit`, `pnpm --filter @studio/engine lint`, and `pnpm vitest run src/effects` (from `packages/engine`).
     - **Completion:** All three commands exit with code 0 and zero failures.
 
