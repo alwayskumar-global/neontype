@@ -34,8 +34,8 @@ This plan converts the `effect-presets` design into an ordered series of coding 
     - Run `pnpm --filter @studio/engine exec tsc --noEmit`, `pnpm --filter @studio/engine lint`, and `pnpm vitest run src/draw.test.ts` (from `packages/engine`).
     - **Completion:** All three commands exit with code 0 and zero failures.
 
-- [ ] 2. Group 2: Shared fast-check arbitraries
-  - [ ] 2.1 Add schema-valid arbitraries for all ten effect param schemas
+- [x] 2. Group 2: Shared fast-check arbitraries
+  - [x] 2.1 Add schema-valid arbitraries for all ten effect param schemas
     - Add `arbBlurInParams`, `arbGlitchRevealParams`, `arbKineticPopParams`, `arbLetterSpreadParams`, `arbLineWipeParams`, `arbNeonFlickerParams`, `arbRotateDropParams`, `arbScaleBounceParams`, `arbSpotlightParams`, and `arbWaveParams` to `packages/engine/src/testing/arbitraries.ts`, each following the existing `arbTypewriterParams`/`arbFadeSlideParams` pattern.
     - Each arbitrary generates ONLY schema-valid params: every number finite and within that param's documented min/max; `steps` (glitch-reveal), `cellsPerPeriod` (neon-flicker), and `bounces` (scale-bounce) as integers; `easing` via the existing `arbEasing`; enum params (`axis`, `direction`, `settleAtEnd`) drawn from their allowed values.
     - These param schemas do not exist yet (they are authored per-effect in Group 3). The arbitraries encode the same bounds the Group 3 schemas will enforce — note this ordering dependency: each effect's Group 3 property tests import its arbitrary from this file.
@@ -43,7 +43,7 @@ This plan converts the `effect-presets` design into an ordered series of coding 
     - **Completion:** `pnpm --filter @studio/engine exec tsc --noEmit` passes (arbitraries compile; they are exercised by the Group 3 property tests).
     - Commit: `test(effect-presets): add fast-check arbitraries for all ten effect param schemas`
 
-  - [ ] 2.2 Checkpoint — Group 2
+  - [x] 2.2 Checkpoint — Group 2
     - Run `pnpm --filter @studio/engine exec tsc --noEmit` and `pnpm --filter @studio/engine lint`.
     - **Completion:** Both commands exit with code 0 and zero errors.
 

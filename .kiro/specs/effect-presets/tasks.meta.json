@@ -35,6 +35,27 @@
         "chatSessionId": "sess_effect_presets_impl",
         "timestamp": 1794057423723
       }
+    ],
+    "2.1 Add schema-valid arbitraries for all ten effect param schemas": [
+      {
+        "executionId": "8a57ae5d-a21d-497a-b595-e51809c1a488",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794057503330
+      }
+    ],
+    "2.2 Checkpoint \u2014 Group 2": [
+      {
+        "executionId": "8a57ae5d-a21d-497a-b595-e51809c1a488",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794057503330
+      }
+    ],
+    "2. Group 2: Shared fast-check arbitraries": [
+      {
+        "executionId": "8a57ae5d-a21d-497a-b595-e51809c1a488",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794057503330
+      }
     ]
   }
 }

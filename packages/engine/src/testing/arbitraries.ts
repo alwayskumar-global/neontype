@@ -742,3 +742,174 @@ export const arbGraphemeText: fc.Arbitrary<string> = fc
     { minLength: 1, maxLength: 12 },
   )
   .map((segments) => segments.join(""));
+
+
+/* ------------------------------------------------------------------------- *
+ * effect-presets: per-effect param arbitraries (Task 2.1).
+ *
+ * One `arbXxxParams` per new effect, following the existing
+ * `arbTypewriterParams` / `arbFadeSlideParams` pattern. Each generator produces
+ * ONLY schema-valid params: every number finite and within that param's
+ * documented [min, max]; integer params (`steps`, `cellsPerPeriod`, `bounces`)
+ * via `fc.integer`; enum params from their allowed literals; `easing` via the
+ * existing `arbEasing`. The per-effect property tests (Group 3) import these.
+ *
+ * `fin(min, max)` is a finite double in [min, max] with `-0` normalized, so the
+ * `.finite()` + hard-min/max bounds every effect schema enforces always hold.
+ * ------------------------------------------------------------------------- */
+
+/** A finite double in [min, max] with -0 normalized to +0. */
+const fin = (min: number, max: number): fc.Arbitrary<number> =>
+  fc.double({ min, max, noNaN: true }).map(normalizeZero);
+
+/** `blur-in` params (Requirement 3.2). */
+export const arbBlurInParams: fc.Arbitrary<{
+  startDelay: number;
+  durationSeconds: number;
+  startBlur: number;
+  delayPerGroup: number;
+  easing: Easing;
+}> = fc.record({
+  startDelay: fin(0, 60),
+  durationSeconds: fin(0.001, 60),
+  startBlur: fin(0, 1000),
+  delayPerGroup: fin(0, 60),
+  easing: arbEasing,
+});
+
+/** `glitch-reveal` params (Requirement 4.2). */
+export const arbGlitchRevealParams: fc.Arbitrary<{
+  startDelay: number;
+  durationSeconds: number;
+  delayPerGroup: number;
+  maxOffset: number;
+  steps: number;
+  easing: Easing;
+}> = fc.record({
+  startDelay: fin(0, 60),
+  durationSeconds: fin(0.001, 60),
+  delayPerGroup: fin(0, 60),
+  maxOffset: fin(0, 2000),
+  steps: fc.integer({ min: 1, max: 30 }),
+  easing: arbEasing,
+});
+
+/** `kinetic-pop` params (Requirement 5.2). */
+export const arbKineticPopParams: fc.Arbitrary<{
+  startDelay: number;
+  durationSeconds: number;
+  delayPerGroup: number;
+  startScale: number;
+  overshoot: number;
+  easing: Easing;
+}> = fc.record({
+  startDelay: fin(0, 60),
+  durationSeconds: fin(0.001, 60),
+  delayPerGroup: fin(0, 60),
+  startScale: fin(0, 100),
+  overshoot: fin(0, 10),
+  easing: arbEasing,
+});
+
+/** `letter-spread` params (Requirement 6.3). */
+export const arbLetterSpreadParams: fc.Arbitrary<{
+  startDelay: number;
+  durationSeconds: number;
+  spreadDistance: number;
+  axis: "x" | "y";
+  easing: Easing;
+}> = fc.record({
+  startDelay: fin(0, 60),
+  durationSeconds: fin(0.001, 60),
+  spreadDistance: fin(-2000, 2000),
+  axis: fc.constantFrom("x" as const, "y" as const),
+  easing: arbEasing,
+});
+
+/** `line-wipe` params (Requirement 7.3). */
+export const arbLineWipeParams: fc.Arbitrary<{
+  startDelay: number;
+  delayPerGroup: number;
+  fadeSeconds: number;
+  direction: "forward" | "backward";
+  easing: Easing;
+}> = fc.record({
+  startDelay: fin(0, 60),
+  delayPerGroup: fin(0, 60),
+  fadeSeconds: fin(0, 60),
+  direction: fc.constantFrom("forward" as const, "backward" as const),
+  easing: arbEasing,
+});
+
+/** `neon-flicker` params (Requirement 8.2). */
+export const arbNeonFlickerParams: fc.Arbitrary<{
+  periodSeconds: number;
+  minOpacity: number;
+  cellsPerPeriod: number;
+  phasePerGroup: number;
+}> = fc.record({
+  periodSeconds: fin(0.05, 60),
+  minOpacity: fin(0, 1),
+  cellsPerPeriod: fc.integer({ min: 1, max: 64 }),
+  phasePerGroup: fin(0, 60),
+});
+
+/** `rotate-drop` params (Requirement 9.2). */
+export const arbRotateDropParams: fc.Arbitrary<{
+  startDelay: number;
+  durationSeconds: number;
+  delayPerGroup: number;
+  dropDistance: number;
+  startRotation: number;
+  easing: Easing;
+}> = fc.record({
+  startDelay: fin(0, 60),
+  durationSeconds: fin(0.001, 60),
+  delayPerGroup: fin(0, 60),
+  dropDistance: fin(-32000, 32000),
+  startRotation: fin(-36000, 36000),
+  easing: arbEasing,
+});
+
+/** `scale-bounce` params (Requirement 10.2). */
+export const arbScaleBounceParams: fc.Arbitrary<{
+  startDelay: number;
+  durationSeconds: number;
+  delayPerGroup: number;
+  startScale: number;
+  bounces: number;
+}> = fc.record({
+  startDelay: fin(0, 60),
+  durationSeconds: fin(0.001, 60),
+  delayPerGroup: fin(0, 60),
+  startScale: fin(0, 100),
+  bounces: fc.integer({ min: 0, max: 10 }),
+});
+
+/** `spotlight` params (Requirement 11.3). */
+export const arbSpotlightParams: fc.Arbitrary<{
+  startDelay: number;
+  durationSeconds: number;
+  radius: number;
+  dimOpacity: number;
+  settleAtEnd: boolean;
+}> = fc.record({
+  startDelay: fin(0, 60),
+  durationSeconds: fin(0.001, 60),
+  radius: fin(0, 10000),
+  dimOpacity: fin(0, 1),
+  settleAtEnd: fc.boolean(),
+});
+
+/** `wave` params (Requirement 12.2). */
+export const arbWaveParams: fc.Arbitrary<{
+  periodSeconds: number;
+  amplitude: number;
+  axis: "x" | "y";
+  phasePerGroup: number;
+}> = fc.record({
+  periodSeconds: fin(0.05, 60),
+  amplitude: fin(0, 32000),
+  axis: fc.constantFrom("x" as const, "y" as const),
+  phasePerGroup: fin(-100, 100),
+});
