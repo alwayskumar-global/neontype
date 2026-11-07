@@ -45,6 +45,9 @@ export type {
 
 export { registerBuiltinEffects, builtinRegistry } from "./effects/index.js";
 
+export { presetCatalog } from "./effects/catalog.js";
+export type { PresetCatalogEntry, Granularity } from "./effects/catalog.js";
+
 export { computeFrameState } from "./compute.js";
 export type {
   ComputeOpts,

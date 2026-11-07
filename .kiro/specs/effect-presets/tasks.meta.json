@@ -168,6 +168,41 @@
         "chatSessionId": "sess_effect_presets_impl",
         "timestamp": 1794059250092
       }
+    ],
+    "6.1 Wire all ten effects into `registerBuiltinEffects` and extend registration tests": [
+      {
+        "executionId": "30c387f0-7d9d-4acc-8f8a-cb9c96443819",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059410771
+      }
+    ],
+    "6.2 Create the preset catalog and re-export it": [
+      {
+        "executionId": "30c387f0-7d9d-4acc-8f8a-cb9c96443819",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059410771
+      }
+    ],
+    "6.3 Write the catalog\u2013registry drift guard (Property 8)": [
+      {
+        "executionId": "30c387f0-7d9d-4acc-8f8a-cb9c96443819",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059410771
+      }
+    ],
+    "6.4 Checkpoint \u2014 Group 4": [
+      {
+        "executionId": "30c387f0-7d9d-4acc-8f8a-cb9c96443819",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059410771
+      }
+    ],
+    "6. Group 4: Registration, catalog, and drift guard": [
+      {
+        "executionId": "30c387f0-7d9d-4acc-8f8a-cb9c96443819",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059410771
+      }
     ]
   }
 }

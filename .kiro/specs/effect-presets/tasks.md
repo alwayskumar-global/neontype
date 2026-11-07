@@ -125,26 +125,26 @@ This plan converts the `effect-presets` design into an ordered series of coding 
     - Run `pnpm --filter @studio/engine exec tsc --noEmit`, `pnpm --filter @studio/engine lint`, and `pnpm vitest run src/effects` (from `packages/engine`).
     - **Completion:** All three commands exit with code 0 and zero failures.
 
-- [ ] 6. Group 4: Registration, catalog, and drift guard
-  - [ ] 6.1 Wire all ten effects into `registerBuiltinEffects` and extend registration tests
+- [x] 6. Group 4: Registration, catalog, and drift guard
+  - [x] 6.1 Wire all ten effects into `registerBuiltinEffects` and extend registration tests
     - Edit `packages/engine/src/effects/index.ts`: import each new effect's `register` and invoke it once per `registerBuiltinEffects` call alongside `typewriter` and `fade-slide`, so `builtinRegistry` holds exactly twelve ids.
     - Add/confirm tests in `packages/engine/src/effects/index.test.ts`: exactly twelve ids registered; no `DuplicateEffectError` on a fresh `createRegistry()` + `registerBuiltinEffects`; `DuplicateEffectError` on a second `registerBuiltinEffects`; `get(id)` resolves each of the twelve ids; `get(unknown)` returns `undefined`.
     - **Covers:** Requirement 13.1, Requirement 13.2, Requirement 13.3, Requirement 13.4, Requirement 13.5, Requirement 13.6
     - **Completion:** `pnpm vitest run src/effects/index.test.ts` (from `packages/engine`) passes with zero failures.
 
-  - [ ] 6.2 Create the preset catalog and re-export it
+  - [x] 6.2 Create the preset catalog and re-export it
     - Create `packages/engine/src/effects/catalog.ts` exporting `Granularity`, `PresetCatalogEntry`, and `presetCatalog` — exactly twelve entries (`typewriter`, `fade-slide`, and the ten new effects). Each entry's `displayName` matches the registered `EffectDefinition.displayName` codepoint-for-codepoint; `defaultParams` equals that effect's schema defaults; `supportedGranularities` is a non-empty distinct subset of `{character, word, line}`; `loop` is `true` only for `wave` and `neon-flicker`. Plain data — MUST NOT throw at module load.
     - Re-export `presetCatalog` and `PresetCatalogEntry` from `packages/engine/src/index.ts`.
     - **Covers:** Requirement 14.1, Requirement 14.2, Requirement 14.3, Requirement 14.4, Requirement 14.5
     - **Completion:** `pnpm --filter @studio/engine exec tsc --noEmit` passes; importing `catalog.ts` does not throw.
 
-  - [ ] 6.3 Write the catalog–registry drift guard (Property 8)
+  - [x] 6.3 Write the catalog–registry drift guard (Property 8)
     - Create `packages/engine/src/effects/catalog.test.ts` tagged `// Feature: effect-presets, Property 8: Catalog–registry drift guard`: build a registry via `createRegistry()` + `registerBuiltinEffects`, then assert every catalog id is registered; entry count equals registered-effect count with no duplicate ids; each `displayName` matches the registered `EffectDefinition.displayName` exactly; each `defaultParams` passes the effect's `paramSchema.safeParse`; each `supportedGranularities` is a non-empty, distinct subset of the three (length 1..3); `loop` is `true` only for `wave` and `neon-flicker`.
     - **Covers:** Requirement 15.1, Requirement 15.2, Requirement 15.3, Requirement 15.4, Requirement 15.5
     - **Completion:** `pnpm vitest run src/effects/catalog.test.ts` (from `packages/engine`) passes with zero failures.
     - Commit: `feat(effect-presets): register built-ins and add preset catalog with drift guard`
 
-  - [ ] 6.4 Checkpoint — Group 4
+  - [x] 6.4 Checkpoint — Group 4
     - Run `pnpm --filter @studio/engine exec tsc --noEmit`, `pnpm --filter @studio/engine lint`, and `pnpm vitest run src/effects/index.test.ts src/effects/catalog.test.ts` (from `packages/engine`).
     - **Completion:** All three commands exit with code 0 and zero failures.
 
