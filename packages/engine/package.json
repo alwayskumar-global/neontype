@@ -7,6 +7,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "lint": "eslint src"
+  },
   "devDependencies": {
     "@playwright/test": "^1.65.0",
     "ajv": "^8.20.0",

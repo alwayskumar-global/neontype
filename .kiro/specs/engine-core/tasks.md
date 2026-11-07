@@ -8,8 +8,8 @@ This plan converts the `engine-core` design into an ordered series of coding tas
 
 ## Tasks
 
-- [ ] 1. Group 1: Scaffolding
-  - [ ] 1.1 Initialise `packages/engine` package structure
+- [x] 1. Group 1: Scaffolding
+  - [x] 1.1 Initialise `packages/engine` package structure
     - Create `packages/engine/package.json` with `name: "@studio/engine"`, `"type": "module"`, `"main": "./src/index.ts"`, `"exports"` pointing to `./src/index.ts`, and dev-dependency placeholders for `typescript`, `vitest`, `fast-check`, `@playwright/test`, `eslint`, `typescript-eslint`, `ajv`, and `vite` (the `packages/*` glob in `pnpm-workspace.yaml` already includes this package, so no workspace edit is needed to register it).
     - Create `packages/engine/tsconfig.json` with `"strict": true`, `"target": "ES2022"`, `"module": "ESNext"`, `"moduleResolution": "Bundler"`, `"noEmit": true` (the package is consumed as TypeScript source by Vite and Vitest; no build output — do NOT set `outDir`), and `"include": ["src/**/*", "scripts/**/*"]`.
     - Create `packages/engine/vitest.config.ts` with `environment: "node"`, `include: ["src/**/*.test.ts"]`, and a separate bench include for `src/**/*.bench.ts`.
@@ -19,7 +19,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 8.1, Requirement 14.1, Requirement 14.2
     - **Completion:** `pnpm install` succeeds and `packages/engine` resolves as a workspace package.
 
-  - [ ] 1.2 Install runtime and dev dependencies
+  - [x] 1.2 Install runtime and dev dependencies
     - Run `pnpm add zod` inside `packages/engine` to install the Zod v4 runtime dependency.
     - Run `pnpm add -D typescript vitest fast-check @playwright/test eslint typescript-eslint ajv vite tsx` to install all dev dependencies.
     - Record exact installed versions in `docs/dependencies.md` for every package (`zod`, `typescript`, `vitest`, `fast-check`, `@playwright/test`, `eslint`, `typescript-eslint`, `ajv`, `vite`, and `tsx`) with columns Package, Version, License, Reason. Record `tsx` with the reason "runs `generate-schemas.ts` and `generate-visual-fixtures.ts`".
@@ -28,19 +28,19 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Completion:** `pnpm install` passes; `docs/dependencies.md` contains a row for each of the ten packages (`zod`, `typescript`, `vitest`, `fast-check`, `@playwright/test`, `eslint`, `typescript-eslint`, `ajv`, `vite`, `tsx`) with actual installed versions.
     - Commit: `feat(engine-core): scaffold packages/engine with dependencies`
 
-  - [ ] 1.3 Approve pnpm dependency build scripts
+  - [x] 1.3 Approve pnpm dependency build scripts
     - pnpm 10 blocks post-install build scripts by default. Add an `onlyBuiltDependencies` list to `pnpm-workspace.yaml` approving the packages that legitimately need build scripts (e.g. `esbuild`, and any Playwright/Vite native deps that request it).
     - Run `pnpm approve-builds` (or edit `onlyBuiltDependencies` directly) and record in the task which packages were approved.
     - **Covers:** Requirement 14.1
     - **Completion:** `pnpm install` completes without "Ignored build scripts" warnings for the approved packages.
 
-  - [ ] 1.4 Configure ESLint flat config (`eslint.config.js`)
+  - [x] 1.4 Configure ESLint flat config (`eslint.config.js`)
     - Create `packages/engine/eslint.config.js` as an ESLint 9 flat-config file using `typescript-eslint`.
     - Configure `no-restricted-properties` to raise an error for `Math.random` (`"Use createPRNG() instead."`), `Date.now` (`"Not allowed in engine/src."`), and `performance.now` (`"Not allowed in engine/src."`) within `files: ["src/**/*.ts"]`.
     - **Covers:** Requirement 13.1
     - **Completion:** Running `pnpm eslint packages/engine/src` on a temporary file that calls `Math.random()` reports an ESLint error; on a clean file reports zero errors.
 
-  - [ ] 1.5 Checkpoint — Group 1
+  - [x] 1.5 Checkpoint — Group 1
     - Run `pnpm install` from workspace root and `pnpm --filter @studio/engine exec tsc --noEmit` to confirm TypeScript resolves the empty barrel.
     - Run `pnpm --filter @studio/engine lint` (zero errors).
     - **Completion:** All commands exit with code 0.

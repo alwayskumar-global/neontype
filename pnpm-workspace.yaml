@@ -1,3 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Dependencies explicitly approved to run post-install build scripts.
+# pnpm 10 blocks build scripts by default; only the packages listed here run them.
+onlyBuiltDependencies:
+  # esbuild's postinstall installs the native Go-compiled binary required by
+  # vite and vitest at runtime. Without it, both tools fail to start.
+  - esbuild
