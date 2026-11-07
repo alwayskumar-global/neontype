@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Effects library</title>
+<link rel="stylesheet" href="_ds/motion-text-studio-design-system-f5b901ae-a7fb-489e-9b53-af9bc496124b/styles.css">
+<script src="_ds/motion-text-studio-design-system-f5b901ae-a7fb-489e-9b53-af9bc496124b/_ds_bundle.js"></script>
+<style>
+html,body{margin:0;height:100%;background:#0C0E12;overflow:hidden;color-scheme:dark}
+body{color:var(--color-text-primary);font:13px/18px var(--font-ui);-webkit-font-smoothing:antialiased}
+a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
+@keyframes mt-type{0%{width:0}35%,85%{width:calc(var(--n) * 1ch)}100%{width:0}}
+@keyframes mt-caret{50%{border-color:transparent}}
+@keyframes mt-flicker{0%,100%{opacity:1}6%{opacity:.15}8%{opacity:1}11%{opacity:.35}13%,58%{opacity:1}60%{opacity:.2}62%,100%{opacity:1}}
+@keyframes mt-glitch{0%{opacity:0;transform:translateX(-40%) skewX(35deg);text-shadow:3px 0 #2DD3F0,-3px 0 #F23DC8}8%{opacity:1;transform:translateX(18%) skewX(-20deg)}14%{transform:translateX(-8%);text-shadow:2px 0 #2DD3F0,-2px 0 #F23DC8}20%,82%{transform:none;opacity:1;text-shadow:none}86%{transform:translateX(6%);text-shadow:2px 0 #2DD3F0,-2px 0 #F23DC8}100%{opacity:0;transform:translateX(-20%)}}
+@keyframes mt-spot{0%{background-position:100% 0}70%,100%{background-position:0 0}}
+@keyframes mt-bounce{0%{transform:scale(0);opacity:0}16%{transform:scale(1.18);opacity:1}26%{transform:scale(.93)}34%{transform:scale(1.04)}40%,82%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}
+@keyframes mt-rotdrop{0%{transform:translateY(-120%) rotate(-50deg);opacity:0}28%,82%{transform:none;opacity:1}100%{transform:none;opacity:0}}
+@keyframes mt-spread{0%,30%{letter-spacing:-.02em;opacity:1;filter:blur(0)}80%,100%{letter-spacing:.55em;opacity:0;filter:blur(2px)}}
+@keyframes mt-wipe{0%{clip-path:inset(0 100% 0 0)}30%,80%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 100%)}}
+@keyframes mt-skel{0%,100%{opacity:.45}50%{opacity:1}}
+@media (prefers-reduced-motion: reduce){[data-fx],[data-fx] *{animation:none!important;width:auto!important}}
+</style>
+</helmet>
+
+<div class="ui" style="position:fixed;inset:0;overflow:auto;background:var(--color-bg-app);color-scheme:dark"><div style="position:relative;min-width:1100px;height:100%;min-height:640px;overflow:hidden">
+
+  <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none">
+    <dc-import name="Studio Editor" playing="{{ false }}" keyframe-editor="{{ false }}" warning="{{ false }}" hint-size="100%,100%"></dc-import>
+  </div>
+
+  <sc-if value="{{ open }}" hint-placeholder-val="{{ true }}">
+    <div onPointerDown="{{ scrimDown }}" style="position:absolute;inset:0;z-index:400;background:var(--color-bg-overlay);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)">
+      <div role="dialog" aria-modal="true" aria-labelledby="lib-title" data-screen-label="Effects library" style="position:absolute;top:8px;bottom:8px;left:8px;width:min(1200px,calc(100% - 136px));display:flex;flex-direction:column;background:var(--color-bg-panel);border-radius:var(--radius-xl);box-shadow:var(--shadow-modal);overflow:hidden">
+
+        <!-- Header -->
+        <div style="display:flex;align-items:center;gap:12px;height:56px;padding:0 12px 0 20px;border-bottom:1px solid var(--color-border-subtle);flex:none">
+          <h2 id="lib-title" style="margin:0;font-size:var(--text-title-lg-size);line-height:var(--text-title-lg-line);font-weight:600;letter-spacing:-0.01em">Effects library</h2>
+          <span class="ui-mono" style="font-size:12px;color:var(--color-text-tertiary)">12 effects</span>
+          <span style="flex:1"></span>
+          <span style="font-size:12px;color:var(--color-text-secondary)">Applying to</span>
+          <span class="ui-chip ui-chip--static" style="height:24px;gap:6px;color:var(--color-text-primary)">
+            <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="text" size="{{ 14 }}" hint-size="14px,14px"></x-import>
+            Sale starts Friday
+            <span class="ui-mono" style="font-size:11px;color:var(--color-text-tertiary)">Layer 2</span>
+          </span>
+          <span style="width:1px;height:20px;background:var(--color-border-default)"></span>
+          <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.IconButton" icon="close" label="Close library" shortcut="Esc" on-click="{{ close }}" hint-size="28px,28px"></x-import>
+        </div>
+
+        <!-- Toolbar -->
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:12px 20px;border-bottom:1px solid var(--color-border-subtle);flex:none">
+          <label class="ui-field" style="flex:1 1 260px;max-width:380px;height:32px">
+            <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="search" size="{{ 16 }}" hint-size="16px,16px"></x-import>
+            <input ref="{{ searchRef }}" type="search" aria-label="Search effects" placeholder="Search effects" value="{{ query }}" onChange="{{ onQuery }}">
+            <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.IconButton" icon="close" label="Clear search" size="sm" tooltip="{{ false }}" on-click="{{ clearQuery }}" hint-size="24px,24px"></x-import>
+            </sc-if>
+            <sc-if value="{{ noQuery }}" hint-placeholder-val="{{ true }}">
+              <span class="ui-kbd">/</span>
+            </sc-if>
+          </label>
+          <div role="group" aria-label="Split by" style="display:flex;align-items:center;gap:6px">
+            <span class="ui-caption" style="margin-right:2px">Split by</span>
+            <sc-for list="{{ granChips }}" as="ch" hint-placeholder-count="3">
+              <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Chip" pressed="{{ ch.on }}" on-toggle="{{ ch.toggle }}" hint-size="72px,22px">{{ ch.label }}</x-import>
+            </sc-for>
+          </div>
+          <div role="group" aria-label="Category" style="display:flex;align-items:center;gap:6px">
+            <span class="ui-caption" style="margin-right:2px">Category</span>
+            <sc-for list="{{ catChips }}" as="ch" hint-placeholder-count="4">
+              <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Chip" pressed="{{ ch.on }}" on-toggle="{{ ch.toggle }}" hint-size="72px,22px">{{ ch.label }}</x-import>
+            </sc-for>
+          </div>
+          <span style="flex:1"></span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="ui-label">Sort</span>
+            <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Select" label="Sort effects" options="{{ sortOptions }}" value="{{ sort }}" on-change="{{ onSort }}" width="152px" hint-size="152px,28px"></x-import>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div style="position:relative;flex:1;min-height:0;display:flex">
+  <div class="ui-toast-region" aria-live="polite" style="position:absolute;left:20px;bottom:16px;right:auto;top:auto;width:360px;z-index:500">
+    <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+      <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Toast" variant="success" title="{{ toastTitle }}" action="{{ toastAction }}" on-close="{{ closeToast }}" hint-size="360px,84px">{{ toastText }}</x-import>
+    </sc-if>
+  </div>
+          <div style="flex:1;min-width:0;overflow:auto;padding:14px 20px 20px">
+            <div style="display:flex;align-items:center;gap:12px;height:24px;margin-bottom:10px">
+              <span class="ui-mono" aria-live="polite" style="font-size:12px;color:var(--color-text-tertiary)">{{ countText }}</span>
+              <sc-if value="{{ anyFilter }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" size="sm" on-click="{{ clearAll }}" hint-size="96px,24px">Clear filters</x-import>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+              <div aria-busy="true" aria-label="Loading effects" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px">
+                <sc-for list="{{ skeletons }}" as="s" hint-placeholder-count="12">
+                  <div style="display:grid;gap:8px;padding:4px 4px 10px;border:1px solid var(--color-border-subtle);border-radius:var(--radius-md);background:var(--color-bg-raised)">
+                    <div style="aspect-ratio:16/10;border-radius:var(--radius-sm);background:var(--color-bg-control);animation:mt-skel 1.4s ease-in-out infinite;animation-delay:{{ s.d }}"></div>
+                    <div style="height:10px;width:{{ s.w }};margin:2px 4px 0;border-radius:2px;background:var(--color-bg-control-hover);animation:mt-skel 1.4s ease-in-out infinite;animation-delay:{{ s.d }}"></div>
+                    <div style="display:flex;gap:4px;margin:0 4px">
+                      <span style="width:34px;height:18px;border-radius:var(--radius-sm);background:var(--color-bg-control);animation:mt-skel 1.4s ease-in-out infinite;animation-delay:{{ s.d }}"></span>
+                      <span style="width:38px;height:18px;border-radius:var(--radius-sm);background:var(--color-bg-control);animation:mt-skel 1.4s ease-in-out infinite;animation-delay:{{ s.d }}"></span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ showEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;place-items:center;min-height:360px">
+                <div class="ui-empty">
+                  <div class="ui-empty__art"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="search" hint-size="28px,28px"></x-import></div>
+                  <h3 class="ui-empty__title">{{ emptyTitle }}</h3>
+                  <p class="ui-empty__text">{{ emptyText }}</p>
+                  <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="secondary" on-click="{{ clearAll }}" hint-size="180px,28px">Clear search and filters</x-import>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ showGrid }}" hint-placeholder-val="{{ true }}">
+              <div ref="{{ gridRef }}" role="listbox" aria-label="Effects" onKeyDown="{{ onGridKey }}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px">
+                <sc-for list="{{ cards }}" as="c" hint-placeholder-count="12">
+                  <div class="ui-preset" role="option" aria-selected="{{ c.selAria }}" aria-label="{{ c.aria }}" tabIndex="{{ c.tab }}" data-idx="{{ $index }}" data-id="{{ c.id }}" onClick="{{ c.select }}" onMouseEnter="{{ c.enter }}" onMouseLeave="{{ c.leave }}" onFocus="{{ c.focus }}" onBlur="{{ c.blur }}" style="cursor:pointer;text-align:left;border-color:{{ c.bc }};box-shadow:{{ c.bs }}">
+                    <div class="ui-preset__thumb">
+                      {{ c.thumb }}
+                      <sc-if value="{{ c.fast }}" hint-placeholder-val="{{ false }}">
+                        <span class="ui-mono" aria-hidden="true" style="position:absolute;top:6px;left:6px;height:18px;padding:0 5px;display:inline-flex;align-items:center;border-radius:var(--radius-xs);background:var(--color-accent-2-subtle);border:1px solid var(--color-cyan-700);font-size:11px;color:var(--color-text-accent-2)">2.5×</span>
+                      </sc-if>
+                      <sc-if value="{{ c.selected }}" hint-placeholder-val="{{ false }}">
+                        <span class="ui-preset__badge"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="check" hint-size="12px,12px"></x-import></span>
+                      </sc-if>
+                      <sc-if value="{{ c.showApply }}" hint-placeholder-val="{{ false }}">
+                        <div style="position:absolute;right:6px;bottom:6px">
+                          <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" size="sm" aria-label="{{ c.applyLabel }}" on-click="{{ c.apply }}" hint-size="56px,24px">Apply</x-import>
+                        </div>
+                      </sc-if>
+                    </div>
+                    <div class="ui-preset__head">
+                      <span class="ui-preset__name">{{ c.name }}</span>
+                      <span class="ui-caption" style="font-size:10px">{{ c.cat }}</span>
+                    </div>
+                    <div class="ui-preset__chips" style="align-items:center">
+                      <sc-for list="{{ c.grans }}" as="g" hint-placeholder-count="2"><span class="ui-chip ui-chip--static">{{ g }}</span></sc-for>
+                      <sc-if value="{{ c.applied }}" hint-placeholder-val="{{ false }}">
+                        <span class="ui-chip ui-chip--static" style="margin-left:auto;border-color:var(--color-success-border);background:var(--color-success-bg);color:var(--color-text-success)">On layer</span>
+                      </sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- Parameter panel -->
+          <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ true }}">
+            <aside aria-label="Effect parameters" style="width:340px;flex:none;display:flex;flex-direction:column;min-height:0;border-left:1px solid var(--color-border-subtle);background:var(--color-bg-raised)">
+              <div style="display:flex;align-items:flex-start;gap:8px;padding:14px 12px 10px 16px;flex:none">
+                <div style="flex:1;min-width:0">
+                  <div class="ui-caption">{{ selCat }}</div>
+                  <div style="font-size:var(--text-title-size);line-height:var(--text-title-line);font-weight:600">{{ selName }}</div>
+                </div>
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.IconButton" icon="close" label="Close parameters" on-click="{{ deselect }}" hint-size="28px,28px"></x-import>
+              </div>
+              <div style="flex:1;min-height:0;overflow:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:16px">
+                <div style="display:grid;gap:6px">
+                  <div style="position:relative;display:grid;place-items:center;aspect-ratio:16/10;border-radius:var(--radius-md);background:var(--color-bg-stage);box-shadow:0 0 0 1px var(--color-border-default);overflow:hidden">{{ preview }}</div>
+                  <div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--color-text-tertiary)"><span>Preview on your layer</span><span class="ui-mono">{{ selMeta }}</span></div>
+                </div>
+                <div class="ui-formrow">
+                  <span class="ui-label">Split by</span>
+                  <sc-if value="{{ multiSplit }}" hint-placeholder-val="{{ true }}">
+                    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.SegmentedControl" label="Split by" options="{{ splitOpts }}" value="{{ split }}" on-change="{{ onSplit }}" block="{{ true }}" hint-size="100%,30px"></x-import>
+                  </sc-if>
+                  <sc-if value="{{ singleSplit }}" hint-placeholder-val="{{ false }}">
+                    <span class="ui-help">{{ singleSplitText }}</span>
+                  </sc-if>
+                </div>
+                <sc-for list="{{ paramList }}" as="p" hint-placeholder-count="3">
+                  <div class="ui-formrow">
+                    <span class="ui-label">{{ p.label }}</span>
+                    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Slider" label="{{ p.label }}" value="{{ p.val }}" min="{{ p.min }}" max="{{ p.max }}" step="{{ p.step }}" format="{{ p.fmt }}" on-change="{{ p.set }}" hint-size="100%,20px"></x-import>
+                  </div>
+                </sc-for>
+                <div class="ui-formrow">
+                  <span class="ui-label">Easing</span>
+                  <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Select" label="Easing" options="{{ easeOpts }}" value="{{ ease }}" on-change="{{ onEase }}" hint-size="100%,28px"></x-import>
+                </div>
+              </div>
+              <div style="display:grid;gap:8px;padding:14px 16px 16px;border-top:1px solid var(--color-border-subtle);flex:none">
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" size="lg" icon="check" on-click="{{ applySel }}" dc-props="{{ fullWidth }}" hint-size="100%,36px">Apply to selected layer</x-import>
+                <span class="ui-help" style="justify-content:center;text-align:center">{{ applyHelp }}</span>
+              </div>
+            </aside>
+          </sc-if>
+        </div>
+
+        <!-- Keyboard hints -->
+        <div style="display:flex;align-items:center;gap:18px;height:36px;padding:0 20px;border-top:1px solid var(--color-border-subtle);font-size:12px;color:var(--color-text-tertiary);flex:none">
+          <span style="display:inline-flex;align-items:center;gap:4px"><span class="ui-kbd">←</span><span class="ui-kbd">↑</span><span class="ui-kbd">↓</span><span class="ui-kbd">→</span>Move</span>
+          <span style="display:inline-flex;align-items:center;gap:4px"><span class="ui-kbd">↵</span>Select</span>
+          <span style="display:inline-flex;align-items:center;gap:4px"><span class="ui-kbd">⇧</span><span class="ui-kbd">↵</span>Apply</span>
+          <span style="display:inline-flex;align-items:center;gap:4px"><span class="ui-kbd">/</span>Search</span>
+          <span style="display:inline-flex;align-items:center;gap:4px"><span class="ui-kbd">Esc</span>Close</span>
+          <span style="flex:1"></span>
+          <span>Hover or focus a card to preview at 2.5× speed</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ closed }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:50%;top:64px;transform:translateX(-50%);z-index:400">
+      <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" icon="effect" on-click="{{ reopen }}" hint-size="180px,28px">Open effects library</x-import>
+    </div>
+  </sc-if>
+
+
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;view&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Results&quot;,&quot;Selected + parameters&quot;,&quot;Empty search&quot;,&quot;Loading&quot;],&quot;default&quot;:&quot;Selected + parameters&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;State&quot;},&quot;toast&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;State&quot;}}">
+const GL = { char: 'Char', word: 'Word', line: 'Line' };
+const EASEV = { linear: 'linear', easeIn: 'var(--motion-easing-easeIn)', easeOut: 'var(--motion-easing-easeOut)', easeInOut: 'var(--motion-easing-easeInOut)' };
+const LAYER = 'Sale starts Friday';
+const FX = [
+  { id: 'typewriter', name: 'Typewriter', cat: 'Entrance', gran: ['char'], sample: 'Hello', kf: 'mt-type', dur: 0.5, stag: 90, ease: 'linear', added: 1, extra: [['caret', 'Caret blink', 0.2, 2, 0.1, 's', 0.8]] },
+  { id: 'fade', name: 'Fade & Slide', cat: 'Entrance', gran: ['word', 'line', 'char'], sample: 'Sale today', kf: 'fx-rise', dur: 0.6, stag: 150, ease: 'easeOut', added: 2, extra: [['dist', 'Distance', 0, 200, 1, 'px', 48]] },
+  { id: 'neon', name: 'Neon Flicker', cat: 'Looping', gran: ['line', 'char'], sample: 'OPEN', kf: 'mt-flicker', dur: 0.8, stag: 0, ease: 'linear', added: 9, extra: [['rate', 'Flicker rate', 1, 12, 1, '/s', 6], ['glow', 'Glow', 0, 100, 1, '%', 70]] },
+  { id: 'glitch', name: 'Glitch Reveal', cat: 'Entrance', gran: ['char', 'word'], sample: 'Glitch', kf: 'mt-glitch', dur: 0.7, stag: 60, ease: 'linear', added: 11, extra: [['amt', 'Intensity', 0, 100, 1, '%', 70], ['rgb', 'RGB split', 0, 8, 1, 'px', 3]] },
+  { id: 'pop', name: 'Kinetic Pop', cat: 'Emphasis', gran: ['char', 'word'], sample: 'Boom', kf: 'fx-pop', dur: 0.5, stag: 70, ease: 'easeOut', added: 5, extra: [['over', 'Overshoot', 0, 60, 1, '%', 25]] },
+  { id: 'wave', name: 'Wave', cat: 'Looping', gran: ['char'], sample: 'வணக்கம்', kf: 'fx-wave', dur: 0.8, stag: 80, ease: 'easeInOut', added: 4, extra: [['amp', 'Amplitude', 0, 100, 1, '%', 30]] },
+  { id: 'spot', name: 'Spotlight', cat: 'Emphasis', gran: ['line'], sample: 'Spotlight', kf: 'mt-spot', dur: 1.0, stag: 0, ease: 'easeInOut', added: 10, extra: [['beam', 'Beam width', 6, 60, 1, '%', 24]] },
+  { id: 'blur', name: 'Blur In', cat: 'Entrance', gran: ['char', 'word', 'line'], sample: 'Dream', kf: 'fx-blur', dur: 0.6, stag: 60, ease: 'easeOut', added: 3, extra: [['blur', 'Blur', 0, 32, 1, 'px', 8]] },
+  { id: 'bounce', name: 'Scale Bounce', cat: 'Emphasis', gran: ['word', 'line'], sample: 'Big news', kf: 'mt-bounce', dur: 0.6, stag: 120, ease: 'linear', added: 7, extra: [['over', 'Overshoot', 0, 50, 1, '%', 18], ['n', 'Bounces', 1, 4, 1, '', 2]] },
+  { id: 'drop', name: 'Rotate Drop', cat: 'Entrance', gran: ['char', 'word'], sample: 'Drop', kf: 'mt-rotdrop', dur: 0.6, stag: 80, ease: 'easeOut', added: 8, extra: [['ang', 'Angle', -90, 90, 1, '°', -50]] },
+  { id: 'spread', name: 'Letter Spread', cat: 'Exit', gran: ['line'], sample: 'Goodbye', kf: 'mt-spread', dur: 0.8, stag: 0, ease: 'easeIn', added: 6, extra: [['spread', 'Spread', 0, 1.5, 0.05, 'em', 0.55]] },
+  { id: 'wipe', name: 'Line Wipe', cat: 'Entrance', gran: ['line'], sample: 'New menu\nthis week', kf: 'mt-wipe', dur: 0.6, stag: 200, ease: 'easeInOut', added: 12, extra: [['soft', 'Edge softness', 0, 24, 1, 'px', 0]] },
+];
+const BYID = Object.fromEntries(FX.map(f => [f.id, f]));
+const GRAN_CHIPS = [['char', 'Character'], ['word', 'Word'], ['line', 'Line']];
+const CATS = ['Entrance', 'Emphasis', 'Exit', 'Looping'];
+const SORTS = [{ value: 'popular', label: 'Most used' }, { value: 'az', label: 'Name A–Z' }, { value: 'new', label: 'Newest' }, { value: 'short', label: 'Shortest first' }];
+const SKEL = Array.from({ length: 12 }, (_, i) => ({ d: (i % 4) * 0.12 + 's', w: [62, 48, 70, 54][i % 4] + '%' }));
+const segr = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+const graphemes = s => segr ? Array.from(segr.segment(s), x => x.segment) : Array.from(s);
+const splitText = (t, by) => by === 'line' ? t.split('\n') : by === 'word' ? t.split(/(\s+)/).filter(Boolean) : graphemes(t);
+const dec = s => (String(s).split('.')[1] || '').length;
+const VIEWS = {
+  'Results': { sel: null, query: '', grans: [], cats: [], loading: false, open: true },
+  'Selected + parameters': { sel: 'glitch', query: '', grans: [], cats: [], loading: false, open: true },
+  'Empty search': { sel: null, query: 'zoom', grans: ['word'], cats: ['Exit'], loading: false, open: true },
+  'Loading': { sel: null, query: '', grans: [], cats: [], loading: true, open: true },
+};
+
+function renderFx(fx, p, size, text) {
+  const h = React.createElement;
+  if (fx.id === 'typewriter') {
+    const n = graphemes(text).length;
+    const cyc = Math.max(1.2, (n * p.stag / 1000) / 0.35);
+    return h('span', { 'data-fx': fx.id, style: { fontFamily: 'var(--font-mono)', fontWeight: 500, fontSize: size * 0.9, color: '#fff', whiteSpace: 'nowrap', display: 'inline-block' } },
+      h('span', { style: { '--n': n, display: 'inline-block', overflow: 'hidden', verticalAlign: 'bottom', width: n + 'ch', borderRight: '2px solid #FFFFFF', paddingRight: 1, animation: `mt-type ${cyc.toFixed(2)}s steps(${n},end) infinite both, mt-caret ${p.caret}s steps(1,end) infinite` } }, text));
+  }
+  const by = p.split;
+  const parts = splitText(by === 'line' ? text : text.replace(/\n/g, ' '), by);
+  const cyc = Math.max(1, p.dur / 0.3);
+  const stg = (p.stag || 0) / 1000;
+  const tf = EASEV[p.ease] || 'linear';
+  const kids = parts.map((t, i) => {
+    const st = { display: by === 'line' && parts.length > 1 ? 'block' : 'inline-block', whiteSpace: 'pre', animation: `${fx.kf} ${cyc.toFixed(2)}s ${tf} ${(i * stg).toFixed(3)}s infinite both` };
+    if (fx.id === 'spot') { const b = p.beam; Object.assign(st, { backgroundImage: `linear-gradient(90deg,#3C4451 0%,#3C4451 ${50 - b / 2}%,#FFFFFF 50%,#3C4451 ${50 + b / 2}%,#3C4451 100%)`, backgroundSize: '300% 100%', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }); }
+    if (fx.id === 'drop') st.transformOrigin = '50% 100%';
+    if (fx.id === 'neon' && by === 'char') st.animationDelay = ((i * 0.37) % 1.3).toFixed(2) + 's';
+    return h('span', { key: i, style: st }, t);
+  });
+  const base = { position: 'relative', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: size, lineHeight: 1.15, letterSpacing: '-0.02em', color: '#FFFFFF', textAlign: 'center', whiteSpace: 'nowrap' };
+  if (fx.id === 'neon') { const g = p.glow / 100; Object.assign(base, { color: '#FFD6F4', letterSpacing: '0.08em', textShadow: `0 0 4px rgba(242,61,200,${g}), 0 0 12px rgba(242,61,200,${g}), 0 0 26px rgba(242,61,200,${g * 0.7})` }); }
+  if (fx.id === 'wipe') Object.assign(base, { fontSize: size * 0.8, textAlign: 'left' });
+  if (fx.id === 'wave') base.fontFamily = 'var(--font-tamil)';
+  return h('span', { 'data-fx': fx.id, style: base }, kids);
+}
+
+class Component extends DCLogic {
+  gridRef = React.createRef();
+  searchRef = React.createRef();
+  state = Object.assign({ sort: 'popular', hover: null, focusId: null, params: {}, applied: 'fade', toast: null }, VIEWS[this.props.view] || VIEWS['Selected + parameters'], this.props.toast ? { toast: { id: 'glitch', prev: 'fade' } } : {});
+
+  componentDidMount() {
+    this._key = e => {
+      if (e.key === 'Escape') { if (this.state.sel) this.setState({ sel: null }); else if (this.state.open) this.setState({ open: false }); }
+      if (e.key === '/' && this.state.open && !(e.target.closest && e.target.closest('input,textarea,select'))) { e.preventDefault(); this.searchRef.current && this.searchRef.current.focus(); }
+    };
+    window.addEventListener('keydown', this._key);
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this._key); clearTimeout(this._tt); }
+  componentDidUpdate(pp) {
+    if (pp.view !== this.props.view) this.setState(VIEWS[this.props.view] || VIEWS['Selected + parameters']);
+    if (pp.toast !== this.props.toast) { clearTimeout(this._tt); this.setState({ toast: this.props.toast ? { id: this.state.sel || 'glitch', prev: 'fade' } : null }); }
+  }
+  P(fx) {
+    const d = { split: fx.gran[0], dur: fx.dur, stag: fx.stag, ease: fx.ease };
+    fx.extra.forEach(x => { d[x[0]] = x[6]; });
+    return Object.assign(d, this.state.params[fx.id]);
+  }
+  setParam(id, k, v) { this.setState(s => ({ params: { ...s.params, [id]: { ...s.params[id], [k]: v } } })); }
+  speed(el, r) { try { el.getAnimations({ subtree: true }).forEach(a => a.updatePlaybackRate ? a.updatePlaybackRate(r) : (a.playbackRate = r)); } catch (e) {} }
+  apply(id) {
+    clearTimeout(this._tt);
+    this.setState(s => ({ toast: { id, prev: s.applied }, applied: id }));
+    this._tt = setTimeout(() => this.setState({ toast: null }), 6000);
+  }
+  toggleIn(key, v) { this.setState(s => ({ [key]: s[key].includes(v) ? s[key].filter(x => x !== v) : [...s[key], v] })); }
+  onGridKey = e => {
+    const grid = this.gridRef.current; if (!grid) return;
+    const cards = [...grid.querySelectorAll('[data-idx]')]; if (!cards.length) return;
+    const cur = e.target.closest('[data-idx]'); if (!cur) return;
+    const i = cards.indexOf(cur);
+    const top0 = cards[0].offsetTop;
+    const cols = cards.filter(c => c.offsetTop === top0).length || 1;
+    const m = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: cols, ArrowUp: -cols }[e.key];
+    let j = null;
+    if (m != null) j = Math.max(0, Math.min(cards.length - 1, i + m));
+    if (e.key === 'Home') j = 0;
+    if (e.key === 'End') j = cards.length - 1;
+    if (j != null) { e.preventDefault(); cards[j].focus(); return; }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target === cur) {
+      e.preventDefault();
+      const id = cur.getAttribute('data-id');
+      if (e.shiftKey) this.apply(id); else this.setState({ sel: id });
+    }
+  };
+  renderVals() {
+    const s = this.state;
+    const q = s.query.trim().toLowerCase();
+    let list = FX.filter(f =>
+      (!q || f.name.toLowerCase().includes(q) || f.cat.toLowerCase().includes(q)) &&
+      (!s.grans.length || f.gran.some(g => s.grans.includes(g))) &&
+      (!s.cats.length || s.cats.includes(f.cat)));
+    if (s.sort === 'az') list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+    if (s.sort === 'new') list = [...list].sort((a, b) => b.added - a.added);
+    if (s.sort === 'short') list = [...list].sort((a, b) => this.P(a).dur - this.P(b).dur);
+    const tabId = s.focusId && list.some(f => f.id === s.focusId) ? s.focusId : s.sel && list.some(f => f.id === s.sel) ? s.sel : list[0] && list[0].id;
+
+    const cards = list.map(f => {
+      const sel = s.sel === f.id, hot = s.hover === f.id || s.focusId === f.id;
+      return {
+        id: f.id, name: f.name, cat: f.cat, grans: f.gran.map(g => GL[g]),
+        thumb: renderFx(f, this.P(f), 22, f.sample),
+        selected: sel, selAria: String(sel),
+        bc: sel ? 'var(--color-accent)' : '', bs: sel ? 'var(--glow-accent)' : '',
+        tab: f.id === tabId ? 0 : -1,
+        fast: hot, showApply: hot,
+        applied: s.applied === f.id,
+        aria: `${f.name}, ${f.cat}, splits by ${f.gran.map(g => GL[g]).join(', ')}${s.applied === f.id ? ', on selected layer' : ''}`,
+        applyLabel: `Apply ${f.name} to Sale starts Friday`,
+        select: () => this.setState({ sel: f.id }),
+        enter: e => { this.speed(e.currentTarget, 2.5); this.setState({ hover: f.id }); },
+        leave: e => { this.speed(e.currentTarget, 1); this.setState({ hover: null }); },
+        focus: e => { this.speed(e.currentTarget, 2.5); if (s.focusId !== f.id) this.setState({ focusId: f.id }); },
+        blur: e => { if (!e.currentTarget.contains(e.relatedTarget)) { this.speed(e.currentTarget, 1); this.setState({ focusId: null }); } },
+        apply: e => { e && e.stopPropagation && e.stopPropagation(); this.apply(f.id); },
+      };
+    });
+
+    const fx = s.sel && BYID[s.sel];
+    const p = fx ? this.P(fx) : null;
+    const paramList = fx ? [
+      ['dur', fx.id === 'typewriter' ? 'Hold' : 'Duration', 0.2, 2, 0.05, 's', 0],
+      ...(fx.stag > 0 ? [['stag', fx.id === 'typewriter' ? 'Per character' : fx.id === 'wipe' ? 'Line delay' : 'Stagger', 0, 300, 5, 'ms', 0]] : []),
+      ...fx.extra,
+    ].map(([k, label, min, max, step, unit]) => ({
+      label, min, max, step, val: p[k],
+      fmt: v => `${Number(v).toFixed(dec(step))}${unit ? (unit === '°' ? '°' : ' ' + unit) : ''}`,
+      set: v => this.setParam(fx.id, k, v),
+    })) : [];
+    const appliedFx = BYID[s.applied];
+    const tfx = s.toast && BYID[s.toast.id];
+    const tp = tfx && this.P(tfx);
+    const anyFilter = !!(q || s.grans.length || s.cats.length);
+    const filterBits = [...s.grans.map(g => GL[g]), ...s.cats];
+
+    return {
+      open: s.open, closed: !s.open,
+      close: () => this.setState({ open: false }),
+      reopen: () => this.setState({ open: true }),
+      scrimDown: e => { if (e.target === e.currentTarget) this.setState({ open: false }); },
+      searchRef: this.searchRef, gridRef: this.gridRef,
+      query: s.query, hasQuery: !!s.query, noQuery: !s.query,
+      onQuery: e => this.setState({ query: e.target.value }),
+      clearQuery: () => this.setState({ query: '' }),
+      granChips: GRAN_CHIPS.map(([v, label]) => ({ label, on: s.grans.includes(v), toggle: () => this.toggleIn('grans', v) })),
+      catChips: CATS.map(c => ({ label: c, on: s.cats.includes(c), toggle: () => this.toggleIn('cats', c) })),
+      sortOptions: SORTS, sort: s.sort, onSort: v => this.setState({ sort: v }),
+      countText: s.loading ? 'Loading effects…' : `${list.length} of ${FX.length}`,
+      anyFilter: anyFilter && !s.loading,
+      clearAll: () => this.setState({ query: '', grans: [], cats: [] }),
+      loading: s.loading, skeletons: SKEL,
+      showEmpty: !s.loading && list.length === 0,
+      showGrid: !s.loading && list.length > 0,
+      emptyTitle: q ? `No effects match “${s.query.trim()}”` : 'No effects match these filters',
+      emptyText: `${filterBits.length ? 'Filters on: ' + filterBits.join(', ') + '. ' : ''}Check the spelling, or try a broader word like “fade” or “bounce”.`,
+      cards, onGridKey: this.onGridKey,
+      hasSel: !!fx && !s.loading,
+      deselect: () => this.setState({ sel: null }),
+      selName: fx ? fx.name : '', selCat: fx ? fx.cat : '',
+      preview: fx ? renderFx(fx, p, 22, fx.id === 'wipe' ? 'Sale starts\nFriday' : LAYER) : null,
+      selMeta: fx ? `${GL[p.split]} · ${Number(p.dur).toFixed(2)} s · loop` : '',
+      multiSplit: !!fx && fx.gran.length > 1, singleSplit: !!fx && fx.gran.length === 1,
+      singleSplitText: fx ? `This effect always splits by ${GL[fx.gran[0]]}.` : '',
+      splitOpts: fx ? fx.gran.map(g => ({ value: g, label: GL[g] })) : [],
+      split: p ? p.split : 'char', onSplit: v => this.setParam(fx.id, 'split', v),
+      paramList,
+      easeOpts: ['linear', 'easeIn', 'easeOut', 'easeInOut'], ease: p ? p.ease : 'linear',
+      onEase: v => this.setParam(fx.id, 'ease', v),
+      applySel: () => fx && this.apply(fx.id),
+      fullWidth: { style: { width: '100%' } },
+      applyHelp: fx ? (s.applied === fx.id ? `Already on “${LAYER}”. Applying updates its parameters.` : `Replaces ${appliedFx ? appliedFx.name : 'the current effect'} on “${LAYER}”.`) : '',
+      hasToast: !!tfx,
+      toastTitle: tfx ? `Applied ${tfx.name}` : '',
+      toastText: tfx ? `“${LAYER}” · Split by ${GL[tp.split]} · ${Number(tp.dur).toFixed(2)} s` : '',
+      toastAction: { label: 'Undo', onClick: () => { clearTimeout(this._tt); this.setState(st => ({ applied: st.toast ? st.toast.prev : st.applied, toast: null })); } },
+      closeToast: () => { clearTimeout(this._tt); this.setState({ toast: null }); },
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Error and edge states</title>
+<link rel="stylesheet" href="_ds/motion-text-studio-design-system-f5b901ae-a7fb-489e-9b53-af9bc496124b/styles.css">
+<script src="_ds/motion-text-studio-design-system-f5b901ae-a7fb-489e-9b53-af9bc496124b/_ds_bundle.js"></script>
+<style>
+html,body{margin:0;background:#08090C;color-scheme:dark}
+body{color:var(--color-text-primary);font:13px/18px var(--font-ui);-webkit-font-smoothing:antialiased}
+a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
+</style>
+</helmet>
+
+<div class="ui" style="min-height:100vh;background:var(--color-bg-canvas);padding:32px 28px 64px">
+  <div style="max-width:1360px;margin:0 auto;display:grid;gap:28px">
+    <header style="display:grid;gap:4px">
+      <span class="ui-caption">Studio · edge cases</span>
+      <h1 style="margin:0;font-size:var(--text-display-size);line-height:var(--text-display-line);font-weight:600;letter-spacing:-0.02em">Error and edge states</h1>
+      <p style="margin:0;max-width:640px;color:var(--color-text-secondary);text-wrap:pretty">Each frame says what happened, what it means for your work, and gives one clear next action.</p>
+    </header>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,600px),1fr));gap:36px 28px">
+
+      <!-- 01 Browser not supported -->
+      <figure data-screen-label="01 Browser not supported" style="margin:0;display:grid;gap:10px">
+        <figcaption style="display:flex;align-items:center;gap:10px">
+          <span class="ui-mono" style="font-size:12px;color:var(--color-text-accent)">01</span>
+          <span style="font-weight:600">Browser not supported</span>
+          <span class="ui-chip ui-chip--static" style="margin-left:auto">Full screen</span>
+        </figcaption>
+        <div style="position:relative;height:480px;display:flex;flex-direction:column;background:var(--color-bg-app);border:1px solid var(--color-border-default);border-radius:var(--radius-lg);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;background:var(--color-bg-panel);border-bottom:1px solid var(--color-border-subtle);flex:none"><img src="assets/neontype-logo.png" alt="NeonType" style="height:18px;width:auto;display:block;flex:none"></div>
+          <div style="flex:1;display:grid;place-items:center;padding:24px">
+            <div style="display:grid;gap:16px;max-width:440px;width:100%">
+              <div style="display:grid;justify-items:center;gap:10px;text-align:center">
+                <div class="ui-empty__art" style="border-style:solid;border-color:var(--color-warning-border);color:var(--color-warning);background:var(--color-warning-bg)"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="warning" hint-size="28px,28px"></x-import></div>
+                <h3 class="ui-empty__title">Video export needs a newer browser</h3>
+                <p class="ui-empty__text">This browser can’t encode video on your device, so MP4, WebM and GIF export are turned off. Editing, preview, PNG frames and web embeds still work.</p>
+              </div>
+              <div style="display:grid;gap:0;border:1px solid var(--color-border-default);border-radius:var(--radius-md);background:var(--color-bg-raised);overflow:hidden">
+                <div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--color-border-subtle)"><span class="ui-caption">Works with video export</span><span class="ui-mono" style="font-size:11px;color:var(--color-text-tertiary)">Desktop</span></div>
+                <div style="display:flex;justify-content:space-between;padding:7px 12px"><span>Chrome</span><span class="ui-mono" style="font-size:12px;color:var(--color-text-secondary)">94 or later</span></div>
+                <div style="display:flex;justify-content:space-between;padding:7px 12px"><span>Edge</span><span class="ui-mono" style="font-size:12px;color:var(--color-text-secondary)">94 or later</span></div>
+                <div style="display:flex;justify-content:space-between;padding:7px 12px"><span>Firefox</span><span class="ui-mono" style="font-size:12px;color:var(--color-text-secondary)">130 or later</span></div>
+                <div style="display:flex;justify-content:space-between;padding:7px 12px;border-top:1px solid var(--color-border-subtle);background:var(--color-bg-panel)"><span style="color:var(--color-text-secondary)">You’re using</span><span class="ui-mono" style="font-size:12px;color:var(--color-text-warning)">Safari 15.6 · no video encoder</span></div>
+              </div>
+              <div style="display:flex;justify-content:center;gap:8px">
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" icon="copy" hint-size="150px,28px">Copy link to project</x-import>
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" hint-size="210px,28px">Continue with limited features</x-import>
+              </div>
+            </div>
+          </div>
+        </div>
+      </figure>
+
+      <!-- 02 Fonts failed -->
+      <figure data-screen-label="02 Fonts failed to load" style="margin:0;display:grid;gap:10px">
+        <figcaption style="display:flex;align-items:center;gap:10px">
+          <span class="ui-mono" style="font-size:12px;color:var(--color-text-accent)">02</span>
+          <span style="font-weight:600">Fonts failed to load</span>
+          <span class="ui-chip ui-chip--static" style="margin-left:auto">Inline banner</span>
+        </figcaption>
+        <div style="position:relative;height:480px;display:flex;flex-direction:column;background:var(--color-bg-app);border:1px solid var(--color-border-default);border-radius:var(--radius-lg);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;background:var(--color-bg-panel);border-bottom:1px solid var(--color-border-subtle);flex:none">
+            <img src="assets/neontype-logo.png" alt="NeonType" style="height:18px;width:auto;display:block;flex:none"><span style="font-size:12px;font-weight:600">Grand opening — teaser</span><span style="flex:1"></span>
+            <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" size="sm" icon="export" disabled="{{ true }}" title="Export waits for fonts" hint-size="72px,24px">Export</x-import>
+          </div>
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column;background:var(--color-bg-canvas)">
+            <div class="ui-banner" role="status" style="margin:10px 10px 0">
+              <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="warning" hint-size="20px,20px"></x-import>
+              <div class="ui-banner__body">
+                <div class="ui-banner__title">2 fonts didn’t load</div>
+                <div class="ui-banner__text">Instrument Sans Bold and Noto Sans Tamil couldn’t be read from this device. The stage shows a fallback font, so line breaks and spacing may shift. Export waits until the real fonts load.</div>
+              </div>
+              <div class="ui-banner__actions">
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="secondary" size="sm" icon="redo" hint-size="96px,24px">Retry fonts</x-import>
+              </div>
+            </div>
+            <div style="flex:1;min-height:0;position:relative;container-type:size">
+              <div style="position:absolute;inset:16px;display:grid;place-items:center;container-type:size">
+                <div style="position:relative;width:min(100cqw,100cqh);aspect-ratio:1/1;background:#000;box-shadow:0 0 0 1px var(--color-border-default);display:grid;place-items:center;align-content:center;gap:6px">
+                  <span style="font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:26px;letter-spacing:-0.01em;outline:1px dashed var(--color-amber-700);outline-offset:4px">Grand Opening</span>
+                  <span style="font-family:Georgia,serif;font-size:14px;color:#FFD27A">Sale starts Friday</span>
+                  <span style="font-family:serif;font-size:15px;outline:1px dashed var(--color-amber-700);outline-offset:4px">வணக்கம்</span>
+                  <span class="ui-chip ui-chip--static" style="position:absolute;left:8px;bottom:8px;height:20px;border-color:var(--color-warning-border);background:var(--color-warning-bg);color:var(--color-text-warning)">Fallback font</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </figure>
+
+      <!-- 03 Project failed to open -->
+      <figure data-screen-label="03 Project failed to open" style="margin:0;display:grid;gap:10px">
+        <figcaption style="display:flex;align-items:center;gap:10px">
+          <span class="ui-mono" style="font-size:12px;color:var(--color-text-accent)">03</span>
+          <span style="font-weight:600">Project failed to open</span>
+          <span class="ui-chip ui-chip--static" style="margin-left:auto">Dialog</span>
+        </figcaption>
+        <div style="position:relative;height:480px;display:flex;flex-direction:column;background:var(--color-bg-app);border:1px solid var(--color-border-default);border-radius:var(--radius-lg);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;background:var(--color-bg-panel);border-bottom:1px solid var(--color-border-subtle);flex:none"><img src="assets/neontype-logo.png" alt="NeonType" style="height:18px;width:auto;display:block;flex:none"></div>
+          <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:20px;align-content:start">
+            <div style="aspect-ratio:16/10;border-radius:var(--radius-md);background:var(--color-bg-raised)"></div>
+            <div style="aspect-ratio:16/10;border-radius:var(--radius-md);background:var(--color-bg-raised)"></div>
+            <div style="aspect-ratio:16/10;border-radius:var(--radius-md);background:var(--color-bg-raised)"></div>
+          </div>
+          <div class="ui-scrim" style="padding:16px">
+            <div class="ui-modal" role="dialog" aria-modal="true" aria-labelledby="e3-title" style="width:min(480px,100%)">
+              <div class="ui-modal__head" style="padding:12px 12px 12px 18px">
+                <h2 class="ui-modal__title" id="e3-title" style="font-size:var(--text-title-size);line-height:var(--text-title-line)">This file can’t be opened</h2>
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.IconButton" icon="close" label="Close" hint-size="28px,28px"></x-import>
+              </div>
+              <div class="ui-modal__body" style="padding:14px 18px;gap:12px">
+                <div class="ui-file" style="padding:8px 10px">
+                  <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="error" style="color:var(--color-error)" hint-size="20px,20px"></x-import>
+                  <span style="display:grid;gap:1px;min-width:0"><span class="ui-file__name">spring-sale.mtproj</span><span class="ui-file__meta">18 KB · 7 problems found</span></span>
+                </div>
+                <p style="margin:0;color:var(--color-text-secondary);text-wrap:pretty">It’s a project file, but some parts are missing or out of range. Your file wasn’t changed. Here are the first three problems:</p>
+                <ol style="display:grid;gap:8px;margin:0;padding:0;list-style:none">
+                  <li style="display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px"><span class="ui-mono" style="font-size:12px;color:var(--color-text-tertiary)">1</span><span style="display:grid;gap:1px"><span>Layer 2 has no text. Every text layer needs at least one character.</span><span class="ui-mono" style="font-size:11px;color:var(--color-text-tertiary)">layers[1].text is empty</span></span></li>
+                  <li style="display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px"><span class="ui-mono" style="font-size:12px;color:var(--color-text-tertiary)">2</span><span style="display:grid;gap:1px"><span>The timeline is 0 seconds long. It needs to be longer than that.</span><span class="ui-mono" style="font-size:11px;color:var(--color-text-tertiary)">duration: 0</span></span></li>
+                  <li style="display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px"><span class="ui-mono" style="font-size:12px;color:var(--color-text-tertiary)">3</span><span style="display:grid;gap:1px"><span>A keyframe on “Grand Opening” sits at 7.50 s, past the end of the timeline.</span><span class="ui-mono" style="font-size:11px;color:var(--color-text-tertiary)">layers[0].keyframes[3].t: 7.5</span></span></li>
+                </ol>
+                <span class="ui-help">4 more problems are listed in the file report.</span>
+              </div>
+              <div class="ui-modal__foot" style="padding:10px 18px">
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" hint-size="140px,28px">Choose another file</x-import>
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" icon="plus" hint-size="140px,28px">Start new project</x-import>
+              </div>
+            </div>
+          </div>
+        </div>
+      </figure>
+
+      <!-- 04 Newer version -->
+      <figure data-screen-label="04 Project from newer version" style="margin:0;display:grid;gap:10px">
+        <figcaption style="display:flex;align-items:center;gap:10px">
+          <span class="ui-mono" style="font-size:12px;color:var(--color-text-accent)">04</span>
+          <span style="font-weight:600">Project from a newer version</span>
+          <span class="ui-chip ui-chip--static" style="margin-left:auto">Full screen</span>
+        </figcaption>
+        <div style="position:relative;height:480px;display:flex;flex-direction:column;background:var(--color-bg-app);border:1px solid var(--color-border-default);border-radius:var(--radius-lg);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;background:var(--color-bg-panel);border-bottom:1px solid var(--color-border-subtle);flex:none"><img src="assets/neontype-logo.png" alt="NeonType" style="height:18px;width:auto;display:block;flex:none"></div>
+          <div style="flex:1;display:grid;place-items:center;padding:24px">
+            <div style="display:grid;gap:16px;max-width:420px;width:100%">
+              <div style="display:grid;justify-items:center;gap:10px;text-align:center">
+                <div class="ui-empty__art" style="border-style:solid;border-color:var(--color-info-border);color:var(--color-info);background:var(--color-info-bg)"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="info" hint-size="28px,28px"></x-import></div>
+                <h3 class="ui-empty__title">This project needs a newer version</h3>
+                <p class="ui-empty__text">“Grand opening — teaser” was saved by a newer version of the app, with effect settings this version can’t read. To keep your work intact, it won’t open here. Your file is untouched.</p>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr auto;gap:6px 16px;padding:12px 14px;border:1px solid var(--color-border-default);border-radius:var(--radius-md);background:var(--color-bg-raised)">
+                <span style="color:var(--color-text-secondary)">Project saved with</span><span class="ui-mono" style="color:var(--color-text-info)">3.2.0</span>
+                <span style="color:var(--color-text-secondary)">This app</span><span class="ui-mono">2.8.1</span>
+              </div>
+              <div style="display:flex;justify-content:center;gap:8px">
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" icon="chevron-left" hint-size="130px,28px">Back to projects</x-import>
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" icon="redo" hint-size="180px,28px">Reload to update</x-import>
+              </div>
+              <span class="ui-help" style="justify-content:center">Updating needs a connection once. After that, it works offline again.</span>
+            </div>
+          </div>
+        </div>
+      </figure>
+
+      <!-- 05 Engine warnings -->
+      <figure data-screen-label="05 Engine warnings panel" style="margin:0;display:grid;gap:10px">
+        <figcaption style="display:flex;align-items:center;gap:10px">
+          <span class="ui-mono" style="font-size:12px;color:var(--color-text-accent)">05</span>
+          <span style="font-weight:600">Engine warnings</span>
+          <span class="ui-chip ui-chip--static" style="margin-left:auto">Side panel</span>
+        </figcaption>
+        <div style="position:relative;height:480px;display:flex;flex-direction:column;background:var(--color-bg-app);border:1px solid var(--color-border-default);border-radius:var(--radius-lg);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;background:var(--color-bg-panel);border-bottom:1px solid var(--color-border-subtle);flex:none">
+            <img src="assets/neontype-logo.png" alt="NeonType" style="height:18px;width:auto;display:block;flex:none"><span style="font-size:12px;font-weight:600">Grand opening — teaser</span><span style="flex:1"></span>
+            <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" size="sm" icon="export" hint-size="72px,24px">Export</x-import>
+          </div>
+          <div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 310px">
+            <div style="position:relative;background:var(--color-bg-canvas);container-type:size">
+              <div style="position:absolute;inset:16px;display:grid;place-items:center;container-type:size">
+                <div style="width:min(100cqw,100cqh);aspect-ratio:1/1;background:#000;box-shadow:0 0 0 1px var(--color-border-default);display:grid;place-items:center;align-content:center;gap:4px">
+                  <span style="font-weight:700;font-size:20px;letter-spacing:-0.02em">Grand Opening</span>
+                  <span style="font-weight:500;font-size:11px;color:#FFD27A">Sale starts Friday</span>
+                  <span style="font-family:var(--font-tamil);font-weight:600;font-size:12px">வணக்கம்</span>
+                </div>
+              </div>
+            </div>
+            <aside aria-label="Engine warnings" style="display:flex;flex-direction:column;min-height:0;background:var(--color-bg-panel);border-left:1px solid var(--color-border-subtle)">
+              <div style="display:flex;align-items:center;gap:8px;padding:10px 8px 10px 14px;border-bottom:1px solid var(--color-border-subtle)">
+                <span style="font-weight:600">Engine warnings</span>
+                <span class="ui-mono" style="font-size:11px;color:var(--color-text-tertiary)">{{ warnCount }}</span>
+                <span style="flex:1"></span>
+                <sc-if value="{{ anyRemoved }}" hint-placeholder-val="{{ false }}">
+                  <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" size="sm" on-click="{{ resetWarnings }}" hint-size="56px,24px">Reset</x-import>
+                </sc-if>
+              </div>
+              <div style="flex:1;min-height:0;overflow:auto;padding:10px;display:grid;gap:8px;align-content:start">
+                <span class="ui-help" style="padding:0 2px 2px">These don’t block export. Each layer still renders.</span>
+                <sc-for list="{{ warnings }}" as="w" hint-placeholder-count="3">
+                  <div style="display:grid;gap:6px;padding:10px;border:1px solid var(--color-border-default);border-radius:var(--radius-md);background:var(--color-bg-raised)">
+                    <div style="display:flex;align-items:flex-start;gap:8px">
+                      <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="{{ w.icon }}" label="{{ w.kind }}" style="{{ w.iconStyle }}" hint-size="16px,16px"></x-import>
+                      <div style="display:grid;gap:2px;min-width:0">
+                        <span style="font-weight:600">{{ w.title }}</span>
+                        <span style="font-size:12px;line-height:16px;color:var(--color-text-secondary);text-wrap:pretty">{{ w.text }}</span>
+                        <span class="ui-mono" style="font-size:11px;color:var(--color-text-tertiary)">{{ w.code }}</span>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:6px;padding-left:24px">
+                      <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="secondary" size="sm" icon="trash" aria-label="{{ w.removeLabel }}" on-click="{{ w.remove }}" hint-size="110px,24px">Remove effect</x-import>
+                      <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" size="sm" hint-size="80px,24px">Show layer</x-import>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ noWarnings }}" hint-placeholder-val="{{ false }}">
+                  <div class="ui-empty" style="justify-self:center;padding:32px 8px">
+                    <span class="ui-result__icon"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="check" hint-size="24px,24px"></x-import></span>
+                    <span class="ui-empty__title" style="font-size:13px">No warnings</span>
+                    <span class="ui-empty__text" style="font-size:12px">Every effect in this project plays as designed.</span>
+                  </div>
+                </sc-if>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </figure>
+
+      <!-- 06 Unsaved changes -->
+      <figure data-screen-label="06 Unsaved changes dialog" style="margin:0;display:grid;gap:10px">
+        <figcaption style="display:flex;align-items:center;gap:10px">
+          <span class="ui-mono" style="font-size:12px;color:var(--color-text-accent)">06</span>
+          <span style="font-weight:600">Unsaved changes</span>
+          <span class="ui-chip ui-chip--static" style="margin-left:auto">Dialog</span>
+        </figcaption>
+        <div style="position:relative;height:480px;display:flex;flex-direction:column;background:var(--color-bg-app);border:1px solid var(--color-border-default);border-radius:var(--radius-lg);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;background:var(--color-bg-panel);border-bottom:1px solid var(--color-border-subtle);flex:none">
+            <img src="assets/neontype-logo.png" alt="NeonType" style="height:18px;width:auto;display:block;flex:none"><span style="font-size:12px;font-weight:600">Grand opening — teaser</span>
+            <span class="ui-status" style="color:var(--color-text-warning)">Unsaved changes</span>
+          </div>
+          <div style="flex:1;display:grid;grid-template-columns:110px minmax(0,1fr) 130px">
+            <div style="background:var(--color-bg-panel);border-right:1px solid var(--color-border-subtle)"></div>
+            <div style="background:var(--color-bg-canvas);display:grid;place-items:center"><div style="width:62%;aspect-ratio:1/1;background:#000;display:grid;place-items:center;font-weight:700;font-size:20px">Grand Opening</div></div>
+            <div style="background:var(--color-bg-panel);border-left:1px solid var(--color-border-subtle)"></div>
+          </div>
+          <div class="ui-scrim" style="padding:16px">
+            <div class="ui-modal ui-modal--sm" role="alertdialog" aria-modal="true" aria-labelledby="e6-title" aria-describedby="e6-desc">
+              <div class="ui-modal__head" style="padding:12px 12px 12px 18px">
+                <h2 class="ui-modal__title" id="e6-title" style="font-size:var(--text-title-size);line-height:var(--text-title-line)">Save before you close?</h2>
+              </div>
+              <div class="ui-modal__body" style="padding:14px 18px;gap:10px">
+                <p id="e6-desc" style="margin:0;color:var(--color-text-secondary);text-wrap:pretty">“Grand opening — teaser” has changes that aren’t in your project file yet. If you close without saving, they’re gone.</p>
+                <div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 12px;border-radius:var(--radius-md);background:var(--color-bg-raised);border:1px solid var(--color-border-subtle)">
+                  <span style="font-size:12px;color:var(--color-text-secondary)">Last saved to file</span><span class="ui-mono" style="font-size:12px">14:02</span>
+                  <span style="font-size:12px;color:var(--color-text-secondary)">Changes since</span><span class="ui-mono" style="font-size:12px">6 edits · 4 min</span>
+                </div>
+              </div>
+              <div class="ui-modal__foot" style="padding:10px 18px">
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" style="margin-right:auto" hint-size="120px,28px">Discard changes</x-import>
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="secondary" hint-size="64px,28px">Cancel</x-import>
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" hint-size="96px,28px">Save to file</x-import>
+              </div>
+            </div>
+          </div>
+        </div>
+      </figure>
+
+      <!-- 07 Offline -->
+      <figure data-screen-label="07 Offline" style="margin:0;display:grid;gap:10px">
+        <figcaption style="display:flex;align-items:center;gap:10px">
+          <span class="ui-mono" style="font-size:12px;color:var(--color-text-accent)">07</span>
+          <span style="font-weight:600">Offline</span>
+          <span class="ui-chip ui-chip--static" style="margin-left:auto">Toast + status</span>
+        </figcaption>
+        <div style="position:relative;height:480px;display:flex;flex-direction:column;background:var(--color-bg-app);border:1px solid var(--color-border-default);border-radius:var(--radius-lg);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;background:var(--color-bg-panel);border-bottom:1px solid var(--color-border-subtle);flex:none">
+            <img src="assets/neontype-logo.png" alt="NeonType" style="height:18px;width:auto;display:block;flex:none"><span style="font-size:12px;font-weight:600">Grand opening — teaser</span>
+            <span class="ui-status"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="check" hint-size="14px,14px"></x-import>Saved on this device</span>
+            <span style="flex:1"></span>
+            <span class="ui-chip ui-chip--static" title="No network connection" style="height:22px;gap:6px"><span style="width:6px;height:6px;border-radius:999px;background:var(--color-neutral-400)"></span>Offline</span>
+            <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" size="sm" icon="export" hint-size="72px,24px">Export</x-import>
+          </div>
+          <div style="flex:1;display:grid;grid-template-columns:110px minmax(0,1fr) 130px">
+            <div style="background:var(--color-bg-panel);border-right:1px solid var(--color-border-subtle);padding:10px;display:grid;gap:6px;align-content:start"><span style="height:8px;width:70%;border-radius:2px;background:var(--color-bg-control)"></span><span style="height:8px;width:55%;border-radius:2px;background:var(--color-bg-control)"></span><span style="height:8px;width:62%;border-radius:2px;background:var(--color-bg-control)"></span></div>
+            <div style="background:var(--color-bg-canvas);display:grid;place-items:center"><div style="width:62%;aspect-ratio:1/1;background:#000;display:grid;place-items:center;align-content:center;gap:4px"><span style="font-weight:700;font-size:20px;letter-spacing:-0.02em">Grand Opening</span><span style="font-size:11px;font-weight:500;color:#FFD27A">Sale starts Friday</span></div></div>
+            <div style="background:var(--color-bg-panel);border-left:1px solid var(--color-border-subtle)"></div>
+          </div>
+          <sc-if value="{{ showOffline }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;right:12px;bottom:12px;width:min(360px,calc(100% - 24px))">
+              <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Toast" variant="info" title="You’re offline, and that’s fine" action="{{ offlineAction }}" on-close="{{ hideOffline }}" hint-size="100%,96px">Editing, preview and export all run on this device. Nothing is uploaded, and your fonts and effects are already stored here.</x-import>
+            </div>
+          </sc-if>
+        </div>
+      </figure>
+
+      <!-- 08 First run -->
+      <figure data-screen-label="08 First-run empty state" style="margin:0;display:grid;gap:10px">
+        <figcaption style="display:flex;align-items:center;gap:10px">
+          <span class="ui-mono" style="font-size:12px;color:var(--color-text-accent)">08</span>
+          <span style="font-weight:600">First run</span>
+          <span class="ui-chip ui-chip--static" style="margin-left:auto">Empty state</span>
+        </figcaption>
+        <div style="position:relative;height:480px;display:flex;flex-direction:column;background:var(--color-bg-app);border:1px solid var(--color-border-default);border-radius:var(--radius-lg);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;background:var(--color-bg-panel);border-bottom:1px solid var(--color-border-subtle);flex:none">
+            <img src="assets/neontype-logo.png" alt="NeonType" style="height:18px;width:auto;display:block;flex:none"><span style="font-size:12px;font-weight:600;color:var(--color-text-secondary)">Untitled project</span><span style="flex:1"></span>
+            <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" size="sm" icon="export" disabled="{{ true }}" hint-size="72px,24px">Export</x-import>
+          </div>
+          <div style="flex:1;display:grid;place-items:center;padding:24px;background:var(--color-bg-canvas)">
+            <div style="display:grid;justify-items:center;gap:16px;max-width:400px;text-align:center">
+              <div class="ui-empty__art"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="text" hint-size="28px,28px"></x-import></div>
+              <div style="display:grid;gap:6px">
+                <h3 class="ui-empty__title">Start with a line of text</h3>
+                <p class="ui-empty__text">Type a headline, then drop an effect on it from the library. Or open the sample to see a finished reel and take it apart.</p>
+              </div>
+              <div style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;align-items:center;width:100%;padding:8px;border:1px solid var(--color-border-default);border-radius:var(--radius-lg);background:var(--color-bg-raised);text-align:left">
+                <div style="aspect-ratio:16/10;border-radius:var(--radius-sm);background:#000;display:grid;place-items:center;align-content:center;gap:1px">
+                  <span style="font-weight:700;font-size:12px;letter-spacing:-0.02em">Grand Opening</span>
+                  <span style="font-size:7px;font-weight:500;color:#FFD27A">Sale starts Friday</span>
+                </div>
+                <div style="display:grid;gap:2px">
+                  <span style="font-weight:600">Sample: shop opening</span>
+                  <span class="ui-mono" style="font-size:11px;color:var(--color-text-tertiary)">3 layers · 6.0 s · 1080 × 1080</span>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" icon="plus" hint-size="96px,28px">Start blank</x-import>
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" icon="play" hint-size="160px,28px">Open sample project</x-import>
+              </div>
+            </div>
+          </div>
+        </div>
+      </figure>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const WARN = [
+  { id: 'unknown', kind: 'Warning', icon: 'warning', iconStyle: { color: 'var(--color-warning)', flex: 'none', marginTop: 1 }, title: 'Unknown effect: skipped', text: 'Layer “வணக்கம்” uses an effect this engine can’t play. It renders without animation.', code: 'fx.shimmer-v2 · Layer 3', fx: 'fx.shimmer-v2' },
+  { id: 'stagger', kind: 'Invalid parameter', icon: 'error', iconStyle: { color: 'var(--color-error)', flex: 'none', marginTop: 1 }, title: 'Stagger can’t be negative', text: 'Fade-slide on “Sale starts Friday” has a stagger of −0.20 s. We’re playing it with 0 s until you change it.', code: 'stagger: -0.2 → 0 · Layer 2', fx: 'Fade-slide' },
+  { id: 'easing', kind: 'Invalid parameter', icon: 'error', iconStyle: { color: 'var(--color-error)', flex: 'none', marginTop: 1 }, title: 'Easing name not recognised', text: 'Typewriter on “Grand Opening” asks for “bounceOut”. We’re using linear. Pick linear, easeIn, easeOut or easeInOut.', code: 'easing: "bounceOut" → linear · Layer 1', fx: 'Typewriter' },
+];
+
+class Component extends DCLogic {
+  state = { removed: [], offline: true };
+  renderVals() {
+    const list = WARN.filter(w => !this.state.removed.includes(w.id));
+    return {
+      warnings: list.map(w => ({ ...w, removeLabel: `Remove ${w.fx}`, remove: () => this.setState(s => ({ removed: [...s.removed, w.id] })) })),
+      warnCount: String(list.length),
+      noWarnings: list.length === 0,
+      anyRemoved: this.state.removed.length > 0,
+      resetWarnings: () => this.setState({ removed: [] }),
+      showOffline: this.state.offline,
+      hideOffline: () => this.setState({ offline: false }),
+      offlineAction: { label: 'Got it', onClick: () => this.setState({ offline: false }) },
+    };
+  }
+}
+</script>
+</body>
+</html>

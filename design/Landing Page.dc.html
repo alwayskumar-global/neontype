@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NeonType — animated titles in your browser</title>
+<link rel="stylesheet" href="_ds/motion-text-studio-design-system-f5b901ae-a7fb-489e-9b53-af9bc496124b/styles.css">
+<script src="_ds/motion-text-studio-design-system-f5b901ae-a7fb-489e-9b53-af9bc496124b/_ds_bundle.js"></script>
+<style>
+html{background:#0C0E12;color-scheme:dark;scroll-behavior:smooth}
+body{margin:0;color:var(--color-text-primary);font:14px/20px var(--font-ui);-webkit-font-smoothing:antialiased}
+a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
+@keyframes hero-in{0%{opacity:0;transform:translateY(45%);filter:blur(8px)}7%{opacity:1;transform:none;filter:blur(0)}84%{opacity:1;transform:none}92%,100%{opacity:0;transform:translateY(-20%)}}
+@keyframes hero-slide{0%{opacity:0;transform:translateY(60%)}8%{opacity:1;transform:none}80%{opacity:1}88%,100%{opacity:0}}
+@keyframes hero-fade{0%{opacity:0}6%,78%{opacity:1}86%,100%{opacity:0}}
+@keyframes hero-play{from{left:0}to{left:100%}}
+@keyframes mt-caret{50%{border-color:transparent}}
+@keyframes mt-flicker{0%,100%{opacity:1}6%{opacity:.15}8%{opacity:1}11%{opacity:.35}13%,58%{opacity:1}60%{opacity:.2}62%,100%{opacity:1}}
+@keyframes mt-glitch{0%{opacity:0;transform:translateX(-40%) skewX(35deg);text-shadow:3px 0 #2DD3F0,-3px 0 #F23DC8}8%{opacity:1;transform:translateX(18%) skewX(-20deg)}14%{transform:translateX(-8%);text-shadow:2px 0 #2DD3F0,-2px 0 #F23DC8}20%,82%{transform:none;opacity:1;text-shadow:none}86%{transform:translateX(6%);text-shadow:2px 0 #2DD3F0,-2px 0 #F23DC8}100%{opacity:0;transform:translateX(-20%)}}
+@keyframes mt-spot{0%{background-position:100% 0}70%,100%{background-position:0 0}}
+@keyframes mt-wipe{0%{clip-path:inset(0 100% 0 0)}30%,80%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 100%)}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}[data-fx],[data-fx] *{animation:none!important}}
+</style>
+</helmet>
+
+<div class="ui" style="min-height:100vh;background:var(--color-bg-app);overflow-x:hidden">
+
+  <!-- Nav -->
+  <nav aria-label="Main" style="position:sticky;top:0;z-index:50;background:rgba(12,14,18,.86);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--color-border-subtle)">
+    <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:20px;height:56px;padding:0 clamp(16px,4vw,32px)">
+      <img src="assets/neontype-logo.png" alt="NeonType" style="height:26px;width:auto;display:block;flex:none">
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        <a href="#how" class="ui-btn ui-btn--ghost ui-btn--sm" style="text-decoration:none;color:var(--color-text-secondary)" style-hover="color:var(--color-text-primary)">How it works</a>
+        <a href="#exports" class="ui-btn ui-btn--ghost ui-btn--sm" style="text-decoration:none;color:var(--color-text-secondary)" style-hover="color:var(--color-text-primary)">Exports</a>
+        <a href="#gallery" class="ui-btn ui-btn--ghost ui-btn--sm" style="text-decoration:none;color:var(--color-text-secondary)" style-hover="color:var(--color-text-primary)">Examples</a>
+        <a href="#privacy" class="ui-btn ui-btn--ghost ui-btn--sm" style="text-decoration:none;color:var(--color-text-secondary)" style-hover="color:var(--color-text-primary)">Privacy</a>
+      </div>
+      <span style="flex:1"></span>
+      <a href="Studio Editor.dc.html" class="ui-btn ui-btn--primary" style="text-decoration:none;color:var(--color-text-on-accent)">Open the studio</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header data-screen-label="Hero" style="position:relative;max-width:1200px;margin:0 auto;padding:clamp(48px,8vw,96px) clamp(16px,4vw,32px) clamp(56px,8vw,104px);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:clamp(32px,5vw,64px);align-items:center">
+    <div style="display:grid;gap:22px;align-content:center">
+      <span class="ui-chip ui-chip--static" style="justify-self:start;height:24px;gap:6px"><span style="width:6px;height:6px;border-radius:999px;background:var(--color-accent);box-shadow:0 0 8px var(--color-accent)"></span>Motion text studio · runs in your browser</span>
+      <h1 style="margin:0;font-size:clamp(40px,5.6vw,68px);line-height:1.02;font-weight:650;letter-spacing:-0.035em;text-wrap:balance">Animated titles, made in your browser.</h1>
+      <p style="margin:0;max-width:520px;font-size:clamp(16px,1.5vw,18px);line-height:1.5;color:var(--color-text-secondary);text-wrap:pretty">Type a line, give it motion, and export a reel, a transparent overlay or a live web embed. It all runs on your device, so nothing is uploaded.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <a href="Studio Editor.dc.html" class="ui-btn ui-btn--primary ui-btn--lg" style="text-decoration:none;color:var(--color-text-on-accent);box-shadow:0 0 0 1px #F23DC8,0 0 28px -4px rgba(242,61,200,.65)">Open the studio</a>
+        <a href="#gallery" class="ui-btn ui-btn--ghost ui-btn--lg" style="text-decoration:none;color:var(--color-text-secondary)" style-hover="color:var(--color-text-primary)">See examples</a>
+      </div>
+      <span class="ui-help" style="font-size:12px">No account. No upload. Works offline after your first visit.</span>
+    </div>
+
+    <div style="position:relative;display:grid;gap:10px;justify-self:center;width:min(100%,520px)">
+      <div aria-hidden="true" style="position:absolute;inset:-12% -10%;background:radial-gradient(closest-side,rgba(242,61,200,.22),rgba(242,61,200,0) 70%);pointer-events:none"></div>
+      <div role="img" aria-label="Animated preview: Grand Opening, Sale starts Friday, வணக்கம்" style="position:relative;aspect-ratio:1/1;background:#000;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-border-default),0 30px 80px -30px rgba(242,61,200,.45);display:grid;place-items:center;align-content:center;gap:clamp(8px,1.6vw,14px);overflow:hidden;container-type:inline-size">
+        {{ heroStage }}
+        <span aria-hidden="true" style="position:absolute;inset:5%;border:1px dashed rgba(92,227,250,.22);border-radius:2px;pointer-events:none"></span>
+        <span class="ui-mono" aria-hidden="true" style="position:absolute;left:12px;top:10px;font-size:11px;color:var(--color-text-tertiary)">1080 × 1080</span>
+      </div>
+      <div aria-hidden="true" style="position:relative;display:grid;gap:4px;padding:8px 10px;border-radius:var(--radius-md);background:var(--color-bg-panel);box-shadow:0 0 0 1px var(--color-border-subtle)">
+        <div style="position:relative;height:8px"><span style="position:absolute;left:0;width:100%;top:0;bottom:0;border-radius:2px;background:var(--color-neutral-700)"></span></div>
+        <div style="position:relative;height:8px"><span style="position:absolute;left:15%;right:0;top:0;bottom:0;border-radius:2px;background:var(--color-magenta-800);box-shadow:inset 0 0 0 1px var(--color-magenta-400)"></span></div>
+        <div style="position:relative;height:8px"><span style="position:absolute;left:26%;right:8%;top:0;bottom:0;border-radius:2px;background:var(--color-neutral-700)"></span></div>
+        {{ heroPlayhead }}
+      </div>
+    </div>
+  </header>
+
+  <!-- How it works -->
+  <section id="how" data-screen-label="How it works" style="border-top:1px solid var(--color-border-subtle);background:var(--color-bg-panel)">
+    <div style="max-width:1200px;margin:0 auto;padding:clamp(56px,7vw,88px) clamp(16px,4vw,32px);display:grid;gap:36px">
+      <div style="display:grid;gap:8px;max-width:640px">
+        <span class="ui-caption">How it works</span>
+        <h2 style="margin:0;font-size:clamp(28px,3.2vw,38px);line-height:1.1;font-weight:600;letter-spacing:-0.02em">Type, animate, export</h2>
+      </div>
+      <ol style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px;margin:0;padding:0;list-style:none">
+        <li style="display:grid;gap:14px;align-content:start;padding:20px;border:1px solid var(--color-border-subtle);border-radius:var(--radius-lg);background:var(--color-bg-raised)">
+          <div style="display:flex;align-items:center;gap:8px"><span class="ui-mono" style="font-size:12px;color:var(--color-text-accent)">01</span><span style="font-size:var(--text-title-size);font-weight:600">Type</span></div>
+          <div aria-hidden="true" class="ui-field" style="height:40px;background:var(--color-bg-app)">
+            <span data-fx="caret" style="font-size:15px;font-weight:600;padding-right:2px;border-right:2px solid var(--color-accent-2);animation:mt-caret 1s steps(1,end) infinite">Grand Opening</span>
+          </div>
+          <p style="margin:0;color:var(--color-text-secondary);text-wrap:pretty">Write your headline. Tamil, Devanagari and other scripts split correctly, letter by letter.</p>
+        </li>
+        <li style="display:grid;gap:14px;align-content:start;padding:20px;border:1px solid var(--color-border-subtle);border-radius:var(--radius-lg);background:var(--color-bg-raised)">
+          <div style="display:flex;align-items:center;gap:8px"><span class="ui-mono" style="font-size:12px;color:var(--color-text-accent)">02</span><span style="font-size:var(--text-title-size);font-weight:600">Animate</span></div>
+          <div aria-hidden="true" style="display:flex;align-items:center;gap:8px;height:40px">
+            <span class="ui-chip ui-chip--static">Char</span>
+            <span class="ui-chip" aria-pressed="true" style="pointer-events:none">Word</span>
+            <span class="ui-chip ui-chip--static">Line</span>
+            <span style="flex:1;position:relative;height:2px;background:var(--color-magenta-800);margin:0 6px">
+              <span style="position:absolute;left:0;top:-4px;width:9px;height:9px;transform:rotate(45deg);background:var(--color-accent)"></span>
+              <span style="position:absolute;right:0;top:-4px;width:9px;height:9px;transform:rotate(45deg);background:var(--color-accent)"></span>
+            </span>
+          </div>
+          <p style="margin:0;color:var(--color-text-secondary);text-wrap:pretty">Drop one of 12 effects on it, split by character, word or line, and adjust timing on the keyframe timeline.</p>
+        </li>
+        <li style="display:grid;gap:14px;align-content:start;padding:20px;border:1px solid var(--color-border-subtle);border-radius:var(--radius-lg);background:var(--color-bg-raised)">
+          <div style="display:flex;align-items:center;gap:8px"><span class="ui-mono" style="font-size:12px;color:var(--color-text-accent)">03</span><span style="font-size:var(--text-title-size);font-weight:600">Export</span></div>
+          <div aria-hidden="true" class="ui-file" style="height:40px;padding:0 10px;gap:8px;background:var(--color-bg-app)">
+            <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="success" style="color:var(--color-success);flex:none" hint-size="16px,16px"></x-import>
+            <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">grand-opening-reel.mp4</span>
+            <span class="ui-file__meta" style="margin-left:auto">4.2 MB</span>
+          </div>
+          <p style="margin:0;color:var(--color-text-secondary);text-wrap:pretty">Get an MP4 for social, PNG or WebM with transparency for video editors, or a live embed for your site.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Exports -->
+  <section id="exports" data-screen-label="Export destinations" style="border-top:1px solid var(--color-border-subtle)">
+    <div style="max-width:1200px;margin:0 auto;padding:clamp(56px,7vw,88px) clamp(16px,4vw,32px);display:grid;gap:32px">
+      <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 32px">
+        <div style="display:grid;gap:8px;max-width:620px">
+          <span class="ui-caption">Exports</span>
+          <h2 style="margin:0;font-size:clamp(28px,3.2vw,38px);line-height:1.1;font-weight:600;letter-spacing:-0.02em">Export for where it’s going</h2>
+        </div>
+        <p style="margin:0;max-width:420px;color:var(--color-text-secondary);text-wrap:pretty">Pick a destination. Size, frame rate and format are set for you, and you can still change them.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,176px),1fr));gap:12px">
+        <sc-for list="{{ dests }}" as="d" hint-placeholder-count="6">
+          <div class="ui-dest" style="cursor:default;grid-template-rows:80px auto">
+            <span class="ui-dest__art"><span class="{{ d.frameClass }}" style="aspect-ratio:{{ d.ar }};height:{{ d.fh }}px;color:var(--color-text-secondary)"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="{{ d.icon }}" hint-size="20px,20px"></x-import></span></span>
+            <span style="display:grid;gap:2px">
+              <span style="display:flex;align-items:center;gap:6px"><span class="ui-dest__name">{{ d.name }}</span><span class="ui-mono" style="font-size:11px;color:var(--color-text-secondary)">{{ d.ratio }}</span></span>
+              <span class="ui-dest__meta">{{ d.meta }}</span>
+              <span style="font-size:12px;line-height:16px;color:var(--color-text-secondary);margin-top:2px;text-wrap:pretty">{{ d.use }}</span>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gallery -->
+  <section id="gallery" data-screen-label="Gallery" style="border-top:1px solid var(--color-border-subtle);background:var(--color-bg-canvas)">
+    <div style="max-width:1200px;margin:0 auto;padding:clamp(56px,7vw,88px) clamp(16px,4vw,32px);display:grid;gap:32px">
+      <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 32px">
+        <div style="display:grid;gap:8px;max-width:620px">
+          <span class="ui-caption">Examples</span>
+          <h2 style="margin:0;font-size:clamp(28px,3.2vw,38px);line-height:1.1;font-weight:600;letter-spacing:-0.02em">Made with the built-in effects</h2>
+        </div>
+        <p style="margin:0;max-width:420px;color:var(--color-text-secondary);text-wrap:pretty">Every title here is live text, animated by the same engine the studio uses.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:16px">
+        <sc-for list="{{ gallery }}" as="g" hint-placeholder-count="6">
+          <figure style="margin:0;display:grid;gap:10px">
+            <div role="img" aria-label="{{ g.aria }}" style="position:relative;aspect-ratio:16/10;border-radius:var(--radius-lg);background:#000;box-shadow:0 0 0 1px var(--color-border-subtle);display:grid;place-items:center;overflow:hidden">{{ g.thumb }}</div>
+            <figcaption style="display:flex;align-items:center;gap:8px;padding:0 2px">
+              <span style="font-weight:600">{{ g.name }}</span>
+              <span class="ui-chip ui-chip--static" style="height:20px">{{ g.split }}</span>
+              <span class="ui-mono" style="margin-left:auto;font-size:11px;color:var(--color-text-tertiary)">{{ g.meta }}</span>
+            </figcaption>
+          </figure>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- Privacy + accessibility -->
+  <section id="privacy" data-screen-label="Privacy and accessibility" style="border-top:1px solid var(--color-border-subtle)">
+    <div style="max-width:1200px;margin:0 auto;padding:clamp(56px,7vw,88px) clamp(16px,4vw,32px);display:grid;gap:32px">
+      <div style="display:grid;gap:8px;max-width:680px">
+        <span class="ui-caption">Privacy and accessibility</span>
+        <h2 style="margin:0;font-size:clamp(28px,3.2vw,38px);line-height:1.1;font-weight:600;letter-spacing:-0.02em;text-wrap:balance">Runs entirely in your browser. Nothing is uploaded.</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:16px">
+        <div style="display:grid;gap:16px;align-content:start;padding:24px;border:1px solid var(--color-border-subtle);border-radius:var(--radius-lg);background:var(--color-bg-panel)">
+          <div style="display:flex;align-items:center;gap:10px"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="lock" style="color:var(--color-text-accent-2)" hint-size="20px,20px"></x-import><span style="font-size:var(--text-title-size);font-weight:600">Your work stays on your device</span></div>
+          <ul style="display:grid;gap:10px;margin:0;padding:0;list-style:none">
+            <sc-for list="{{ privacy }}" as="p" hint-placeholder-count="4">
+              <li style="display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="check" style="color:var(--color-success);margin-top:1px" hint-size="16px,16px"></x-import><span style="display:grid;gap:1px"><span style="font-weight:600">{{ p.t }}</span><span style="color:var(--color-text-secondary);font-size:13px">{{ p.d }}</span></span></li>
+            </sc-for>
+          </ul>
+        </div>
+        <div style="display:grid;gap:16px;align-content:start;padding:24px;border:1px solid var(--color-border-subtle);border-radius:var(--radius-lg);background:var(--color-bg-panel)">
+          <div style="display:flex;align-items:center;gap:10px"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="eye" style="color:var(--color-text-accent-2)" hint-size="20px,20px"></x-import><span style="font-size:var(--text-title-size);font-weight:600">Built for everyone who uses it, and everyone who watches</span></div>
+          <ul style="display:grid;gap:10px;margin:0;padding:0;list-style:none">
+            <sc-for list="{{ access }}" as="p" hint-placeholder-count="4">
+              <li style="display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="check" style="color:var(--color-success);margin-top:1px" hint-size="16px,16px"></x-import><span style="display:grid;gap:1px"><span style="font-weight:600">{{ p.t }}</span><span style="color:var(--color-text-secondary);font-size:13px">{{ p.d }}</span></span></li>
+            </sc-for>
+          </ul>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px;border-radius:var(--radius-lg);background:var(--color-bg-raised);box-shadow:0 0 0 1px var(--color-border-subtle)">
+        <span style="font-size:var(--text-title-size);font-weight:600">Try it with the sample project. It takes about a minute.</span>
+        <a href="Studio Editor.dc.html" class="ui-btn ui-btn--primary ui-btn--lg" style="text-decoration:none;color:var(--color-text-on-accent)">Open the studio</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer style="border-top:1px solid var(--color-border-subtle);background:var(--color-bg-panel)">
+    <div style="max-width:1200px;margin:0 auto;padding:24px clamp(16px,4vw,32px);display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px">
+      <img src="assets/neontype-logo.png" alt="NeonType" style="height:26px;width:auto;display:block;flex:none">
+      <span style="font-size:12px;color:var(--color-text-tertiary)">A browser-based motion text studio.</span>
+      <span style="flex:1"></span>
+      <a href="#" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;text-decoration:none"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="code" size="{{ 16 }}" hint-size="16px,16px"></x-import>Source code (link to come)</a>
+      <a href="Studio Editor.dc.html" style="font-size:13px;color:var(--color-text-secondary);text-decoration:none">Open the studio</a>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const segr = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+const graphemes = s => segr ? Array.from(segr.segment(s), x => x.segment) : Array.from(s);
+const h = React.createElement;
+const CYCLE = 6;
+
+function heroStage() {
+  const l1 = graphemes('Grand Opening').map((c, i) => h('span', { key: i, style: { display: 'inline-block', whiteSpace: 'pre', animation: `hero-in ${CYCLE}s var(--motion-easing-easeOut) ${(i * 0.05).toFixed(2)}s infinite both` } }, c));
+  const l2 = ['Sale ', 'starts ', 'Friday'].map((w, i) => h('span', { key: i, style: { display: 'inline-block', whiteSpace: 'pre', animation: `hero-slide ${CYCLE}s var(--motion-easing-easeOut) ${(0.9 + i * 0.15).toFixed(2)}s infinite both` } }, w));
+  const l3 = graphemes('வணக்கம்').map((c, i) => h('span', { key: i, style: { display: 'inline-block', animation: `fx-wave 1.8s var(--motion-easing-easeInOut) ${(i * 0.09).toFixed(2)}s infinite both` } }, c));
+  return h(React.Fragment, null,
+    h('span', { 'data-fx': 'hero1', 'aria-hidden': true, style: { fontWeight: 700, fontSize: '12cqw', lineHeight: 1, letterSpacing: '-0.03em', color: '#fff', whiteSpace: 'nowrap', textShadow: '0 0 18px rgba(242,61,200,.6), 0 0 48px rgba(242,61,200,.35)' } }, l1),
+    h('span', { 'data-fx': 'hero2', 'aria-hidden': true, style: { fontWeight: 500, fontSize: '6cqw', lineHeight: 1.1, color: '#FFD27A', whiteSpace: 'nowrap' } }, l2),
+    h('span', { 'data-fx': 'hero3', 'aria-hidden': true, style: { fontFamily: 'var(--font-tamil)', fontWeight: 600, fontSize: '6.6cqw', lineHeight: 1.5, color: '#F4F6F9', animation: `hero-fade ${CYCLE}s linear 1.6s infinite both` } }, l3));
+}
+const heroPlayhead = h('span', { 'data-fx': 'ph', style: { position: 'absolute', top: 4, bottom: 4, left: 10, right: 10, pointerEvents: 'none' } },
+  h('span', { style: { position: 'absolute', top: 0, bottom: 0, width: 2, marginLeft: -1, background: 'var(--color-accent-2)', boxShadow: '0 0 8px var(--color-accent-2-glow)', animation: `hero-play ${CYCLE}s linear infinite` } }));
+
+function tile(kind, text) {
+  const base = { position: 'relative', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 40, lineHeight: 1.1, letterSpacing: '-0.02em', color: '#fff', whiteSpace: 'nowrap', textAlign: 'center' };
+  const part = (t, i, anim, extra) => h('span', { key: i, style: Object.assign({ display: 'inline-block', whiteSpace: 'pre', animation: anim }, extra || {}) }, t);
+  if (kind === 'neon') return h('span', { 'data-fx': kind, style: Object.assign(base, { color: '#FFD6F4', letterSpacing: '0.1em', textShadow: '0 0 4px #F23DC8, 0 0 14px #F23DC8, 0 0 34px rgba(242,61,200,.7)' }) },
+    graphemes(text).map((c, i) => part(c, i, `mt-flicker 2.6s linear ${((i * 0.37) % 1.3).toFixed(2)}s infinite both`)));
+  if (kind === 'glitch') return h('span', { 'data-fx': kind, style: base }, graphemes(text).map((c, i) => part(c, i, `mt-glitch 2.4s linear ${(i * 0.06).toFixed(2)}s infinite both`)));
+  if (kind === 'pop') return h('span', { 'data-fx': kind, style: Object.assign(base, { fontSize: 48, color: '#FFD27A' }) }, graphemes(text).map((c, i) => part(c, i, `fx-pop 2.2s var(--motion-easing-easeOut) ${(i * 0.07).toFixed(2)}s infinite both`)));
+  if (kind === 'wave') return h('span', { 'data-fx': kind, style: Object.assign(base, { fontFamily: 'var(--font-tamil)', fontSize: 38, lineHeight: 1.6 }) }, graphemes(text).map((c, i) => part(c, i, `fx-wave 1.8s var(--motion-easing-easeInOut) ${(i * 0.09).toFixed(2)}s infinite both`)));
+  if (kind === 'spot') return h('span', { 'data-fx': kind, style: base }, part(text, 0, 'mt-spot 3s var(--motion-easing-easeInOut) infinite both', { backgroundImage: 'linear-gradient(90deg,#3C4451 0%,#3C4451 38%,#FFFFFF 50%,#3C4451 62%,#3C4451 100%)', backgroundSize: '300% 100%', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }));
+  if (kind === 'wipe') return h('span', { 'data-fx': kind, style: Object.assign(base, { fontSize: 32, textAlign: 'left' }) }, text.split('\n').map((l, i) => part(l, i, `mt-wipe 2.4s var(--motion-easing-easeInOut) ${(i * 0.2).toFixed(2)}s infinite both`, { display: 'block' })));
+  return null;
+}
+const GALLERY = [
+  { kind: 'neon', text: 'OPEN LATE', name: 'Neon Flicker', split: 'Char', meta: 'Looping' },
+  { kind: 'glitch', text: 'Fresh drop', name: 'Glitch Reveal', split: 'Char', meta: '0.70 s' },
+  { kind: 'pop', text: '50% off', name: 'Kinetic Pop', split: 'Char', meta: '0.50 s' },
+  { kind: 'wave', text: 'வணக்கம்', name: 'Wave', split: 'Char', meta: 'Tamil · looping' },
+  { kind: 'spot', text: 'Now hiring', name: 'Spotlight', split: 'Line', meta: '1.00 s' },
+  { kind: 'wipe', text: 'New menu\nthis week', name: 'Line Wipe', split: 'Line', meta: '0.60 s' },
+].map(g => ({ ...g, thumb: tile(g.kind, g.text), aria: `${g.name} example: ${g.text.replace('\n', ' ')}` }));
+const DESTS = [
+  { name: 'Reel', ratio: '9:16', ar: '9/16', fh: 72, icon: 'play', meta: '1080 × 1920 · MP4', use: 'Short vertical video.' },
+  { name: 'Story', ratio: '9:16', ar: '9/16', fh: 72, icon: 'clock', meta: '1080 × 1920 · MP4', use: 'Full-screen frames.' },
+  { name: 'Square', ratio: '1:1', ar: '1/1', fh: 60, icon: 'grid', meta: '1080 × 1080 · MP4', use: 'Feed posts and ads.' },
+  { name: 'YouTube', ratio: '16:9', ar: '16/9', fh: 48, icon: 'image', meta: '1920 × 1080 · MP4', use: 'Intros and title cards.' },
+  { name: 'Overlay', ratio: 'Alpha', ar: '1/1', fh: 60, icon: 'layers', meta: 'PNG · WebM alpha', use: 'Titles over footage.', checker: true },
+  { name: 'Web embed', ratio: 'Live', ar: '16/9', fh: 48, icon: 'code', meta: 'HTML + JS · 38 KB', use: 'Sharp text on your site.' },
+].map(d => ({ ...d, frameClass: 'ui-dest__frame' + (d.checker ? ' ui-checker' : '') }));
+const PRIVACY = [
+  { t: 'Rendering and encoding happen here', d: 'Frames are drawn and encoded by your browser. No server sees your text.' },
+  { t: 'Projects save to this device', d: 'Download a project file whenever you want a copy elsewhere.' },
+  { t: 'Works offline', d: 'After the first visit, fonts, effects and the editor are stored locally.' },
+  { t: 'No account, no tracking', d: 'Open the page and start. There’s nothing to sign up for.' },
+];
+const ACCESS = [
+  { t: 'Keyboard first', d: 'Every control has a visible focus ring, a name, and a shortcut where it helps.' },
+  { t: 'Embeds keep real text', d: 'Screen readers and search engines read the words, not an image of them.' },
+  { t: 'Reduced motion respected', d: 'In the studio and in embeds, motion settles to the final frame.' },
+  { t: 'Every script splits correctly', d: 'Character effects split by grapheme, so Tamil and emoji never break apart.' },
+];
+
+class Component extends DCLogic {
+  renderVals() {
+    return { heroStage: heroStage(), heroPlayhead, gallery: GALLERY, dests: DESTS, privacy: PRIVACY, access: ACCESS };
+  }
+}
+</script>
+</body>
+</html>

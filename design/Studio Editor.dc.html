@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Studio editor</title>
+<link rel="stylesheet" href="ds/tokens/fonts.css">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#0C0E12}
+body{color:#E4E8EE;font:13px/18px "Instrument Sans","Noto Sans Tamil",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible{outline:2px solid #2DD3F0;outline-offset:2px;box-shadow:0 0 0 4px rgba(45,211,240,.18)}
+a{color:#FF85E0}a:hover{color:#FFADEA}
+</style>
+</helmet>
+
+<div style="display:grid;grid-template-columns:264px minmax(0,1fr) 304px;grid-template-rows:48px minmax(0,1fr) 248px;height:100vh;min-width:1280px;min-height:760px;background:#0C0E12;overflow:hidden">
+
+<!-- TOP BAR -->
+<header data-screen-label="Top bar" style="grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 12px;background:#111419;border-bottom:1px solid #1C2129">
+  <div style="flex:1;display:flex;align-items:center;gap:12px;min-width:0">
+    <img src="assets/neontype-logo.png" alt="NeonType" style="height:22px;width:auto;display:block;flex:none">
+    <span style="width:1px;height:20px;background:#2D343F"></span>
+    <input aria-label="Project name" value="{{ projectName }}" onChange="{{ onName }}" style="width:220px;height:28px;padding:0 8px;background:transparent;border:1px solid transparent;border-radius:4px;font-size:13px;font-weight:600;color:#E4E8EE" style-hover="border-color:#5E6776;background:#161A20" style-focus="border-color:#2DD3F0;background:#1C2129;outline:none">
+    <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#929CAC;white-space:nowrap"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8"></path></svg>Saved</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:4px">
+    <button aria-label="Undo" title="Undo ⌘Z" style="display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#1C2129;color:#E4E8EE"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5 3.5 8 7 11.5"></path><path d="M3.5 8h8.75a4.25 4.25 0 0 1 0 8.5H8"></path></svg></button>
+    <button aria-label="Redo" title="Redo ⇧⌘Z" style="display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#1C2129;color:#E4E8EE"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 4.5 16.5 8 13 11.5"></path><path d="M16.5 8H7.75a4.25 4.25 0 0 0 0 8.5H12"></path></svg></button>
+    <span style="width:1px;height:20px;background:#2D343F;margin:0 6px"></span>
+    <sc-if value="{{ playing }}" hint-placeholder-val="{{ false }}">
+      <button aria-label="Pause" title="Pause (Space)" onClick="{{ togglePlay }}" style="display:grid;place-items:center;width:32px;height:28px;border:1px solid #2DD3F0;border-radius:6px;background:#062D36;color:#5CE3FA;cursor:pointer;padding:0;box-shadow:0 0 14px -2px rgba(45,211,240,.40)"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="4.5" width="3" height="11" rx="1"></rect><rect x="11.5" y="4.5" width="3" height="11" rx="1"></rect></svg></button>
+    </sc-if>
+    <sc-if value="{{ paused }}" hint-placeholder-val="{{ true }}">
+      <button aria-label="Play" title="Play (Space)" onClick="{{ togglePlay }}" style="display:grid;place-items:center;width:32px;height:28px;border:1px solid #5E6776;border-radius:6px;background:#1C2129;color:#E4E8EE;cursor:pointer;padding:0" style-hover="background:#242A33;border-color:#7A8494"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 4.6v10.8a.6.6 0 0 0 .9.5l8.6-5.4a.6.6 0 0 0 0-1L7.4 4.1a.6.6 0 0 0-.9.5z"></path></svg></button>
+    </sc-if>
+    <sc-if value="{{ loop }}" hint-placeholder-val="{{ true }}">
+      <button aria-label="Loop" aria-pressed="true" title="Loop: on" onClick="{{ toggleLoop }}" style="display:grid;place-items:center;width:28px;height:28px;border:1px solid #FF5CD6;border-radius:6px;background:#2B1229;color:#FF85E0;cursor:pointer;padding:0"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 9.5V8A3 3 0 0 1 6.5 5h9"></path><path d="M13 2.5 15.5 5 13 7.5"></path><path d="M16.5 10.5V12a3 3 0 0 1-3 3h-9"></path><path d="M7 17.5 4.5 15 7 12.5"></path></svg></button>
+    </sc-if>
+    <sc-if value="{{ noLoop }}" hint-placeholder-val="{{ false }}">
+      <button aria-label="Loop" aria-pressed="false" title="Loop: off" onClick="{{ toggleLoop }}" style="display:grid;place-items:center;width:28px;height:28px;border:1px solid transparent;border-radius:6px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#1C2129;color:#E4E8EE"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 9.5V8A3 3 0 0 1 6.5 5h9"></path><path d="M13 2.5 15.5 5 13 7.5"></path><path d="M16.5 10.5V12a3 3 0 0 1-3 3h-9"></path><path d="M7 17.5 4.5 15 7 12.5"></path></svg></button>
+    </sc-if>
+    <span style="width:1px;height:20px;background:#2D343F;margin:0 6px"></span>
+    <button aria-label="Zoom out" title="Zoom out ⌘−" onClick="{{ zoomOut }}" style="display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#1C2129;color:#E4E8EE"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5"></circle><path d="m12.25 12.25 4.25 4.25"></path><path d="M6.5 8.5h4"></path></svg></button>
+    <button aria-label="Zoom level" style="display:inline-flex;align-items:center;gap:2px;height:28px;padding:0 4px 0 8px;border:1px solid #2D343F;border-radius:4px;background:#161A20;color:#E4E8EE;cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;min-width:68px;justify-content:space-between" style-hover="border-color:#5E6776">{{ zoomLabel }}<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#929CAC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8"></path></svg></button>
+    <button aria-label="Zoom in" title="Zoom in ⌘+" onClick="{{ zoomIn }}" style="display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#1C2129;color:#E4E8EE"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5"></circle><path d="m12.25 12.25 4.25 4.25"></path><path d="M8.5 6.5v4M6.5 8.5h4"></path></svg></button>
+  </div>
+
+  <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:8px">
+    <button aria-label="Help and shortcuts" title="Help & shortcuts ?" style="display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#1C2129;color:#E4E8EE"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"></circle><path d="M8 8a2 2 0 1 1 2.75 1.85c-.45.2-.75.6-.75 1.1v.3"></path><path d="M10 13.75h.01"></path></svg></button>
+    <button style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border:0;border-radius:6px;background:#F23DC8;color:#1A0516;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:#FF5CD6" style-active="background:#E233BD;box-shadow:0 0 0 1px #F23DC8,0 0 16px -2px rgba(242,61,200,.45)"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 12.5v-9"></path><path d="M6.5 7 10 3.5 13.5 7"></path><path d="M4 11.5V15a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 16 15v-3.5"></path></svg>Export</button>
+  </div>
+</header>
+
+<!-- LEFT PANEL -->
+<aside data-screen-label="Library" style="grid-column:1;grid-row:2;display:flex;flex-direction:column;min-height:0;background:#111419;border-right:1px solid #1C2129">
+  <div role="tablist" aria-label="Library" style="display:flex;gap:16px;height:40px;padding:0 12px;border-bottom:1px solid #1C2129;flex:none">
+    <sc-if value="{{ tabPresets }}" hint-placeholder-val="{{ true }}">
+      <button role="tab" aria-selected="true" style="height:40px;padding:0;border:0;border-bottom:2px solid #F23DC8;background:transparent;font-size:13px;font-weight:600;color:#E4E8EE;cursor:pointer">Presets</button>
+      <button role="tab" aria-selected="false" onClick="{{ showLayers }}" style="display:inline-flex;align-items:center;gap:6px;height:40px;padding:0;border:0;border-bottom:2px solid transparent;background:transparent;font-size:13px;font-weight:500;color:#A6AFBD;cursor:pointer" style-hover="color:#E4E8EE">Layers<span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">3</span></button>
+    </sc-if>
+    <sc-if value="{{ tabLayers }}" hint-placeholder-val="{{ false }}">
+      <button role="tab" aria-selected="false" onClick="{{ showPresets }}" style="height:40px;padding:0;border:0;border-bottom:2px solid transparent;background:transparent;font-size:13px;font-weight:500;color:#A6AFBD;cursor:pointer" style-hover="color:#E4E8EE">Presets</button>
+      <button role="tab" aria-selected="true" style="display:inline-flex;align-items:center;gap:6px;height:40px;padding:0;border:0;border-bottom:2px solid #F23DC8;background:transparent;font-size:13px;font-weight:600;color:#E4E8EE;cursor:pointer">Layers<span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">3</span></button>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ tabPresets }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column;gap:8px;padding:12px 12px 8px;flex:none">
+      <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px;color:#929CAC">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5"></circle><path d="m12.25 12.25 4.25 4.25"></path></svg>
+        <span style="font-size:13px">Search effects</span>
+        <span style="margin-left:auto;font-family:'DM Mono',monospace;font-size:11px;padding:0 4px;border:1px solid #2D343F;border-radius:2px">/</span>
+      </div>
+      <div role="group" aria-label="Filter" style="display:flex;gap:4px">
+        <button aria-pressed="true" style="height:24px;padding:0 8px;border:1px solid #FF5CD6;border-radius:4px;background:#2B1229;color:#FF85E0;font-size:12px;font-weight:500;cursor:pointer">All</button>
+        <button aria-pressed="false" style="height:24px;padding:0 8px;border:1px solid #2D343F;border-radius:4px;background:transparent;color:#A6AFBD;font-size:12px;font-weight:500;cursor:pointer" style-hover="background:#1C2129;color:#E4E8EE">In</button>
+        <button aria-pressed="false" style="height:24px;padding:0 8px;border:1px solid #2D343F;border-radius:4px;background:transparent;color:#A6AFBD;font-size:12px;font-weight:500;cursor:pointer" style-hover="background:#1C2129;color:#E4E8EE">Out</button>
+        <button aria-pressed="false" style="height:24px;padding:0 8px;border:1px solid #2D343F;border-radius:4px;background:transparent;color:#A6AFBD;font-size:12px;font-weight:500;cursor:pointer" style-hover="background:#1C2129;color:#E4E8EE">Loop</button>
+      </div>
+    </div>
+    <div style="flex:1;min-height:0;overflow:auto;padding:0 8px 12px">
+      <sc-for list="{{ presetGroups }}" as="g" hint-placeholder-count="3">
+        <div style="padding:10px 4px 4px;font-size:11px;font-weight:500;letter-spacing:.06em;color:#929CAC">{{ g.name }}</div>
+        <sc-for list="{{ g.items }}" as="p" hint-placeholder-count="4">
+          <sc-if value="{{ p.on }}" hint-placeholder-val="{{ false }}">
+            <button aria-pressed="true" aria-label="{{ p.aria }}" style="display:flex;align-items:center;gap:8px;width:100%;height:32px;padding:0 6px;border:1px solid #FF5CD6;border-radius:4px;background:#2B1229;cursor:pointer;text-align:left">
+              <span style="display:grid;place-items:center;width:24px;height:24px;border-radius:2px;background:#000;font-size:11px;font-weight:700;color:#fff;flex:none">Aa</span>
+              <span style="font-size:13px;font-weight:500;color:#E4E8EE">{{ p.name }}</span>
+              <span style="margin-left:auto;display:inline-flex;align-items:center;height:18px;padding:0 6px;border:1px solid #9C1A7F;border-radius:4px;font-size:11px;color:#FF85E0">{{ p.gran }}</span>
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#FF85E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Applied to selected layer"><path d="m4.5 10.5 3.5 3.5 7.5-8"></path></svg>
+            </button>
+          </sc-if>
+          <sc-if value="{{ p.off }}" hint-placeholder-val="{{ true }}">
+            <button aria-pressed="false" aria-label="{{ p.aria }}" style="display:flex;align-items:center;gap:8px;width:100%;height:32px;padding:0 6px;border:1px solid transparent;border-radius:4px;background:transparent;cursor:pointer;text-align:left" style-hover="background:#1C2129">
+              <span style="display:grid;place-items:center;width:24px;height:24px;border-radius:2px;background:#000;font-size:11px;font-weight:700;color:#fff;flex:none">Aa</span>
+              <span style="font-size:13px;color:#E4E8EE">{{ p.name }}</span>
+              <span style="margin-left:auto;display:inline-flex;align-items:center;height:18px;padding:0 6px;border:1px solid #2D343F;border-radius:4px;font-size:11px;color:#929CAC">{{ p.gran }}</span>
+              <span style="width:16px"></span>
+            </button>
+          </sc-if>
+        </sc-for>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ tabLayers }}" hint-placeholder-val="{{ false }}">
+    <div role="listbox" aria-label="Layers" style="display:flex;flex-direction:column;gap:2px;padding:8px">
+      <div role="option" aria-selected="false" style="display:flex;align-items:center;gap:8px;height:32px;padding:0 6px;border:1px solid transparent;border-radius:4px" style-hover="background:#1C2129">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#929CAC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6V4h11v2"></path><path d="M10 4v12"></path><path d="M7.5 16h5"></path></svg>
+        <span style="font-size:13px;color:#E4E8EE;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Grand Opening</span>
+        <span style="font-size:11px;color:#929CAC">Typewriter</span>
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#A6AFBD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Visible"><path d="M2.5 10S5.25 5 10 5s7.5 5 7.5 5-2.75 5-7.5 5-7.5-5-7.5-5z"></path><circle cx="10" cy="10" r="2.25"></circle></svg>
+      </div>
+      <div role="option" aria-selected="true" style="display:flex;align-items:center;gap:8px;height:32px;padding:0 6px;border:1px solid #FF5CD6;border-radius:4px;background:#2B1229">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#FF85E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6V4h11v2"></path><path d="M10 4v12"></path><path d="M7.5 16h5"></path></svg>
+        <span style="font-size:13px;font-weight:600;color:#E4E8EE;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Sale starts Friday</span>
+        <span style="font-size:11px;color:#FF85E0">Fade-slide</span>
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#A6AFBD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Visible"><path d="M2.5 10S5.25 5 10 5s7.5 5 7.5 5-2.75 5-7.5 5-7.5-5-7.5-5z"></path><circle cx="10" cy="10" r="2.25"></circle></svg>
+      </div>
+      <div role="option" aria-selected="false" style="display:flex;align-items:center;gap:8px;height:32px;padding:0 6px;border:1px solid transparent;border-radius:4px" style-hover="background:#1C2129">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#929CAC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6V4h11v2"></path><path d="M10 4v12"></path><path d="M7.5 16h5"></path></svg>
+        <span style="font-family:'Noto Sans Tamil','Instrument Sans',sans-serif;font-size:14px;line-height:24px;color:#E4E8EE;flex:1;min-width:0">வணக்கம்</span>
+        <sc-if value="{{ warning }}" hint-placeholder-val="{{ true }}">
+          <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#FFD27A"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#FFBC47" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.7 4.2a1.5 1.5 0 0 1 2.6 0l5.9 10.3a1.5 1.5 0 0 1-1.3 2.25H4.1a1.5 1.5 0 0 1-1.3-2.25z"></path><path d="M10 8.5v3"></path><path d="M10 14.25h.01"></path></svg>Skipped</span>
+        </sc-if>
+        <sc-if value="{{ noWarning }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size:11px;color:#929CAC">Fade in</span>
+        </sc-if>
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#A6AFBD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Visible"><path d="M2.5 10S5.25 5 10 5s7.5 5 7.5 5-2.75 5-7.5 5-7.5-5-7.5-5z"></path><circle cx="10" cy="10" r="2.25"></circle></svg>
+      </div>
+      <button style="display:inline-flex;align-items:center;justify-content:center;gap:6px;height:28px;margin-top:8px;border:1px solid #5E6776;border-radius:6px;background:#1C2129;color:#E4E8EE;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#242A33"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4v12M4 10h12"></path></svg>Add text</button>
+    </div>
+  </sc-if>
+</aside>
+
+<!-- WORKSPACE -->
+<main data-screen-label="Stage" style="grid-column:2;grid-row:2;display:flex;flex-direction:column;min-width:0;min-height:0;background:#08090C">
+  <div style="display:flex;align-items:center;gap:12px;height:36px;padding:0 12px;border-bottom:1px solid #111419;flex:none">
+    <span style="font-size:12px;font-weight:500;color:#A6AFBD">Stage</span>
+    <span style="font-family:'DM Mono',monospace;font-size:12px;color:#929CAC">1080 × 1080 · 30 fps · 6.0 s</span>
+    <sc-if value="{{ playing }}" hint-placeholder-val="{{ false }}">
+      <span style="display:inline-flex;align-items:center;gap:6px;height:20px;padding:0 6px;border:1px solid #0A6F85;border-radius:4px;background:#062D36;font-size:11px;font-weight:500;color:#5CE3FA"><span style="width:6px;height:6px;border-radius:999px;background:#2DD3F0"></span>Playing</span>
+    </sc-if>
+    <span style="flex:1"></span>
+    <button role="switch" aria-checked="{{ checkerAria }}" onClick="{{ toggleChecker }}" style="display:inline-flex;align-items:center;gap:8px;height:24px;padding:0 6px;border:0;border-radius:4px;background:transparent;font-size:12px;color:#A6AFBD;cursor:pointer" style-hover="background:#161A20;color:#E4E8EE">
+      <sc-if value="{{ checker }}" hint-placeholder-val="{{ false }}"><span style="position:relative;width:26px;height:14px;border-radius:999px;background:#F23DC8"><span style="position:absolute;top:2px;right:2px;width:10px;height:10px;border-radius:999px;background:#FFF0FB"></span></span></sc-if>
+      <sc-if value="{{ noChecker }}" hint-placeholder-val="{{ true }}"><span style="position:relative;width:26px;height:14px;border-radius:999px;background:#2D343F;box-shadow:inset 0 0 0 1px #5E6776"><span style="position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:999px;background:#A6AFBD"></span></span></sc-if>
+      Transparency
+    </button>
+    <button role="switch" aria-checked="{{ safeAria }}" onClick="{{ toggleSafe }}" style="display:inline-flex;align-items:center;gap:8px;height:24px;padding:0 6px;border:0;border-radius:4px;background:transparent;font-size:12px;color:#A6AFBD;cursor:pointer" style-hover="background:#161A20;color:#E4E8EE">
+      <sc-if value="{{ safe }}" hint-placeholder-val="{{ true }}"><span style="position:relative;width:26px;height:14px;border-radius:999px;background:#F23DC8"><span style="position:absolute;top:2px;right:2px;width:10px;height:10px;border-radius:999px;background:#FFF0FB"></span></span></sc-if>
+      <sc-if value="{{ noSafe }}" hint-placeholder-val="{{ false }}"><span style="position:relative;width:26px;height:14px;border-radius:999px;background:#2D343F;box-shadow:inset 0 0 0 1px #5E6776"><span style="position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:999px;background:#A6AFBD"></span></span></sc-if>
+      Safe area
+    </button>
+  </div>
+
+  <sc-if value="{{ showBanner }}" hint-placeholder-val="{{ true }}">
+    <div role="alert" style="display:flex;align-items:flex-start;gap:10px;margin:10px 12px 0;padding:10px 10px 10px 12px;background:#2E2008;border:1px solid #7A5210;border-radius:6px;flex:none">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#FFBC47" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:1px"><path d="M8.7 4.2a1.5 1.5 0 0 1 2.6 0l5.9 10.3a1.5 1.5 0 0 1-1.3 2.25H4.1a1.5 1.5 0 0 1-1.3-2.25z"></path><path d="M10 8.5v3"></path><path d="M10 14.25h.01"></path></svg>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:#FFD27A">Unknown effect: skipped</div>
+        <div style="font-size:12px;line-height:16px;color:#C6CDD8;text-wrap:pretty">Layer “<span style="font-family:'Noto Sans Tamil','Instrument Sans',sans-serif">வணக்கம்</span>” uses <span style="font-family:'DM Mono',monospace;font-size:11px;color:#FFD27A">fx.shimmer-v2</span>, which this engine can’t play. It renders without animation.</div>
+      </div>
+      <button style="height:24px;padding:0 10px;border:1px solid #7A5210;border-radius:6px;background:#3A2A0C;color:#FFD27A;font-size:12px;font-weight:500;cursor:pointer;flex:none;white-space:nowrap" style-hover="background:#4A3610">Replace effect</button>
+      <button aria-label="Dismiss warning" onClick="{{ hideBanner }}" style="display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:4px;background:transparent;color:#FFD27A;cursor:pointer;padding:0;flex:none" style-hover="background:#3A2A0C"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"></path></svg></button>
+    </div>
+  </sc-if>
+
+  <div style="position:relative;flex:1;min-height:0">
+    <div style="position:absolute;inset:20px 24px;display:grid;place-items:center;container-type:size">
+      <div aria-label="Stage, 1080 by 1080" style="position:relative;width:min(100cqw,100cqh);aspect-ratio:1/1;background:#000;box-shadow:0 0 0 1px #2D343F;overflow:hidden;container-type:inline-size">
+        <sc-if value="{{ checker }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;background:repeating-conic-gradient(#2A2F37 0 25%,#1E222A 0 50%) 0 0/16px 16px"></div>
+        </sc-if>
+
+        <!-- Layer 1: typewriter -->
+        <div style="position:absolute;left:0;right:0;top:37%;transform:translateY(-50%);text-align:center;font-family:'Instrument Sans',sans-serif;font-weight:700;font-size:11.85cqw;line-height:1;letter-spacing:-0.02em;color:#FFFFFF;white-space:pre">
+          <sc-for list="{{ l1Chars }}" as="c" hint-placeholder-count="0"><span style="opacity:{{ c.op }}">{{ c.ch }}</span><sc-if value="{{ c.caret }}" hint-placeholder-val="{{ false }}"><span style="display:inline-block;width:0.06em;height:0.86em;margin-right:-0.06em;vertical-align:-0.06em;background:#FFFFFF"></span></sc-if></sc-for>
+        </div>
+
+        <!-- Layer 2: fade-slide (selected) -->
+        <div style="position:absolute;left:9.26%;width:81.48%;top:51.85%;transform:translateY(calc(-50% + {{ l2dy }}cqw)) scale({{ l2s }});opacity:{{ l2op }};text-align:center;font-family:'Instrument Sans',sans-serif;font-weight:500;font-size:5.93cqw;line-height:1.1;letter-spacing:-0.005em;color:#FFD27A;white-space:pre;padding:0.12em 0">
+          <sc-for list="{{ l2Words }}" as="w" hint-placeholder-count="0"><span style="display:inline-block;opacity:{{ w.op }};transform:translateY({{ w.ty }}cqw)">{{ w.w }}</span></sc-for>
+        </div>
+        <sc-if value="{{ showSelection }}" hint-placeholder-val="{{ true }}">
+          <div aria-hidden="true" style="position:absolute;left:9.26%;width:81.48%;top:51.85%;height:8.5cqw;transform:translateY(-50%);border:1px solid #F23DC8;pointer-events:none">
+            <span style="position:absolute;left:-4px;top:-4px;width:7px;height:7px;background:#000;border:1px solid #FF5CD6"></span>
+            <span style="position:absolute;right:-4px;top:-4px;width:7px;height:7px;background:#000;border:1px solid #FF5CD6"></span>
+            <span style="position:absolute;left:-4px;bottom:-4px;width:7px;height:7px;background:#000;border:1px solid #FF5CD6"></span>
+            <span style="position:absolute;right:-4px;bottom:-4px;width:7px;height:7px;background:#000;border:1px solid #FF5CD6"></span>
+            <span style="position:absolute;left:-4px;top:calc(50% - 4px);width:7px;height:7px;background:#000;border:1px solid #FF5CD6"></span>
+            <span style="position:absolute;right:-4px;top:calc(50% - 4px);width:7px;height:7px;background:#000;border:1px solid #FF5CD6"></span>
+            <span style="position:absolute;left:calc(50% - 5px);top:calc(50% - 5px);width:10px;height:10px;border:1px solid #FF5CD6;border-radius:999px"></span>
+            <span style="position:absolute;left:-1px;top:calc(100% + 4px);height:18px;padding:0 6px;display:inline-flex;align-items:center;gap:6px;border-radius:2px;background:#F23DC8;color:#1A0516;font-size:11px;font-weight:600;white-space:nowrap">Sale starts Friday<span style="font-family:'DM Mono',monospace;font-weight:400">880 px</span></span>
+          </div>
+        </sc-if>
+
+        <!-- Layer 3: Tamil -->
+        <div style="position:absolute;left:0;right:0;top:70.4%;transform:translateY(-50%);text-align:center;font-family:'Noto Sans Tamil','Instrument Sans',sans-serif;font-weight:600;font-size:6.67cqw;line-height:1.5;color:#F4F6F9;opacity:{{ l3op }}">வணக்கம்</div>
+
+        <sc-if value="{{ safe }}" hint-placeholder-val="{{ true }}">
+          <div aria-hidden="true" style="position:absolute;inset:5%;border:1px dashed rgba(92,227,250,.6);pointer-events:none">
+            <span style="position:absolute;left:6px;top:4px;font-family:'DM Mono',monospace;font-size:11px;color:#5CE3FA">Safe area · 972 × 972</span>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- INSPECTOR -->
+<aside data-screen-label="Inspector" style="grid-column:3;grid-row:2/4;display:flex;flex-direction:column;min-height:0;background:#111419;border-left:1px solid #1C2129">
+  <div style="display:flex;align-items:center;gap:8px;padding:12px;border-bottom:1px solid #1C2129;flex:none">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:15px;line-height:22px;font-weight:600;letter-spacing:-0.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Sale starts Friday</div>
+      <div style="display:flex;gap:6px;align-items:center;font-size:12px;color:#929CAC">Text layer<span style="font-family:'DM Mono',monospace">0.80 – 6.00 s</span></div>
+    </div>
+    <button aria-label="Layer options" style="display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#1C2129;color:#E4E8EE"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 10h.01M10 10h.01M15 10h.01" stroke-width="2.25"></path></svg></button>
+  </div>
+
+  <div style="flex:1;min-height:0;overflow:auto">
+    <!-- TEXT -->
+    <div style="display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;font-size:11px;font-weight:500;letter-spacing:.06em;color:#A6AFBD">TEXT<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#929CAC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-left:auto"><path d="m5.5 8 4.5 4.5L14.5 8"></path></svg></div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:0 12px 14px">
+      <div style="display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:8px">
+        <span style="font-size:12px;color:#A6AFBD">Font</span>
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 4px 0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px"><span style="flex:1;font-size:13px">Instrument Sans</span><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#929CAC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8"></path></svg></div>
+      </div>
+      <div style="display:grid;grid-template-columns:72px minmax(0,1fr) minmax(0,1fr);align-items:center;gap:8px">
+        <span style="font-size:12px;color:#A6AFBD">Size</span>
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px;min-width:0"><span style="flex:1;text-align:right;font-family:'DM Mono',monospace;font-size:12px">64</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">px</span></div>
+        <div aria-label="Weight" style="display:flex;align-items:center;gap:4px;height:28px;padding:0 4px 0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px;min-width:0"><span style="flex:1;font-size:13px;white-space:nowrap">Medium</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">500</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:8px">
+        <span style="font-size:12px;color:#A6AFBD">Fill</span>
+        <div style="display:flex;align-items:center;gap:8px;height:28px;padding:0 8px 0 6px;background:#1C2129;border:1px solid #5E6776;border-radius:4px"><span style="width:16px;height:16px;border-radius:2px;background:#FFD27A;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)"></span><span style="flex:1;font-family:'DM Mono',monospace;font-size:12px">#FFD27A</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">100 %</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:8px">
+        <span style="font-size:12px;color:#A6AFBD">Align</span>
+        <div role="radiogroup" aria-label="Text align" style="display:grid;grid-template-columns:repeat(3,1fr);height:28px;padding:2px;gap:2px;background:#161A20;border:1px solid #2D343F;border-radius:4px">
+          <button role="radio" aria-checked="false" aria-label="Align left" style="display:grid;place-items:center;border:0;border-radius:2px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#1C2129"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12M4 10h7M4 15h12"></path></svg></button>
+          <button role="radio" aria-checked="true" aria-label="Align center" style="display:grid;place-items:center;border:0;border-radius:2px;background:#2D343F;color:#E4E8EE;cursor:pointer;padding:0;box-shadow:inset 0 0 0 1px #5E6776"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12M6.5 10h7M4 15h12"></path></svg></button>
+          <button role="radio" aria-checked="false" aria-label="Align right" style="display:grid;place-items:center;border:0;border-radius:2px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#1C2129"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12M9 10h7M4 15h12"></path></svg></button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:72px minmax(0,1fr) minmax(0,1fr);align-items:center;gap:8px">
+        <span style="font-size:12px;color:#A6AFBD">Spacing</span>
+        <div title="Letter spacing" style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px;min-width:0"><span style="font-size:11px;color:#929CAC;cursor:ew-resize">L</span><span style="flex:1;text-align:right;font-family:'DM Mono',monospace;font-size:12px">-0.3</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">px</span></div>
+        <div title="Line height" style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px;min-width:0"><span style="font-size:11px;color:#929CAC;cursor:ew-resize">LH</span><span style="flex:1;text-align:right;font-family:'DM Mono',monospace;font-size:12px">1.10</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:8px">
+        <span style="font-size:12px;color:#A6AFBD">Max width</span>
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px"><span style="font-size:11px;color:#929CAC;cursor:ew-resize">W</span><span style="flex:1;text-align:right;font-family:'DM Mono',monospace;font-size:12px">880</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">px</span></div>
+      </div>
+    </div>
+
+    <!-- TRANSFORM -->
+    <div style="display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-top:1px solid #1C2129;font-size:11px;font-weight:500;letter-spacing:.06em;color:#A6AFBD">TRANSFORM<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#929CAC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-left:auto"><path d="m5.5 8 4.5 4.5L14.5 8"></path></svg></div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:0 12px 14px">
+      <div style="display:grid;grid-template-columns:72px minmax(0,1fr) minmax(0,1fr) 20px;align-items:center;gap:8px">
+        <span style="font-size:12px;color:#A6AFBD">Position</span>
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px;min-width:0"><span style="font-size:11px;color:#929CAC;cursor:ew-resize">X</span><span style="flex:1;text-align:right;font-family:'DM Mono',monospace;font-size:12px">540</span></div>
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #FF5CD6;border-radius:4px;min-width:0"><span style="font-size:11px;color:#FF85E0;cursor:ew-resize">Y</span><span style="flex:1;text-align:right;font-family:'DM Mono',monospace;font-size:12px">{{ posY }}</span></div>
+        <button aria-label="{{ kfPos.label }}" title="{{ kfPos.label }}" style="display:grid;place-items:center;width:20px;height:20px;border:0;background:transparent;padding:0;cursor:pointer"><svg width="14" height="14" viewBox="0 0 20 20" fill="{{ kfPos.fill }}" stroke="#FF5CD6" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5 16.5 10 10 16.5 3.5 10z"></path></svg></button>
+      </div>
+      <div style="display:grid;grid-template-columns:72px minmax(0,1fr) minmax(0,1fr) 20px;align-items:center;gap:8px">
+        <span style="font-size:12px;color:#A6AFBD">Scale</span>
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #FF5CD6;border-radius:4px;min-width:0"><span style="flex:1;text-align:right;font-family:'DM Mono',monospace;font-size:12px">{{ scale }}</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">%</span></div>
+        <span style="font-size:11px;color:#929CAC">Uniform</span>
+        <button aria-label="{{ kfScale.label }}" title="{{ kfScale.label }}" style="display:grid;place-items:center;width:20px;height:20px;border:0;background:transparent;padding:0;cursor:pointer"><svg width="14" height="14" viewBox="0 0 20 20" fill="{{ kfScale.fill }}" stroke="#FF5CD6" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5 16.5 10 10 16.5 3.5 10z"></path></svg></button>
+      </div>
+      <div style="display:grid;grid-template-columns:72px minmax(0,1fr) minmax(0,1fr) 20px;align-items:center;gap:8px">
+        <span style="font-size:12px;color:#A6AFBD">Rotation</span>
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px;min-width:0"><span style="flex:1;text-align:right;font-family:'DM Mono',monospace;font-size:12px">0.0</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">°</span></div>
+        <span></span>
+        <button aria-label="Add rotation keyframe" title="Add rotation keyframe" style="display:grid;place-items:center;width:20px;height:20px;border:0;background:transparent;padding:0;cursor:pointer"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="#838D9D" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5 16.5 10 10 16.5 3.5 10z"></path></svg></button>
+      </div>
+      <div style="display:grid;grid-template-columns:72px auto minmax(0,1fr);align-items:center;gap:8px">
+        <span style="font-size:12px;color:#A6AFBD">Anchor</span>
+        <div role="radiogroup" aria-label="Anchor point" style="display:grid;grid-template-columns:repeat(3,10px);grid-template-rows:repeat(3,10px);gap:3px;padding:4px;background:#161A20;border:1px solid #2D343F;border-radius:4px">
+          <span style="border:1px solid #5E6776;border-radius:2px"></span><span style="border:1px solid #5E6776;border-radius:2px"></span><span style="border:1px solid #5E6776;border-radius:2px"></span>
+          <span style="border:1px solid #5E6776;border-radius:2px"></span><span role="radio" aria-checked="true" aria-label="Center" style="background:#F23DC8;border-radius:2px;box-shadow:0 0 0 1px #FF5CD6"></span><span style="border:1px solid #5E6776;border-radius:2px"></span>
+          <span style="border:1px solid #5E6776;border-radius:2px"></span><span style="border:1px solid #5E6776;border-radius:2px"></span><span style="border:1px solid #5E6776;border-radius:2px"></span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;color:#E4E8EE">Center</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">440, 35 px</span></div>
+      </div>
+    </div>
+
+    <!-- APPEARANCE -->
+    <div style="display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-top:1px solid #1C2129;font-size:11px;font-weight:500;letter-spacing:.06em;color:#A6AFBD">APPEARANCE<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#929CAC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-left:auto"><path d="m5.5 8 4.5 4.5L14.5 8"></path></svg></div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:0 12px 14px">
+      <div style="display:grid;grid-template-columns:72px minmax(0,1fr) 64px 20px;align-items:center;gap:8px">
+        <span style="font-size:12px;color:#A6AFBD">Opacity</span>
+        <div role="slider" aria-label="Opacity" aria-valuenow="{{ opacity }}" style="position:relative;height:16px;display:flex;align-items:center"><div style="position:relative;width:100%;height:4px;border-radius:999px;background:#2D343F"><div style="position:absolute;left:0;top:0;bottom:0;width:{{ opacityPct }};border-radius:999px;background:#F23DC8"></div><span style="position:absolute;top:50%;left:{{ opacityPct }};width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:999px;background:#F4F6F9;box-shadow:0 0 0 1px #5E6776"></span></div></div>
+        <div style="display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #FF5CD6;border-radius:4px;min-width:0"><span style="flex:1;text-align:right;font-family:'DM Mono',monospace;font-size:12px">{{ opacity }}</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">%</span></div>
+        <button aria-label="{{ kfOp.label }}" title="{{ kfOp.label }}" style="display:grid;place-items:center;width:20px;height:20px;border:0;background:transparent;padding:0;cursor:pointer"><svg width="14" height="14" viewBox="0 0 20 20" fill="{{ kfOp.fill }}" stroke="#FF5CD6" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5 16.5 10 10 16.5 3.5 10z"></path></svg></button>
+      </div>
+      <div style="display:grid;grid-template-columns:72px minmax(0,1fr) 64px 20px;align-items:center;gap:8px">
+        <span style="font-size:12px;color:#A6AFBD">Blur</span>
+        <div role="slider" aria-label="Blur" aria-valuenow="0" style="position:relative;height:16px;display:flex;align-items:center"><div style="position:relative;width:100%;height:4px;border-radius:999px;background:#2D343F"><span style="position:absolute;top:50%;left:0;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:999px;background:#F4F6F9;box-shadow:0 0 0 1px #5E6776"></span></div></div>
+        <div style="display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px;min-width:0"><span style="flex:1;text-align:right;font-family:'DM Mono',monospace;font-size:12px">0</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">px</span></div>
+        <button aria-label="Add blur keyframe" title="Add blur keyframe" style="display:grid;place-items:center;width:20px;height:20px;border:0;background:transparent;padding:0;cursor:pointer"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="#838D9D" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5 16.5 10 10 16.5 3.5 10z"></path></svg></button>
+      </div>
+      <div style="display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:8px">
+        <span style="font-size:12px;color:#A6AFBD">Color</span>
+        <div style="display:flex;align-items:center;gap:8px;height:28px;padding:0 8px 0 6px;background:#1C2129;border:1px solid #5E6776;border-radius:4px"><span style="width:16px;height:16px;border-radius:2px;background:#F23DC8"></span><span style="flex:1;font-family:'DM Mono',monospace;font-size:12px">#F23DC8</span><span style="font-size:11px;color:#929CAC">Glow · 0 %</span></div>
+      </div>
+    </div>
+
+    <!-- EFFECTS -->
+    <div style="display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-top:1px solid #1C2129;font-size:11px;font-weight:500;letter-spacing:.06em;color:#A6AFBD">EFFECTS ON THIS LAYER<span style="font-family:'DM Mono',monospace;letter-spacing:0;color:#929CAC">2</span><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#929CAC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-left:auto"><path d="m5.5 8 4.5 4.5L14.5 8"></path></svg></div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:0 12px 16px">
+      <div style="background:#161A20;border:1px solid #2D343F;border-radius:6px">
+        <div style="display:flex;align-items:center;gap:6px;height:36px;padding:0 4px 0 6px;border-bottom:1px solid #1C2129">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#838D9D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 5h.01M12.5 5h.01M7.5 10h.01M12.5 10h.01M7.5 15h.01M12.5 15h.01" stroke-width="2"></path></svg>
+          <span style="font-size:13px;font-weight:600">Fade-slide</span>
+          <span title="Granularity" style="display:inline-flex;align-items:center;height:18px;padding:0 6px;border:1px solid #9C1A7F;border-radius:4px;background:#22071C;font-size:11px;font-weight:500;color:#FF85E0">Word</span>
+          <span style="margin-left:auto;font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">0.90 s</span>
+          <button aria-label="Remove Fade-slide" title="Remove effect" style="display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:4px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#331116;color:#FFA0A8"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5.5h13"></path><path d="M8 5.5V4h4v1.5"></path><path d="m5 5.5.8 10.1a1.5 1.5 0 0 0 1.5 1.4h5.4a1.5 1.5 0 0 0 1.5-1.4L15 5.5"></path><path d="M8.5 8.5v5M11.5 8.5v5"></path></svg></button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:10px">
+          <div style="display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:8px">
+            <span style="font-size:12px;color:#A6AFBD">Split by</span>
+            <div role="radiogroup" aria-label="Split by" style="display:grid;grid-template-columns:repeat(3,1fr);height:24px;padding:2px;gap:2px;background:#111419;border:1px solid #2D343F;border-radius:4px">
+              <button role="radio" aria-checked="false" style="border:0;border-radius:2px;background:transparent;color:#A6AFBD;font-size:12px;cursor:pointer;padding:0">Char</button>
+              <button role="radio" aria-checked="true" style="border:0;border-radius:2px;background:#2D343F;color:#E4E8EE;font-size:12px;font-weight:600;cursor:pointer;padding:0;box-shadow:inset 0 0 0 1px #5E6776">Word</button>
+              <button role="radio" aria-checked="false" style="border:0;border-radius:2px;background:transparent;color:#A6AFBD;font-size:12px;cursor:pointer;padding:0">Line</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:8px">
+            <span style="font-size:12px;color:#A6AFBD">Direction</span>
+            <div role="radiogroup" aria-label="Direction" style="display:grid;grid-template-columns:repeat(4,1fr);height:24px;padding:2px;gap:2px;background:#111419;border:1px solid #2D343F;border-radius:4px">
+              <button role="radio" aria-checked="true" style="border:0;border-radius:2px;background:#2D343F;color:#E4E8EE;font-size:12px;font-weight:600;cursor:pointer;padding:0;box-shadow:inset 0 0 0 1px #5E6776">Up</button>
+              <button role="radio" aria-checked="false" style="border:0;border-radius:2px;background:transparent;color:#A6AFBD;font-size:12px;cursor:pointer;padding:0">Down</button>
+              <button role="radio" aria-checked="false" style="border:0;border-radius:2px;background:transparent;color:#A6AFBD;font-size:12px;cursor:pointer;padding:0">Left</button>
+              <button role="radio" aria-checked="false" style="border:0;border-radius:2px;background:transparent;color:#A6AFBD;font-size:12px;cursor:pointer;padding:0">Right</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:62px minmax(0,1fr) minmax(0,1fr);align-items:center;gap:8px">
+            <span style="font-size:12px;color:#A6AFBD">Distance</span>
+            <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px;min-width:0"><span style="flex:1;text-align:right;font-family:'DM Mono',monospace;font-size:12px">48</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">px</span></div>
+            <span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:62px minmax(0,1fr) minmax(0,1fr);align-items:center;gap:8px">
+            <span style="font-size:12px;color:#A6AFBD">Timing</span>
+            <div title="Duration" style="display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px;min-width:0"><span style="font-size:11px;color:#929CAC;cursor:ew-resize">Dur</span><span style="flex:1;text-align:right;font-family:'DM Mono',monospace;font-size:12px">0.60</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">s</span></div>
+            <div title="Stagger" style="display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px;min-width:0"><span style="font-size:11px;color:#929CAC;cursor:ew-resize">Stag</span><span style="flex:1;text-align:right;font-family:'DM Mono',monospace;font-size:12px">0.15</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">s</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:8px">
+            <span style="font-size:12px;color:#A6AFBD">Easing</span>
+            <div style="display:flex;align-items:center;gap:8px;height:28px;padding:0 4px 0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#FF85E0" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 16C6 6 10 4 16 4"></path></svg><span style="flex:1;font-family:'DM Mono',monospace;font-size:12px">easeOut</span><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#929CAC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8"></path></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:6px;height:40px;padding:0 4px 0 6px;background:#161A20;border:1px solid #2D343F;border-radius:6px">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#838D9D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5.5l4.5 4.5L8 14.5"></path></svg>
+        <span style="font-size:13px;font-weight:600">Glow pulse</span>
+        <span title="Granularity" style="display:inline-flex;align-items:center;height:18px;padding:0 6px;border:1px solid #2D343F;border-radius:4px;font-size:11px;font-weight:500;color:#A6AFBD">Line</span>
+        <span style="margin-left:auto;font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">3.00 s · loop</span>
+        <button aria-label="Remove Glow pulse" title="Remove effect" style="display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:4px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#331116;color:#FFA0A8"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5.5h13"></path><path d="M8 5.5V4h4v1.5"></path><path d="m5 5.5.8 10.1a1.5 1.5 0 0 0 1.5 1.4h5.4a1.5 1.5 0 0 0 1.5-1.4L15 5.5"></path><path d="M8.5 8.5v5M11.5 8.5v5"></path></svg></button>
+      </div>
+
+      <button style="display:inline-flex;align-items:center;justify-content:center;gap:6px;height:28px;border:1px solid #5E6776;border-radius:6px;background:#1C2129;color:#E4E8EE;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#242A33"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4v12M4 10h12"></path></svg>Add effect</button>
+    </div>
+  </div>
+</aside>
+
+<!-- TIMELINE -->
+<section data-screen-label="Timeline" style="grid-column:1/3;grid-row:3;position:relative;z-index:5;display:flex;flex-direction:column;min-width:0;background:#111419;border-top:1px solid #1C2129">
+  <div style="display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-bottom:1px solid #1C2129;flex:none">
+    <button aria-label="Go to start" title="Go to start Home" onClick="{{ toStart }}" style="display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#1C2129;color:#E4E8EE"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5v11"></path><path d="M15 5.1v9.8a.6.6 0 0 1-.9.5L8 10.5a.6.6 0 0 1 0-1l6.1-4.9a.6.6 0 0 1 .9.5z"></path></svg></button>
+    <sc-if value="{{ playing }}" hint-placeholder-val="{{ false }}">
+      <button aria-label="Pause" onClick="{{ togglePlay }}" style="display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:#062D36;color:#5CE3FA;cursor:pointer;padding:0;box-shadow:0 0 0 1px #2DD3F0"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="4.5" width="3" height="11" rx="1"></rect><rect x="11.5" y="4.5" width="3" height="11" rx="1"></rect></svg></button>
+    </sc-if>
+    <sc-if value="{{ paused }}" hint-placeholder-val="{{ true }}">
+      <button aria-label="Play" onClick="{{ togglePlay }}" style="display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:transparent;color:#E4E8EE;cursor:pointer;padding:0" style-hover="background:#1C2129"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 4.6v10.8a.6.6 0 0 0 .9.5l8.6-5.4a.6.6 0 0 0 0-1L7.4 4.1a.6.6 0 0 0-.9.5z"></path></svg></button>
+    </sc-if>
+    <button aria-label="Go to end" title="Go to end End" onClick="{{ toEnd }}" style="display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#1C2129;color:#E4E8EE"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4.5v11"></path><path d="M5 5.1v9.8a.6.6 0 0 0 .9.5L12 10.5a.6.6 0 0 0 0-1L5.9 4.6a.6.6 0 0 0-.9.5z"></path></svg></button>
+    <div aria-label="Timecode" style="display:flex;align-items:baseline;gap:6px;margin-left:8px;font-family:'DM Mono',monospace">
+      <span style="font-size:14px;font-weight:500;color:#5CE3FA;min-width:76px">{{ timecode }}</span>
+      <span style="font-size:12px;color:#929CAC">/ 00:06:00</span>
+    </div>
+    <span style="width:1px;height:20px;background:#2D343F;margin:0 8px"></span>
+    <button style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:#A6AFBD;font-size:12px;font-weight:500;cursor:pointer" style-hover="background:#1C2129;color:#E4E8EE"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4.5 13.5 10 8 15.5 2.5 10z"></path><path d="M16 3v5M13.5 5.5h5"></path></svg>Add keyframe</button>
+    <button aria-label="Snap to keyframes" aria-pressed="true" title="Snap: on" style="display:grid;place-items:center;width:28px;height:28px;border:1px solid #FF5CD6;border-radius:6px;background:#2B1229;color:#FF85E0;cursor:pointer;padding:0"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3.5v6.5a5 5 0 0 0 10 0V3.5h-3.5V10a1.5 1.5 0 0 1-3 0V3.5z"></path><path d="M5 7h3.5M11.5 7H15"></path></svg></button>
+    <span style="flex:1"></span>
+    <div style="display:flex;align-items:center;gap:6px;color:#A6AFBD">
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5"></circle><path d="m12.25 12.25 4.25 4.25"></path><path d="M6.5 8.5h4"></path></svg>
+      <div role="slider" aria-label="Timeline zoom" aria-valuenow="40" style="position:relative;width:120px;height:4px;border-radius:999px;background:#2D343F"><div style="position:absolute;left:0;top:0;bottom:0;width:40%;border-radius:999px;background:#F23DC8"></div><span style="position:absolute;top:50%;left:40%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:999px;background:#F4F6F9;box-shadow:0 0 0 1px #5E6776"></span></div>
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5"></circle><path d="m12.25 12.25 4.25 4.25"></path><path d="M8.5 6.5v4M6.5 8.5h4"></path></svg>
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC;min-width:56px;text-align:right">1 s / div</span>
+    </div>
+  </div>
+
+  <div style="position:relative;flex:1;min-height:0">
+    <!-- Ruler -->
+    <div style="display:grid;grid-template-columns:220px minmax(0,1fr);height:24px;border-bottom:1px solid #1C2129">
+      <div style="display:flex;align-items:center;padding:0 12px;font-size:11px;font-weight:500;letter-spacing:.06em;color:#929CAC;border-right:1px solid #1C2129">LAYERS</div>
+      <div style="position:relative;margin:0 12px 0 8px;cursor:ew-resize">
+        <sc-for list="{{ ticks }}" as="k" hint-placeholder-count="0"><span style="position:absolute;bottom:0;left:{{ k.left }};width:1px;height:{{ k.h }}px;background:#3C4451"></span></sc-for>
+        <sc-for list="{{ rulerLabels }}" as="r" hint-placeholder-count="0"><span style="position:absolute;top:3px;left:{{ r.left }};transform:{{ r.tf }};font-family:'DM Mono',monospace;font-size:11px;line-height:14px;color:#929CAC">{{ r.label }}</span></sc-for>
+      </div>
+    </div>
+
+    <!-- Layer 1 -->
+    <div style="display:grid;grid-template-columns:220px minmax(0,1fr);height:28px;border-bottom:1px solid #161A20">
+      <div style="display:flex;align-items:center;gap:6px;padding:0 8px;border-right:1px solid #1C2129">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#838D9D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5.5l4.5 4.5L8 14.5"></path></svg>
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#A6AFBD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Visible"><path d="M2.5 10S5.25 5 10 5s7.5 5 7.5 5-2.75 5-7.5 5-7.5-5-7.5-5z"></path><circle cx="10" cy="10" r="2.25"></circle></svg>
+        <span style="font-size:12px;font-weight:500;color:#E4E8EE;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Grand Opening</span>
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">1</span>
+      </div>
+      <div style="position:relative;margin:0 12px 0 8px;background:#0C0E12">
+        <div style="position:absolute;left:0%;width:100%;top:4px;bottom:4px;display:flex;align-items:center;gap:6px;padding:0 8px;background:#242A33;border:1px solid #3C4451;border-radius:4px;overflow:hidden">
+          <span style="font-size:11px;font-weight:500;color:#C6CDD8;white-space:nowrap">Typewriter</span><span style="font-size:11px;color:#929CAC">Char</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layer 2 (selected) -->
+    <div style="display:grid;grid-template-columns:220px minmax(0,1fr);height:28px;border-bottom:1px solid #161A20">
+      <div style="display:flex;align-items:center;gap:6px;padding:0 8px;background:#2B1229;border-right:1px solid #1C2129">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#E4E8EE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8"></path></svg>
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#C6CDD8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Visible"><path d="M2.5 10S5.25 5 10 5s7.5 5 7.5 5-2.75 5-7.5 5-7.5-5-7.5-5z"></path><circle cx="10" cy="10" r="2.25"></circle></svg>
+        <span style="font-size:12px;font-weight:600;color:#FFFFFF;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Sale starts Friday</span>
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:#FF85E0">2</span>
+      </div>
+      <div style="position:relative;margin:0 12px 0 8px;background:#0C0E12">
+        <div style="position:absolute;left:13.333%;width:86.667%;top:4px;bottom:4px;display:flex;align-items:center;gap:6px;padding:0 10px;background:#3A0B30;border:1px solid #FF5CD6;border-radius:4px;box-shadow:0 0 12px -4px rgba(242,61,200,.45)">
+          <span style="position:absolute;left:1px;top:3px;bottom:3px;width:3px;border-radius:2px;background:#FF85E0"></span>
+          <span style="font-size:11px;font-weight:600;color:#FFD6F4;white-space:nowrap">Fade-slide</span><span style="font-size:11px;color:#FF85E0">Word</span>
+          <span style="position:absolute;right:1px;top:3px;bottom:3px;width:3px;border-radius:2px;background:#FF85E0"></span>
+        </div>
+      </div>
+    </div>
+    <!-- Sub-track: Position -->
+    <div style="display:grid;grid-template-columns:220px minmax(0,1fr);height:24px;border-bottom:1px solid #161A20">
+      <div style="display:flex;align-items:center;gap:6px;padding:0 8px 0 36px;border-right:1px solid #1C2129;background:#14171D">
+        <span style="font-size:12px;color:#A6AFBD;flex:1">Position</span>
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">540, {{ posY }}</span>
+      </div>
+      <div style="position:relative;margin:0 12px 0 8px;background:#0E1015">
+        <div style="position:absolute;left:15%;width:10%;top:50%;height:1px;background:#9C1A7F"></div>
+        <span style="position:absolute;left:20%;top:50%;transform:translate(-50%,-50%);height:16px;padding:0 4px;display:inline-flex;align-items:center;background:#161A20;border:1px solid #9C1A7F;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;line-height:1;color:#FF85E0;white-space:nowrap">{{ posEase }}</span>
+        <span aria-label="Keyframe 0.90 s" style="position:absolute;left:15%;top:50%;width:9px;height:9px;transform:translate(-50%,-50%) rotate(45deg);background:#9C1A7F;border:1px solid #FF5CD6;border-radius:1px"></span>
+        <button aria-label="Keyframe 1.50 s, selected" aria-pressed="true" onClick="{{ toggleKf }}" style="position:absolute;left:25%;top:50%;width:12px;height:12px;padding:0;transform:translate(-50%,-50%) rotate(45deg);background:#F23DC8;border:2px solid #FFFFFF;border-radius:2px;cursor:pointer;box-shadow:0 0 0 1px #F23DC8,0 0 12px rgba(242,61,200,.6)"></button>
+        <sc-if value="{{ kfOpen }}" hint-placeholder-val="{{ true }}">
+          <div role="dialog" aria-label="Keyframe easing" style="position:absolute;left:25%;bottom:calc(100% + 10px);transform:translateX(-50%);width:284px;z-index:200;background:#161A20;border-radius:8px;box-shadow:0 0 0 1px #2D343F,0 8px 24px rgba(0,0,0,.55)">
+            <div style="display:flex;align-items:center;gap:6px;height:36px;padding:0 6px 0 12px;border-bottom:1px solid #1C2129">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="#F23DC8" stroke="#FF5CD6" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5 16.5 10 10 16.5 3.5 10z"></path></svg>
+              <span style="font-size:13px;font-weight:600">Position keyframe</span>
+              <span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">00:01:15</span>
+              <button aria-label="Delete keyframe" title="Delete keyframe" style="margin-left:auto;display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:4px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#331116;color:#FFA0A8"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5.5h13"></path><path d="M8 5.5V4h4v1.5"></path><path d="m5 5.5.8 10.1a1.5 1.5 0 0 0 1.5 1.4h5.4a1.5 1.5 0 0 0 1.5-1.4L15 5.5"></path><path d="M8.5 8.5v5M11.5 8.5v5"></path></svg></button>
+              <button aria-label="Close easing editor" onClick="{{ toggleKf }}" style="display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:4px;background:transparent;color:#A6AFBD;cursor:pointer;padding:0" style-hover="background:#1C2129;color:#E4E8EE"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"></path></svg></button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px 12px">
+              <div style="font-size:11px;font-weight:500;letter-spacing:.06em;color:#929CAC">EASING INTO THIS KEYFRAME</div>
+              <div role="radiogroup" aria-label="Easing" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px">
+                <sc-for list="{{ easeOpts }}" as="e" hint-placeholder-count="4">
+                  <sc-if value="{{ e.on }}" hint-placeholder-val="{{ false }}">
+                    <button role="radio" aria-checked="true" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0 5px;border:1px solid #FF5CD6;border-radius:4px;background:#2B1229;cursor:pointer;min-width:0">
+                      <svg width="28" height="18" viewBox="0 0 28 18" fill="none" stroke="#FF85E0" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="{{ e.d }}"></path></svg>
+                      <span style="font-family:'DM Mono',monospace;font-size:11px;color:#FFD6F4;letter-spacing:-0.02em">{{ e.label }}</span>
+                    </button>
+                  </sc-if>
+                  <sc-if value="{{ e.off }}" hint-placeholder-val="{{ true }}">
+                    <button role="radio" aria-checked="false" onClick="{{ e.pick }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0 5px;border:1px solid #2D343F;border-radius:4px;background:#111419;cursor:pointer;min-width:0" style-hover="background:#1C2129;border-color:#5E6776">
+                      <svg width="28" height="18" viewBox="0 0 28 18" fill="none" stroke="#A6AFBD" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="{{ e.d }}"></path></svg>
+                      <span style="font-family:'DM Mono',monospace;font-size:11px;color:#A6AFBD;letter-spacing:-0.02em">{{ e.label }}</span>
+                    </button>
+                  </sc-if>
+                </sc-for>
+              </div>
+              <svg viewBox="0 0 260 148" width="100%" height="104" preserveAspectRatio="none" style="display:block;background:#08090C;border:1px solid #1C2129;border-radius:4px" aria-label="Easing curve">
+                <path d="M14 104H246M14 74H246M14 44H246M72 14V134M130 14V134M188 14V134" stroke="#161A20" stroke-width="1"></path>
+                <rect x="14" y="14" width="232" height="120" fill="none" stroke="#2D343F" stroke-width="1"></rect>
+                <path d="M14 134L246 14" stroke="#3C4451" stroke-width="1" stroke-dasharray="3 4"></path>
+                <path d="{{ curve.h1 }}" stroke="#838D9D" stroke-width="1"></path>
+                <path d="{{ curve.h2 }}" stroke="#838D9D" stroke-width="1"></path>
+                <path d="{{ curve.d }}" fill="none" stroke="#F23DC8" stroke-width="2" stroke-linecap="round"></path>
+                <circle cx="14" cy="134" r="3" fill="#F23DC8"></circle>
+                <circle cx="246" cy="14" r="3" fill="#F23DC8"></circle>
+                <circle cx="{{ curve.x1 }}" cy="{{ curve.y1 }}" r="5" fill="#161A20" stroke="#E4E8EE" stroke-width="1.5"></circle>
+                <circle cx="{{ curve.x2 }}" cy="{{ curve.y2 }}" r="5" fill="#161A20" stroke="#E4E8EE" stroke-width="1.5"></circle>
+              </svg>
+              <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;background:#1C2129;border:1px solid #5E6776;border-radius:4px">
+                <span style="font-size:11px;color:#929CAC">Bezier</span><span style="font-family:'DM Mono',monospace;font-size:12px;color:#E4E8EE;flex:1;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ bezText }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:11px;color:#929CAC;white-space:nowrap">
+                <span>Y 608 → 560 px · 0.60 s</span>
+              </div>
+            </div>
+            <span style="position:absolute;left:50%;bottom:-6px;width:10px;height:10px;margin-left:-5px;transform:rotate(45deg);background:#161A20;box-shadow:1px 1px 0 0 #2D343F"></span>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+    <!-- Sub-track: Opacity -->
+    <div style="display:grid;grid-template-columns:220px minmax(0,1fr);height:24px;border-bottom:1px solid #161A20">
+      <div style="display:flex;align-items:center;gap:6px;padding:0 8px 0 36px;border-right:1px solid #1C2129;background:#14171D">
+        <span style="font-size:12px;color:#A6AFBD;flex:1">Opacity</span>
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">{{ opacity }} %</span>
+      </div>
+      <div style="position:relative;margin:0 12px 0 8px;background:#0E1015">
+        <div style="position:absolute;left:15%;width:8.333%;top:50%;height:1px;background:#9C1A7F"></div>
+        <span style="position:absolute;left:19.167%;top:50%;transform:translate(-50%,-50%);height:16px;padding:0 4px;display:inline-flex;align-items:center;background:#161A20;border:1px solid #2D343F;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;line-height:1;color:#A6AFBD">linear</span>
+        <div style="position:absolute;left:90%;width:10%;top:50%;height:1px;background:#9C1A7F"></div>
+        <span style="position:absolute;left:95%;top:50%;transform:translate(-50%,-50%);height:16px;padding:0 4px;display:inline-flex;align-items:center;background:#161A20;border:1px solid #2D343F;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;line-height:1;color:#A6AFBD">easeIn</span>
+        <span aria-label="Keyframe 0.90 s" style="position:absolute;left:15%;top:50%;width:9px;height:9px;transform:translate(-50%,-50%) rotate(45deg);background:#9C1A7F;border:1px solid #FF5CD6;border-radius:1px"></span>
+        <span aria-label="Keyframe 1.40 s" style="position:absolute;left:23.333%;top:50%;width:9px;height:9px;transform:translate(-50%,-50%) rotate(45deg);background:#9C1A7F;border:1px solid #FF5CD6;border-radius:1px"></span>
+        <span aria-label="Keyframe 5.40 s" style="position:absolute;left:90%;top:50%;width:9px;height:9px;transform:translate(-50%,-50%) rotate(45deg);background:#9C1A7F;border:1px solid #FF5CD6;border-radius:1px"></span>
+        <span aria-label="Keyframe 6.00 s" style="position:absolute;left:100%;top:50%;width:9px;height:9px;transform:translate(-50%,-50%) rotate(45deg);background:#9C1A7F;border:1px solid #FF5CD6;border-radius:1px"></span>
+      </div>
+    </div>
+    <!-- Sub-track: Scale -->
+    <div style="display:grid;grid-template-columns:220px minmax(0,1fr);height:24px;border-bottom:1px solid #161A20">
+      <div style="display:flex;align-items:center;gap:6px;padding:0 8px 0 36px;border-right:1px solid #1C2129;background:#14171D">
+        <span style="font-size:12px;color:#A6AFBD;flex:1">Scale</span>
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">{{ scale }} %</span>
+      </div>
+      <div style="position:relative;margin:0 12px 0 8px;background:#0E1015">
+        <div style="position:absolute;left:15%;width:10%;top:50%;height:1px;background:#9C1A7F"></div>
+        <span style="position:absolute;left:20%;top:50%;transform:translate(-50%,-50%);height:16px;padding:0 4px;display:inline-flex;align-items:center;background:#161A20;border:1px solid #2D343F;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;line-height:1;color:#A6AFBD;letter-spacing:-0.03em">easeInOut</span>
+        <span aria-label="Keyframe 0.90 s" style="position:absolute;left:15%;top:50%;width:9px;height:9px;transform:translate(-50%,-50%) rotate(45deg);background:#9C1A7F;border:1px solid #FF5CD6;border-radius:1px"></span>
+        <span aria-label="Keyframe 1.50 s" style="position:absolute;left:25%;top:50%;width:9px;height:9px;transform:translate(-50%,-50%) rotate(45deg);background:#9C1A7F;border:1px solid #FF5CD6;border-radius:1px"></span>
+      </div>
+    </div>
+
+    <!-- Layer 3 -->
+    <div style="display:grid;grid-template-columns:220px minmax(0,1fr);height:28px;border-bottom:1px solid #161A20">
+      <div style="display:flex;align-items:center;gap:6px;padding:0 8px;border-right:1px solid #1C2129">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#838D9D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5.5l4.5 4.5L8 14.5"></path></svg>
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#A6AFBD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Visible"><path d="M2.5 10S5.25 5 10 5s7.5 5 7.5 5-2.75 5-7.5 5-7.5-5-7.5-5z"></path><circle cx="10" cy="10" r="2.25"></circle></svg>
+        <span style="font-family:'Noto Sans Tamil','Instrument Sans',sans-serif;font-size:13px;line-height:20px;font-weight:500;color:#E4E8EE;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">வணக்கம்</span>
+        <sc-if value="{{ warning }}" hint-placeholder-val="{{ true }}">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#FFBC47" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Warning: unknown effect"><path d="M8.7 4.2a1.5 1.5 0 0 1 2.6 0l5.9 10.3a1.5 1.5 0 0 1-1.3 2.25H4.1a1.5 1.5 0 0 1-1.3-2.25z"></path><path d="M10 8.5v3"></path><path d="M10 14.25h.01"></path></svg>
+        </sc-if>
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:#929CAC">3</span>
+      </div>
+      <div style="position:relative;margin:0 12px 0 8px;background:#0C0E12">
+        <sc-if value="{{ warning }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute;left:6.667%;width:86.667%;top:4px;bottom:4px;display:flex;align-items:center;gap:6px;padding:0 8px;background:repeating-linear-gradient(135deg,#2E2008 0 6px,#251A07 6px 12px);border:1px solid #7A5210;border-radius:4px;overflow:hidden">
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="#FFBC47" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.7 4.2a1.5 1.5 0 0 1 2.6 0l5.9 10.3a1.5 1.5 0 0 1-1.3 2.25H4.1a1.5 1.5 0 0 1-1.3-2.25z"></path><path d="M10 8.5v3"></path></svg>
+            <span style="font-size:11px;font-weight:600;color:#FFD27A;white-space:nowrap">Unknown effect: skipped</span>
+            <span style="font-family:'DM Mono',monospace;font-size:11px;color:#C6CDD8;white-space:nowrap">fx.shimmer-v2</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noWarning }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:6.667%;width:86.667%;top:4px;bottom:4px;display:flex;align-items:center;gap:6px;padding:0 8px;background:#242A33;border:1px solid #3C4451;border-radius:4px;overflow:hidden">
+            <span style="font-size:11px;font-weight:500;color:#C6CDD8;white-space:nowrap">Fade in</span><span style="font-size:11px;color:#929CAC">Line</span>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- Playhead -->
+    <div aria-hidden="true" style="position:absolute;left:228px;right:12px;top:0;bottom:0;pointer-events:none;z-index:30">
+      <div style="position:absolute;top:0;bottom:0;left:{{ phLeft }};width:1px;background:#2DD3F0;box-shadow:0 0 6px rgba(45,211,240,.5)">
+        <span style="position:absolute;top:2px;left:-6px;width:13px;height:16px;background:#2DD3F0;clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%)"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;playing&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;States&quot;},&quot;keyframeEditor&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;States&quot;},&quot;warning&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;States&quot;},&quot;checkerboard&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Stage&quot;},&quot;safeArea&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Stage&quot;}}">
+const DUR = 6, FPS = 30, PT = 1.24;
+const EASE = {
+  linear: x => x,
+  easeIn: x => x * x * x,
+  easeOut: x => 1 - Math.pow(1 - x, 3),
+  easeInOut: x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2,
+};
+const BZ = { linear: [0, 0, 1, 1], easeIn: [0.55, 0.055, 0.675, 0.19], easeOut: [0.215, 0.61, 0.355, 1], easeInOut: [0.645, 0.045, 0.355, 1] };
+const cl = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const p2 = n => String(n).padStart(2, '0');
+const tc = t => { const s = Math.floor(t + 1e-6); const f = Math.min(FPS - 1, Math.floor((t - s) * FPS + 1e-6)); return `${p2(Math.floor(s / 60))}:${p2(s % 60)}:${p2(f)}`; };
+const seg = (t, a, b, va, vb, e) => t <= a ? va : t >= b ? vb : va + (vb - va) * EASE[e]((t - a) / (b - a));
+const PRESETS = [
+  { name: 'ENTRANCES', items: [['Typewriter', 'Char'], ['Fade-slide', 'Word', true], ['Pop in', 'Char'], ['Blur in', 'Char'], ['Rise', 'Line'], ['Track in', 'Line'], ['Wave', 'Char']] },
+  { name: 'EXITS', items: [['Fade out', 'Line'], ['Drop out', 'Word'], ['Wipe off', 'Line']] },
+  { name: 'LOOPS', items: [['Glow pulse', 'Line'], ['Flicker', 'Char']] },
+].map(g => ({ name: g.name, items: g.items.map(([name, gran, on]) => ({ name, gran, on: !!on, off: !on, aria: `${name}, split by ${gran}${on ? ', applied to selected layer' : ''}` })) }));
+const TICKS = Array.from({ length: 61 }, (_, i) => ({ left: (i / 60 * 100) + '%', h: i % 10 === 0 ? 10 : i % 5 === 0 ? 7 : 4 }));
+const LABELS = Array.from({ length: 7 }, (_, i) => ({ left: (i / 6 * 100) + '%', label: i + 's', tf: i === 6 ? 'translateX(calc(-100% - 4px))' : 'translateX(4px)' }));
+const L1 = Array.from('Grand Opening');
+const L2 = ['Sale ', 'starts ', 'Friday'];
+const miniPath = b => `M2 16C${2 + b[0] * 24} ${16 - b[1] * 14} ${2 + b[2] * 24} ${16 - b[3] * 14} 26 2`;
+
+class Component extends DCLogic {
+  state = { t: PT, playing: null, checker: null, safe: null, kfOpen: null, warning: null, bannerHidden: false, loop: true, tab: 'presets', name: 'Grand opening — teaser', posEase: 'easeOut', zoom: 50 };
+  get(k, p, d) { return this.state[k] ?? this.props[p] ?? d; }
+  componentDidMount() {
+    this._last = 0;
+    const tick = ts => {
+      this._raf = requestAnimationFrame(tick);
+      if (!this.get('playing', 'playing', false)) { this._last = 0; return; }
+      const dt = this._last ? Math.min(.1, (ts - this._last) / 1000) : 0;
+      this._last = ts;
+      let n = this.state.t + dt;
+      if (n >= DUR) { if (this.state.loop) n -= DUR; else { this.setState({ t: DUR, playing: false }); return; } }
+      this.setState({ t: n });
+    };
+    this._raf = requestAnimationFrame(tick);
+  }
+  componentWillUnmount() { cancelAnimationFrame(this._raf); }
+  componentDidUpdate(pp) {
+    const map = { playing: 'playing', keyframeEditor: 'kfOpen', warning: 'warning', checkerboard: 'checker', safeArea: 'safe' };
+    const ch = {};
+    for (const p in map) if (pp[p] !== this.props[p]) ch[map[p]] = null;
+    if ('playing' in ch && !this.props.playing) ch.t = PT;
+    if ('warning' in ch) ch.bannerHidden = false;
+    if (Object.keys(ch).length) this.setState(ch);
+  }
+  renderVals() {
+    const t = this.state.t;
+    const playing = this.get('playing', 'playing', false);
+    const checker = this.get('checker', 'checkerboard', false);
+    const safe = this.get('safe', 'safeArea', true);
+    const kfOpen = this.get('kfOpen', 'keyframeEditor', true);
+    const warning = this.get('warning', 'warning', true);
+    const posEase = this.state.posEase;
+
+    const n = Math.floor((t - 0.2) / 1.4 * L1.length);
+    const caretAt = t >= 0.2 && t < 2.6 ? Math.min(n, L1.length) - 1 : -2;
+    const l1Chars = L1.map((ch, i) => ({ ch, op: i < n ? 1 : 0, caret: i === caretAt }));
+
+    const posY = seg(t, 0.9, 1.5, 608, 560, posEase);
+    const opacity = t < 0.9 ? 0 : t < 5.4 ? seg(t, 0.9, 1.4, 0, 100, 'linear') : seg(t, 5.4, 6, 100, 0, 'easeIn');
+    const scale = seg(t, 0.9, 1.5, 96, 100, 'easeInOut');
+    const l2Words = L2.map((w, i) => { const p = EASE.easeOut(cl((t - 0.9 - 0.15 * i) / 0.6)); return { w, op: p.toFixed(3), ty: ((1 - p) * 4.44).toFixed(3) }; });
+    const l3op = t < 0.4 || t >= 5.6 ? 0 : warning ? 1 : cl((t - 0.4) / 0.6);
+
+    const near = arr => arr.some(k => Math.abs(t - k) < 1 / 60);
+    const kf = (arr, name) => near(arr) ? { fill: '#F23DC8', label: `Remove ${name} keyframe` } : { fill: 'none', label: `Add ${name} keyframe` };
+
+    const b = BZ[posEase];
+    const X = v => 14 + v * 232, Y = v => 134 - v * 120;
+    const curve = { x1: X(b[0]), y1: Y(b[1]), x2: X(b[2]), y2: Y(b[3]) };
+    curve.d = `M14 134C${curve.x1} ${curve.y1} ${curve.x2} ${curve.y2} 246 14`;
+    curve.h1 = `M14 134L${curve.x1} ${curve.y1}`;
+    curve.h2 = `M246 14L${curve.x2} ${curve.y2}`;
+
+    return {
+      projectName: this.state.name,
+      onName: e => this.setState({ name: e.target.value }),
+      playing, paused: !playing,
+      togglePlay: () => this.setState({ playing: !playing, t: !playing && t >= DUR ? 0 : t }),
+      toStart: () => this.setState({ t: 0 }),
+      toEnd: () => this.setState({ t: DUR - 1 / FPS, playing: false }),
+      loop: this.state.loop, noLoop: !this.state.loop,
+      toggleLoop: () => this.setState(s => ({ loop: !s.loop })),
+      zoomLabel: this.state.zoom + '%',
+      zoomIn: () => this.setState(s => ({ zoom: Math.min(200, s.zoom + 25) })),
+      zoomOut: () => this.setState(s => ({ zoom: Math.max(25, s.zoom - 25) })),
+      tabPresets: this.state.tab === 'presets', tabLayers: this.state.tab === 'layers',
+      showLayers: () => this.setState({ tab: 'layers' }), showPresets: () => this.setState({ tab: 'presets' }),
+      presetGroups: PRESETS,
+      checker, noChecker: !checker, checkerAria: String(checker),
+      toggleChecker: () => this.setState({ checker: !checker }),
+      safe, noSafe: !safe, safeAria: String(safe),
+      toggleSafe: () => this.setState({ safe: !safe }),
+      warning, noWarning: !warning,
+      showBanner: warning && !this.state.bannerHidden,
+      hideBanner: () => this.setState({ bannerHidden: true }),
+      kfOpen, toggleKf: () => this.setState({ kfOpen: !kfOpen }),
+      showSelection: !playing && t >= 0.8,
+      l1Chars, l2Words,
+      l2dy: ((posY - 560) / 1080 * 100).toFixed(3),
+      l2s: (scale / 100).toFixed(4),
+      l2op: t < 0.8 ? 0 : (opacity / 100).toFixed(3),
+      l3op: l3op.toFixed(3),
+      posY: Math.round(posY), opacity: Math.round(opacity), opacityPct: opacity.toFixed(1) + '%', scale: scale.toFixed(1),
+      kfPos: kf([0.9, 1.5], 'position'), kfOp: kf([0.9, 1.4, 5.4, 6], 'opacity'), kfScale: kf([0.9, 1.5], 'scale'),
+      timecode: tc(t), phLeft: (t / DUR * 100).toFixed(3) + '%',
+      ticks: TICKS, rulerLabels: LABELS,
+      posEase,
+      easeOpts: Object.keys(BZ).map(id => ({ id, label: id, on: id === posEase, off: id !== posEase, d: miniPath(BZ[id]), pick: () => this.setState({ posEase: id }) })),
+      curve,
+      bezText: b.map(v => v.toFixed(2)).join(', '),
+    };
+  }
+}
+</script>
+</body>
+</html>
