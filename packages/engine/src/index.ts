@@ -55,3 +55,8 @@ export type {
   UnknownEffectWarning,
   InvalidEffectParamsWarning,
 } from "./compute.js";
+
+export { drawFrame } from "./draw.js";
+
+export { renderFrame } from "./render.js";
+export type { RenderOpts } from "./render.js";
