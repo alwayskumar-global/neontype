@@ -107,3 +107,39 @@ describe("arbitraries smoke tests", () => {
     }
   });
 });
+
+/**
+ * Task 10.1 — explicit generator/schema validation via `fc.check`.
+ *
+ * `fc.check` runs the property WITHOUT throwing and returns a run report. We
+ * assert the report's `failed` flag is `false`, which means fast-check found no
+ * counterexample across all runs (i.e. every generated value satisfied its
+ * schema). This is the consolidation gate for Group 10: the core generators
+ * (`arbValidProject`, `arbValidEffectPack`) must have zero constraint drift
+ * against the Zod schemas that are the source of truth. These checks complement
+ * (and do not replace) the `fc.assert` smoke tests above.
+ */
+describe("arbitraries — Group 10 consolidation (fc.check reports no counterexample)", () => {
+  it("fc.check(arbValidProject → ProjectSchema.safeParse) reports no counterexample", () => {
+    const report = fc.check(
+      fc.property(arbValidProject, (p) => ProjectSchema.safeParse(p).success === true),
+      { numRuns: 500 },
+    );
+    expect(report.failed).toBe(false);
+    expect(report.counterexample).toBeNull();
+    expect(report.numRuns).toBe(500);
+  });
+
+  it("fc.check(arbValidEffectPack → EffectPackSchema.safeParse) reports no counterexample", () => {
+    const report = fc.check(
+      fc.property(
+        arbValidEffectPack,
+        (ep) => EffectPackSchema.safeParse(ep).success === true,
+      ),
+      { numRuns: 500 },
+    );
+    expect(report.failed).toBe(false);
+    expect(report.counterexample).toBeNull();
+    expect(report.numRuns).toBe(500);
+  });
+});

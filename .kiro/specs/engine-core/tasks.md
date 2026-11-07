@@ -314,8 +314,8 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
-- [ ] 9. Group 9: drawFrame and renderFrame
-  - [-] 9.1 Implement `drawFrame`
+- [x] 9. Group 9: drawFrame and renderFrame
+  - [x] 9.1 Implement `drawFrame`
     - Create `packages/engine/src/draw.ts` exporting `drawFrame(ctx: CanvasRenderingContext2D, state: FrameState): void`:
     - Clear background: if `"transparent"` call `ctx.clearRect(0, 0, state.canvasWidth, state.canvasHeight)`; otherwise set `ctx.fillStyle` and call `ctx.fillRect`.
     - Per layer in order: (a) `ctx.save()`; (b) translate to anchor + positionOffset; (c) rotate about layer center; (d) scale about layer center; (e) `ctx.globalAlpha = transform.opacity`; (f) per segment: `ctx.save()`, translate to layoutX/layoutY + effectOverrides positionOffset, apply segment rotation/scale about segment center, set `ctx.globalAlpha = clamp(layerOpacity * (effectOverrides.opacity ?? 1), 0, 1)`, set `ctx.filter = blur > 0 ? \`blur(${blur}px)\` : 'none'` (only when needed), set fill color (effectOverrides.color → colorOverride → layer.fill), call `ctx.fillText(segment.text, 0, 0)`, `ctx.restore()`; (g) `ctx.restore()`.
@@ -323,29 +323,29 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 5.2, Requirement 5.9, Requirement 5.12
     - **Completion:** Unit test in `draw.test.ts` using a spy `CanvasRenderingContext2D` mock asserts: `clearRect` called for transparent background; `fillRect` called for hex background; `ctx.filter` set when blur > 0 and reset to `'none'` otherwise; `fillText` called once per segment.
 
-  - [~] 9.2 Write unit tests for `drawFrame`
+  - [x] 9.2 Write unit tests for `drawFrame`
     - Create `packages/engine/src/draw.test.ts` with a spy `CanvasRenderingContext2D` (all required methods as `vi.fn()`): test transparent background → `ctx.clearRect` called, `ctx.fillRect` not called; test hex background → `ctx.fillStyle` set and `ctx.fillRect` called; test blur > 0 → `ctx.filter` set to `'blur(Npx)'`; test blur = 0 → `ctx.filter` set to `'none'`; test `fillText` called once per segment; test `ctx.save` and `ctx.restore` called in balanced pairs.
     - **Covers:** Requirement 5.2, Requirement 5.12
     - **Completion:** `pnpm vitest run src/draw.test.ts` passes with zero failures.
 
-  - [~] 9.3 Implement `renderFrame`
+  - [x] 9.3 Implement `renderFrame`
     - Create `packages/engine/src/render.ts` exporting `renderFrame(project: Project, t: number, opts?: RenderOpts): void`: extract `ctx` from `opts`; if `opts.metricsProvider` not provided construct `new CanvasMetricsProvider(ctx)`; call `computeFrameState(project, t, { metricsProvider, registry: opts?.registry, layoutCache: opts?.layoutCache })`; call `drawFrame(ctx, state)`. `RenderOpts` interface: `{ ctx: CanvasRenderingContext2D; metricsProvider?: TextMetricsProvider; registry?: EffectRegistry; layoutCache?: Map<string, LayoutGeometry[]> }`.
     - Re-export `renderFrame` and `RenderOpts` from `src/index.ts`.
     - **Covers:** Requirement 5.3
     - **Completion:** TypeScript compiles `render.ts` without errors. A unit test stubs `computeFrameState` and `drawFrame` and asserts both are called with the correct arguments.
     - Commit: `feat(engine-core): implement drawFrame and renderFrame`
 
-  - [~] 9.4 Checkpoint — Group 9
+  - [x] 9.4 Checkpoint — Group 9
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 10. Group 10: Arbitraries and Full Property-Based Test Suite
-  - [~] 10.1 Validate and consolidate arbitraries
+  - [x] 10.1 Validate and consolidate arbitraries
     - Consolidate and validate the generators already created across Groups 3 and 7 in `packages/engine/src/testing/arbitraries.ts`; do NOT create any generators from scratch. Re-run the arbitraries smoke test, confirm all generators satisfy their corresponding Zod schemas, and fix any constraint drift (keyframe `t` range, `endSeconds > startSeconds`, etc.). Run `fc.check(fc.property(arbValidProject, p => ProjectSchema.safeParse(p).success))` and the same for `arbValidEffectPack`, asserting both pass.
     - **Covers:** Requirement 11.7
     - **Completion:** `pnpm vitest run src/testing/arbitraries.test.ts` passes with zero failures.
 
-  - [~] 10.2 Integrate and consolidate all 17 property-based tests
+  - [x] 10.2 Integrate and consolidate all 17 property-based tests
     - Re-run all existing property-based test files (`compute.test.ts`, `serialize.test.ts`, `schemas/project.test.ts`, `prng.test.ts`, `easing.test.ts`, `effects/typewriter/typewriter.test.ts`, `effects/fade-slide/fade-slide.test.ts`) using the now-complete `arbValidProject` and `arbValidEffectPack` generators, replacing any temporary inline stubs. Confirm all 17 properties listed in the design are present and tagged with their property numbers: Properties 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, and 17.
     - **Covers:** Requirement 11.1, Requirement 11.2, Requirement 11.4, Requirement 11.6, Requirement 11.9, Requirement 11.10, Requirement 11.11, Requirement 11.12, Requirement 11.13, Requirement 11.14
     - **Completion:** `pnpm vitest run` passes with all 17 property tests present and tagged. Zero failures.
