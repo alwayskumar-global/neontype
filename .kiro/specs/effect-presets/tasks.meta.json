@@ -98,6 +98,41 @@
         "chatSessionId": "sess_effect_presets_impl",
         "timestamp": 1794058705116
       }
+    ],
+    "4.1 Implement `line-wipe` effect with unit and property tests": [
+      {
+        "executionId": "fa2a90a0-01c0-4bbb-89d4-23c14612a87f",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059036576
+      }
+    ],
+    "4.2 Implement `neon-flicker` effect with unit and property tests": [
+      {
+        "executionId": "fa2a90a0-01c0-4bbb-89d4-23c14612a87f",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059036576
+      }
+    ],
+    "4.3 Implement `rotate-drop` effect with unit and property tests": [
+      {
+        "executionId": "fa2a90a0-01c0-4bbb-89d4-23c14612a87f",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059036576
+      }
+    ],
+    "4.4 Checkpoint \u2014 Group 3b": [
+      {
+        "executionId": "fa2a90a0-01c0-4bbb-89d4-23c14612a87f",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059036576
+      }
+    ],
+    "4. Group 3b: line-wipe, neon-flicker, rotate-drop": [
+      {
+        "executionId": "fa2a90a0-01c0-4bbb-89d4-23c14612a87f",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059036576
+      }
     ]
   }
 }

@@ -77,27 +77,27 @@ This plan converts the `effect-presets` design into an ordered series of coding 
     - Run `pnpm --filter @studio/engine exec tsc --noEmit`, `pnpm --filter @studio/engine lint`, and `pnpm vitest run src/effects` (from `packages/engine`).
     - **Completion:** All three commands exit with code 0 and zero failures.
 
-- [ ] 4. Group 3b: line-wipe, neon-flicker, rotate-drop
-  - [ ] 4.1 Implement `line-wipe` effect with unit and property tests
+- [x] 4. Group 3b: line-wipe, neon-flicker, rotate-drop
+  - [x] 4.1 Implement `line-wipe` effect with unit and property tests
     - Create `packages/engine/src/effects/line-wipe/schema.ts` (`startDelay`, `delayPerGroup`, `fadeSeconds`, `direction` `forward`|`backward`, `easing`; `.finite()`, hard min/max per Requirement 7.3, defaults), `index.ts` (`threshold` from `direction`/`groupIndex`/`groupCount` per design; when `fadeSeconds == 0` `opacity = t >= threshold ? 1 : 0`; when `fadeSeconds > 0` `q = clamp((t - threshold)/fadeSeconds, 0, 1)`, `opacity = evaluate(easing, 0, 1, q)` clamped to `[0,1]`; `register`; throws `InvalidEffectParamsError`), and `line-wipe.test.ts`.
     - Tests: unit at `p = 0`/before threshold, `p = 1`/at or beyond `threshold + fadeSeconds` (`opacity 1`), `p = 0.5` midpoint; `fadeSeconds = 0` hard-step boundary; both directions; `InvalidEffectParamsError`. Property tests using `arbLineWipeParams`: Property 1 determinism, Property 2 bounded, Property 3 terminal identity.
     - **Covers:** Requirement 1.1, Requirement 1.2, Requirement 1.3, Requirement 1.5, Requirement 1.7, Requirement 1.9, Requirement 1.10, Requirement 2.5, Requirement 7.1, Requirement 7.2, Requirement 7.3, Requirement 7.4, Requirement 7.5, Requirement 7.6, Requirement 7.7, Requirement 16.1, Requirement 16.2, Requirement 16.3, Requirement 16.5
     - **Completion:** `pnpm vitest run src/effects/line-wipe` (from `packages/engine`) passes with zero failures.
 
-  - [ ] 4.2 Implement `neon-flicker` effect with unit and property tests
+  - [x] 4.2 Implement `neon-flicker` effect with unit and property tests
     - Create `packages/engine/src/effects/neon-flicker/schema.ts` (`periodSeconds`, `minOpacity`, `cellsPerPeriod` integer, `phasePerGroup`; `.finite()`, hard min/max per Requirement 8.2, defaults), `index.ts` (`phase = (((t - groupIndex * phasePerGroup) % period) + period) % period`; `k = min(cellsPerPeriod - 1, floor((phase/period) * cellsPerPeriod))`; draw exactly `k + 1` PRNG values, use the LAST `r`; `opacity = clamp(minOpacity + (1 - minOpacity) * r, 0, 1)`; looping — no terminal identity; `register`; throws `InvalidEffectParamsError`), and `neon-flicker.test.ts`.
     - Tests: unit asserting `opacity` lies in `[minOpacity, 1]` at sample times across one period; `InvalidEffectParamsError`. Property tests using `arbNeonFlickerParams`: Property 1 determinism, Property 2 bounded, Property 4 loop-period (`opacity(t) == opacity(t + periodSeconds)`), Property 5 brightness differs across distinct cell indices.
     - **Covers:** Requirement 1.1, Requirement 1.2, Requirement 1.3, Requirement 1.4, Requirement 1.5, Requirement 1.7, Requirement 1.9, Requirement 1.10, Requirement 2.8, Requirement 8.1, Requirement 8.2, Requirement 8.3, Requirement 8.4, Requirement 8.5, Requirement 8.6, Requirement 8.7, Requirement 8.8, Requirement 16.1, Requirement 16.2, Requirement 16.3
     - **Completion:** `pnpm vitest run src/effects/neon-flicker` (from `packages/engine`) passes with zero failures.
 
-  - [ ] 4.3 Implement `rotate-drop` effect with unit and property tests
+  - [x] 4.3 Implement `rotate-drop` effect with unit and property tests
     - Create `packages/engine/src/effects/rotate-drop/schema.ts` (`startDelay`, `durationSeconds`, `delayPerGroup`, `dropDistance`, `startRotation`, `easing` default `easeOut`; `.finite()`, hard min/max per Requirement 9.2, defaults), `index.ts` (compute `p`, `e`; `opacity = e`; `positionOffset = [0, dropDistance * (1 - e)]` clamped per axis to `[-32000, 32000]`; `rotation = startRotation * (1 - e)` clamped to `[-36000, 36000]`; `register`; throws `InvalidEffectParamsError`), and `rotate-drop.test.ts`.
     - Tests: unit at `p = 0` (`opacity 0`, `[0, dropDistance]`, `rotation startRotation`), `p = 1` (`opacity 1`, `[0, 0]`, `rotation 0`), `p = 0.5`; `InvalidEffectParamsError`. Property tests using `arbRotateDropParams`: Property 1 determinism, Property 2 bounded, Property 3 terminal identity.
     - **Covers:** Requirement 1.1, Requirement 1.2, Requirement 1.3, Requirement 1.5, Requirement 1.7, Requirement 1.9, Requirement 1.10, Requirement 2.5, Requirement 9.1, Requirement 9.2, Requirement 9.3, Requirement 9.4, Requirement 9.5, Requirement 9.6, Requirement 9.7, Requirement 16.1, Requirement 16.2, Requirement 16.3, Requirement 16.5
     - **Completion:** `pnpm vitest run src/effects/rotate-drop` (from `packages/engine`) passes with zero failures.
     - Commit: `feat(effect-presets): add line-wipe, neon-flicker, rotate-drop effects`
 
-  - [ ] 4.4 Checkpoint — Group 3b
+  - [x] 4.4 Checkpoint — Group 3b
     - Run `pnpm --filter @studio/engine exec tsc --noEmit`, `pnpm --filter @studio/engine lint`, and `pnpm vitest run src/effects` (from `packages/engine`).
     - **Completion:** All three commands exit with code 0 and zero failures.
 
