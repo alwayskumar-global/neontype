@@ -371,7 +371,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
-- [ ] 12. Group 12: Playwright Visual Test Setup
+- [x] 12. Group 12: Playwright Visual Test Setup
   - [x] 12.1 Create Vite visual test app
     - Create `packages/engine/tests/visual/app/index.html` with a single `<canvas id="canvas" width="800" height="450">` and a module script tag.
     - Create `packages/engine/tests/visual/app/main.ts` importing `drawFrame` from `@studio/engine`, self-hosting OFL fonts (Noto Sans, Noto Sans Tamil) via CSS `@font-face` declarations pointing to `../fonts/`, awaiting `document.fonts.ready`, and exposing `window.fontsReady = true` and `window.render = (state) => { const ctx = canvas.getContext("2d"); drawFrame(ctx, state); }`.
@@ -394,46 +394,46 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Completion:** `pnpm --filter @studio/engine exec playwright test --project=chromium` writes golden PNGs on first run and passes on subsequent runs with zero pixel-diff failures.
     - Commit: `feat(engine-core): Playwright golden-image tests for drawFrame (typewriter, fade-slide, Tamil)`
 
-  - [~] 12.4 Checkpoint — Group 12
+  - [ ] 12.4 Checkpoint — Group 12
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 13. Group 13: ESLint Enforcement, Kiro Hook, and CONTRIBUTING.md
-  - [~] 13.1 Verify ESLint `no-restricted-properties` rule covers all banned calls
+  - [x] 13.1 Verify ESLint `no-restricted-properties` rule covers all banned calls
     - Add `packages/engine/src/__tests__/eslint-purity.test.ts`: write a temporary TypeScript snippet calling `Math.random()`, `Date.now()`, and `performance.now()`; programmatically invoke the ESLint `Linter` on the snippet with `eslint.config.js` rules loaded; assert exactly three ESLint errors are produced, each identifying the correct property name.
     - **Covers:** Requirement 13.1, Requirement 13.3
     - **Completion:** `pnpm vitest run src/__tests__/eslint-purity.test.ts` passes with zero failures.
 
-  - [~] 13.2 Create Kiro `PostFileSave` hook for ESLint
+  - [ ] 13.2 Create Kiro `PostFileSave` hook for ESLint
     - Do NOT hand-author a hook JSON file with an invented schema. Instead, create the hook through Kiro's Hooks UI: trigger on file save matching `packages/engine/src/**`, with an action that runs the lint script (`pnpm --filter @studio/engine lint`), reporting only (does not block saves). Keep whatever file Kiro generates under `.kiro/hooks/`.
     - **Covers:** Requirement 13.2
     - **Completion:** The hook appears in the Kiro Hooks panel and fires when a file under `packages/engine/src/` is saved (verified with a test save).
 
-  - [~] 13.3 Write `packages/engine/CONTRIBUTING.md`
+  - [x] 13.3 Write `packages/engine/CONTRIBUTING.md`
     - Create `packages/engine/CONTRIBUTING.md` documenting: (1) directory structure — `src/effects/<kebab-id>/` with `index.ts`, `schema.ts`, and `*.test.ts`; (2) registration pattern — `index.ts` exports `register(registry: EffectRegistry): void`, MUST NOT call `register` at module load time; (3) test requirements — at least one unit test and one property-based test using `computeFrameState` with a fresh `createRegistry()`, `FakeMetricsProvider`, and `fc.assert`; (4) ESLint purity rules — `Math.random`, `Date.now`, `performance.now` are banned in `src/**`; use `createPRNG` for randomness; (5) commit conventions — Conventional Commits format; reference spec task id in commit message.
     - **Covers:** Requirement 8.4
     - **Completion:** `CONTRIBUTING.md` exists and contains all five sections listed above.
     - Commit: `feat(engine-core): ESLint purity test, Kiro hook, and CONTRIBUTING.md`
 
-  - [~] 13.4 Checkpoint — Group 13
+  - [ ] 13.4 Checkpoint — Group 13
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 14. Group 14: Benchmark
-  - [~] 14.1 Wire root `pnpm test` workspace-check script
+  - [ ] 14.1 Wire root `pnpm test` workspace-check script
     - Add a `"test"` script to the ROOT `package.json` that runs, in sequence, the full workspace checks: typecheck (`tsc --noEmit` across the workspace or `pnpm -r exec tsc --noEmit`), lint (`pnpm -r lint`), and `pnpm -r vitest run`.
     - Ensure `packages/engine/package.json` has a `"lint"` script and a test script so the recursive commands pick it up.
     - **Covers:** Requirement 11.8
     - **Completion:** Running `pnpm test` from the repo root runs typecheck, lint, and the full Vitest suite; all pass with zero errors.
 
-  - [~] 14.2 Implement `compute.bench.ts` performance benchmark
+  - [ ] 14.2 Implement `compute.bench.ts` performance benchmark
     - Create `packages/engine/src/compute.bench.ts` using Vitest's `bench` API.
     - Define a `project200` fixture at file top: a project with one text layer containing exactly 200 characters and two character-granularity effects (`typewriter` and `fade-slide`).
     - Write a benchmark: `bench("computeFrameState — 200 chars, 2 effects, cold cache", () => { computeFrameState(project200, 0.5, { metricsProvider: FakeMetricsProvider, layoutCache: new Map() }); }, { time: 500 })`. A fresh `Map` for `layoutCache` MUST be created inside each iteration to ensure a cold cache. Include a comment `// Target: < 4 ms mean`.
     - **Covers:** Requirement 15.3, Requirement 15.4
     - **Completion:** `pnpm vitest bench src/compute.bench.ts` runs without error and reports a mean time.
 
-  - [~] 14.3 Checkpoint — Group 14 (Final)
+  - [ ] 14.3 Checkpoint — Group 14 (Final)
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0, zero test failures, and zero lint errors. The full `packages/engine` implementation is complete.
     - Commit: `feat(engine-core): add computeFrameState benchmark (compute.bench.ts)`
