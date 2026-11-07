@@ -415,12 +415,12 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Completion:** `CONTRIBUTING.md` exists and contains all five sections listed above.
     - Commit: `feat(engine-core): ESLint purity test, Kiro hook, and CONTRIBUTING.md`
 
-  - [ ] 13.4 Checkpoint — Group 13
+  - [x] 13.4 Checkpoint — Group 13
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 14. Group 14: Benchmark
-  - [ ] 14.1 Wire root `pnpm test` workspace-check script
+  - [-] 14.1 Wire root `pnpm test` workspace-check script
     - Add a `"test"` script to the ROOT `package.json` that runs, in sequence, the full workspace checks: typecheck (`tsc --noEmit` across the workspace or `pnpm -r exec tsc --noEmit`), lint (`pnpm -r lint`), and `pnpm -r vitest run`.
     - Ensure `packages/engine/package.json` has a `"lint"` script and a test script so the recursive commands pick it up.
     - **Covers:** Requirement 11.8

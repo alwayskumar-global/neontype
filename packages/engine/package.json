@@ -9,6 +9,7 @@
   },
   "scripts": {
     "lint": "eslint src",
+    "test": "vitest run",
     "generate-schemas": "tsx scripts/generate-schemas.ts",
     "generate-visual-fixtures": "tsx scripts/generate-visual-fixtures.ts"
   },
