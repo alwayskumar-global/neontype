@@ -339,7 +339,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
-- [ ] 10. Group 10: Arbitraries and Full Property-Based Test Suite
+- [x] 10. Group 10: Arbitraries and Full Property-Based Test Suite
   - [x] 10.1 Validate and consolidate arbitraries
     - Consolidate and validate the generators already created across Groups 3 and 7 in `packages/engine/src/testing/arbitraries.ts`; do NOT create any generators from scratch. Re-run the arbitraries smoke test, confirm all generators satisfy their corresponding Zod schemas, and fix any constraint drift (keyframe `t` range, `endSeconds > startSeconds`, etc.). Run `fc.check(fc.property(arbValidProject, p => ProjectSchema.safeParse(p).success))` and the same for `arbValidEffectPack`, asserting both pass.
     - **Covers:** Requirement 11.7
@@ -351,17 +351,17 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Completion:** `pnpm vitest run` passes with all 17 property tests present and tagged. Zero failures.
     - Commit: `feat(engine-core): complete arbitraries and validate all 17 PBT properties`
 
-  - [~] 10.3 Checkpoint — Group 10
+  - [x] 10.3 Checkpoint — Group 10
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 11. Group 11: JSON Schema Generation Script and Staleness Test
-  - [~] 11.1 Implement `generate-schemas.ts` build script
+  - [x] 11.1 Implement `generate-schemas.ts` build script
     - Create `packages/engine/scripts/generate-schemas.ts`: import `ProjectSchema`, `EffectPackSchema`, and each built-in effect's `paramSchema` from the engine package; call `z.toJSONSchema(schema)` (Zod v4 native — `zod-to-json-schema` MUST NOT be used) for each schema; write resulting JSON to `packages/engine/schema/project.json`, `packages/engine/schema/effect-pack.json`, and `packages/engine/schema/<effectId>-params.json` for each built-in effect. Add a `"generate-schemas"` script entry to `packages/engine/package.json`. Run the script once to produce and commit the initial `schema/*.json` files.
     - **Covers:** Requirement 3.3, Requirement 3.4, Requirement 3.5, Requirement 14.1
     - **Completion:** `pnpm --filter @studio/engine generate-schemas` exits with code 0 and writes `schema/project.json` and `schema/effect-pack.json`.
 
-  - [~] 11.2 Write JSON Schema staleness test and AJV validation test
+  - [x] 11.2 Write JSON Schema staleness test and AJV validation test
     - In `packages/engine/src/schemas/schema-staleness.test.ts`: add a staleness test that imports the generation logic as a module function, runs it in memory, and deep-compares output against committed files in `packages/engine/schema/` — fails with a clear message if they differ; add an AJV validation test that compiles each generated JSON Schema file and validates a corpus of at least five valid documents from the arbitraries — asserts all validate successfully.
     - **Covers:** Requirement 3.5, Requirement 3.7
     - **Completion:** `pnpm vitest run src/schemas/schema-staleness.test.ts` passes with zero failures. Manually mutating `schema/project.json` causes the staleness test to fail.

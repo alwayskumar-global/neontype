@@ -1,0 +1,374 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "canvas": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 7680
+        },
+        "height": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 4320
+        },
+        "fps": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 120
+        },
+        "durationSeconds": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 600
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "fps",
+        "durationSeconds"
+      ],
+      "additionalProperties": false
+    },
+    "background": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        {
+          "type": "string",
+          "const": "transparent"
+        }
+      ]
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "layers": {
+      "maxItems": 64,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "property": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "position"
+                    },
+                    {
+                      "type": "string",
+                      "const": "scale"
+                    },
+                    {
+                      "type": "string",
+                      "const": "rotation"
+                    },
+                    {
+                      "type": "string",
+                      "const": "opacity"
+                    },
+                    {
+                      "type": "string",
+                      "const": "blur"
+                    },
+                    {
+                      "type": "string",
+                      "const": "color"
+                    }
+                  ]
+                },
+                "keyframes": {
+                  "minItems": 1,
+                  "maxItems": 500,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "t": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "value": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "number"
+                              }
+                            ],
+                            "items": false,
+                            "minItems": 2,
+                            "maxItems": 2
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "^#[0-9a-fA-F]{6}$"
+                          }
+                        ]
+                      },
+                      "easing": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "linear"
+                          },
+                          {
+                            "type": "string",
+                            "const": "easeIn"
+                          },
+                          {
+                            "type": "string",
+                            "const": "easeOut"
+                          },
+                          {
+                            "type": "string",
+                            "const": "easeInOut"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "const": "cubicBezier"
+                              },
+                              "x1": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                              },
+                              "y1": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                              },
+                              "x2": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                              },
+                              "y2": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "x1",
+                              "y1",
+                              "x2",
+                              "y2"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "const": "step"
+                              },
+                              "steps": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "steps"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "t",
+                      "value",
+                      "easing"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "property",
+                "keyframes"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "effectInstances": {
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "effectId": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+                },
+                "granularity": {
+                  "type": "string",
+                  "enum": [
+                    "character",
+                    "word",
+                    "line"
+                  ]
+                },
+                "params": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "effectId",
+                "granularity",
+                "params"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "fontFamily": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fontSize": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000
+          },
+          "fontWeight": {
+            "type": "string"
+          },
+          "fill": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "align": {
+            "type": "string",
+            "enum": [
+              "left",
+              "center",
+              "right"
+            ]
+          },
+          "letterSpacing": {
+            "default": 0,
+            "type": "number",
+            "minimum": -500,
+            "maximum": 500
+          },
+          "lineHeight": {
+            "default": 1.2,
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 10
+          },
+          "maxWidth": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "startSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "endSeconds": {
+            "type": "number"
+          },
+          "anchor": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": -32000,
+                "maximum": 32000
+              },
+              "y": {
+                "type": "number",
+                "minimum": -32000,
+                "maximum": 32000
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "tracks",
+          "effectInstances",
+          "fontFamily",
+          "fontSize",
+          "fontWeight",
+          "fill",
+          "align",
+          "letterSpacing",
+          "lineHeight",
+          "maxWidth",
+          "startSeconds",
+          "endSeconds",
+          "anchor"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "canvas",
+    "background",
+    "seed",
+    "layers"
+  ],
+  "additionalProperties": false
+}

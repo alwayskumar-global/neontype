@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "durationSeconds": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "slideDistance": {
+      "type": "number"
+    },
+    "slideAxis": {
+      "type": "string",
+      "enum": [
+        "x",
+        "y"
+      ]
+    },
+    "delayPerSegment": {
+      "type": "number",
+      "minimum": 0
+    },
+    "easing": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "linear"
+        },
+        {
+          "type": "string",
+          "const": "easeIn"
+        },
+        {
+          "type": "string",
+          "const": "easeOut"
+        },
+        {
+          "type": "string",
+          "const": "easeInOut"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "cubicBezier"
+            },
+            "x1": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "y1": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "x2": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "y2": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [
+            "type",
+            "x1",
+            "y1",
+            "x2",
+            "y2"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "step"
+            },
+            "steps": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "type",
+            "steps"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "required": [
+    "durationSeconds",
+    "slideDistance",
+    "slideAxis",
+    "delayPerSegment",
+    "easing"
+  ],
+  "additionalProperties": false
+}

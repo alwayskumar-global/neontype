@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "startDelay": {
+      "default": 0,
+      "type": "number",
+      "minimum": 0
+    },
+    "delayPerCharacter": {
+      "type": "number",
+      "minimum": 0
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "forward",
+        "backward"
+      ]
+    }
+  },
+  "required": [
+    "startDelay",
+    "delayPerCharacter",
+    "direction"
+  ],
+  "additionalProperties": false
+}
