@@ -1,0 +1,40 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Pivot segment scale/rotation about the approximate glyph center in `drawFrame`": [
+      {
+        "executionId": "95aa7988-eb9c-43f1-8fd4-093a78bdb87b",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794057423723
+      }
+    ],
+    "1.2 Correct the `layout.ts` doc comment for the layout origin": [
+      {
+        "executionId": "95aa7988-eb9c-43f1-8fd4-093a78bdb87b",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794057423723
+      }
+    ],
+    "1.3 Write pivot fixed-point draw tests (Property 9)": [
+      {
+        "executionId": "95aa7988-eb9c-43f1-8fd4-093a78bdb87b",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794057423723
+      }
+    ],
+    "1.4 Checkpoint \u2014 Group 1": [
+      {
+        "executionId": "95aa7988-eb9c-43f1-8fd4-093a78bdb87b",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794057423723
+      }
+    ],
+    "1. Group 1: drawFrame segment-pivot change (Requirement 17)": [
+      {
+        "executionId": "95aa7988-eb9c-43f1-8fd4-093a78bdb87b",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794057423723
+      }
+    ]
+  }
+}

@@ -410,3 +410,164 @@ describe("drawFrame — hardening against untrusted values", () => {
     expectBalancedSaveRestore(calls);
   });
 });
+
+
+// Feature: effect-presets, Property 9: Pivot fixed point
+//
+// Requirement 17: a segment's effect scale/rotation pivots about the
+// approximate glyph center (width/2, -0.35*fontSize) in the segment-local frame
+// (the frame established after translating to the glyph baseline origin). These
+// tests replay the ORDERED translate/rotate/scale calls the painter emitted as a
+// 2D affine matrix, then confirm the pivot point maps to the same CANVAS
+// coordinate with and without the override — i.e. the pivot is the fixed point
+// of the transform. A third test confirms a segment with no scale/rotation
+// override produces a transform-call sequence identical to current behaviour
+// (the Node-level pixel-identical guard; the Chromium golden-image suite is the
+// end-to-end guard, Requirement 17.9).
+
+/** A 2D affine matrix [a, b, c, d, e, f] mapping (x,y) → (a x + c y + e, b x + d y + f). */
+type Mat = [number, number, number, number, number, number];
+
+const IDENTITY: Mat = [1, 0, 0, 1, 0, 0];
+
+function matMul(m: Mat, n: Mat): Mat {
+  // m * n (apply n after m, i.e. m is the existing CTM, n the new op).
+  const [a, b, c, d, e, f] = m;
+  const [a2, b2, c2, d2, e2, f2] = n;
+  return [
+    a * a2 + c * b2,
+    b * a2 + d * b2,
+    a * c2 + c * d2,
+    b * c2 + d * d2,
+    a * e2 + c * f2 + e,
+    b * e2 + d * f2 + f,
+  ];
+}
+
+function translateMat(x: number, y: number): Mat {
+  return [1, 0, 0, 1, x, y];
+}
+
+function scaleMat(sx: number, sy: number): Mat {
+  return [sx, 0, 0, sy, 0, 0];
+}
+
+function rotateMat(rad: number): Mat {
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  return [cos, sin, -sin, cos, 0, 0];
+}
+
+function applyPoint(m: Mat, x: number, y: number): [number, number] {
+  const [a, b, c, d, e, f] = m;
+  return [a * x + c * y + e, b * x + d * y + f];
+}
+
+/**
+ * Replays the ordered translate/rotate/scale calls (as recorded in `calls` with
+ * per-method args) into the final CTM at the point drawFrame issued `fillText`.
+ * Each test here uses a single layer with a single segment, so every transform
+ * op recorded before the sole `fillText` composes into that segment's CTM.
+ */
+function ctmAtFillText(rc: RecordingContext): Mat {
+  let m: Mat = IDENTITY;
+  const idx = { translate: 0, rotate: 0, scale: 0 };
+  for (const call of rc.calls) {
+    if (call === "fillText") break;
+    if (call === "translate") {
+      const [x, y] = rc.args.translate[idx.translate++] as [number, number];
+      m = matMul(m, translateMat(x, y));
+    } else if (call === "rotate") {
+      const [rad] = rc.args.rotate[idx.rotate++] as [number];
+      m = matMul(m, rotateMat(rad));
+    } else if (call === "scale") {
+      const [sx, sy] = rc.args.scale[idx.scale++] as [number, number];
+      m = matMul(m, scaleMat(sx, sy));
+    }
+  }
+  return m;
+}
+
+describe("drawFrame — segment pivot (Property 9)", () => {
+  const WIDTH = 24;
+  const FONT_SIZE = 40;
+  const pivotLocal = (): [number, number] => [WIDTH / 2, -0.35 * FONT_SIZE];
+
+  function stateWithOverride(ov: BaseSegment["effectOverrides"]): FrameState {
+    const segment = makeSegment({ width: WIDTH, effectOverrides: ov });
+    return makeState({
+      layers: [makeLayerState({ fontSize: FONT_SIZE, segments: [segment] })],
+    });
+  }
+
+  it("keeps the pivot point fixed under effect scale = 2", () => {
+    const base = makeRecordingContext();
+    drawFrame(base.ctx, stateWithOverride(null));
+    const baseCtm = ctmAtFillText(base);
+    const [bx, by] = applyPoint(baseCtm, ...pivotLocal());
+
+    const scaled = makeRecordingContext();
+    drawFrame(scaled.ctx, stateWithOverride({ scale: 2 }));
+    const scaledCtm = ctmAtFillText(scaled);
+    const [sx, sy] = applyPoint(scaledCtm, ...pivotLocal());
+
+    // The painter actually emitted a scale(2,2).
+    expect(scaled.args.scale.map((a) => a[0])).toContain(2);
+    // The pivot maps to the same canvas coordinate with and without the scale.
+    expect(sx).toBeCloseTo(bx, 9);
+    expect(sy).toBeCloseTo(by, 9);
+    expectBalancedSaveRestore(scaled.calls);
+  });
+
+  it("keeps the pivot point fixed under effect rotation = 90", () => {
+    const base = makeRecordingContext();
+    drawFrame(base.ctx, stateWithOverride(null));
+    const baseCtm = ctmAtFillText(base);
+    const [bx, by] = applyPoint(baseCtm, ...pivotLocal());
+
+    const rotated = makeRecordingContext();
+    drawFrame(rotated.ctx, stateWithOverride({ rotation: 90 }));
+    const rotatedCtm = ctmAtFillText(rotated);
+    const [rx, ry] = applyPoint(rotatedCtm, ...pivotLocal());
+
+    // The painter actually emitted a rotate of 90° (π/2).
+    expect(rotated.args.rotate.map((a) => a[0] as number)).toContainEqual(
+      expect.closeTo(Math.PI / 2, 9),
+    );
+    // The pivot is the fixed point of the rotation.
+    expect(rx).toBeCloseTo(bx, 9);
+    expect(ry).toBeCloseTo(by, 9);
+    expectBalancedSaveRestore(rotated.calls);
+  });
+
+  it("emits a transform-call sequence identical to pre-pivot behaviour when no scale/rotation override is present", () => {
+    // A segment with only opacity/position/blur/color overrides (never scale or
+    // rotation) must produce exactly one translate (layout + positionOffset) and
+    // NO rotate/scale/pivot translates — byte-identical to the original painter.
+    const rc = makeRecordingContext();
+    const segment = makeSegment({
+      width: WIDTH,
+      layoutX: 5,
+      layoutY: 7,
+      effectOverrides: { opacity: 0.5, positionOffset: [3, 4], blur: 2, color: "#112233" },
+    });
+    const state = makeState({
+      layers: [makeLayerState({ fontSize: FONT_SIZE, segments: [segment] })],
+    });
+
+    drawFrame(rc.ctx, state);
+
+    // Segment-level transform ops: exactly one translate to (layoutX+off, layoutY+off),
+    // no rotate, no scale, and therefore no pivot translate pair.
+    // (The layer-level translate to the anchor is the first translate.)
+    const translates = rc.args.translate;
+    // layer anchor translate (0,0) then the single segment translate (8, 11).
+    expect(translates).toContainEqual([8, 11]);
+    expect(rc.args.rotate).toHaveLength(0);
+    expect(rc.args.scale).toHaveLength(0);
+    // No extra pivot translate pair: with a (0,0) anchor the only translates are
+    // the anchor and the one segment translate.
+    expect(translates).toHaveLength(2);
+    expectBalancedSaveRestore(rc.calls);
+  });
+});

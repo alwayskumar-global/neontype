@@ -4,10 +4,14 @@
  * `layoutSegments` turns an ordered list of grapheme-cluster tokens (from
  * `segmentText`) into one `LayoutGeometry` per cluster: the cluster's position
  * relative to the layer origin plus its measured box. The origin `(0, 0)` is
- * the top-left of the first character; positions are expressed relative to the
- * layer anchor and are consumed per-frame by `computeFrameState` (Group 8),
- * which wraps each geometry in a `BaseSegment` and layers effect overrides on
- * top. This module deals only with geometry and never with effect overrides.
+ * the pen position of the first character; `layoutY` advances by whole line
+ * heights down the page. NOTE: `drawFrame` consumes each `(layoutX, layoutY)`
+ * as the glyph BASELINE origin — it paints with `ctx.fillText(text, 0, 0)` and
+ * `textBaseline = "alphabetic"`, so glyphs render above `layoutY`, not below a
+ * box top-left. Positions are expressed relative to the layer anchor and are
+ * consumed per-frame by `computeFrameState` (Group 8), which wraps each
+ * geometry in a `BaseSegment` and layers effect overrides on top. This module
+ * deals only with geometry and never with effect overrides.
  *
  * Determinism/purity: the computation uses only `JSON.stringify`, arithmetic,
  * `Map`, and `Object.freeze`. There is no `Math.random`, `Date.now`,
@@ -46,9 +50,11 @@ import type { FontSpec, TextMetricsProvider } from "./metrics.js";
 
 /**
  * The computed geometry of a single grapheme cluster, relative to the layer
- * origin `(0, 0)` = top-left of the first character.
+ * origin `(0, 0)` = the pen position of the first character.
  *
- * - `layoutX` / `layoutY`: the cluster's top-left position.
+ * - `layoutX` / `layoutY`: the cluster's pen position, which `drawFrame`
+ *   consumes as the glyph baseline origin (`textBaseline = "alphabetic"`), not
+ *   the top-left of the glyph box.
  * - `width`: the cluster's measured advance width.
  * - `height`: the cluster's full vertical box (`ascent + descent`).
  */

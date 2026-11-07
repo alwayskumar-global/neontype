@@ -118,7 +118,7 @@ function drawLayer(ctx: CanvasRenderingContext2D, layer: LayerState): void {
     const layerColorOverride = validHex(t.colorOverride ?? undefined);
 
     for (const segment of layer.segments) {
-      drawSegment(ctx, segment, layerOpacity, layerColorOverride, layer.fill);
+      drawSegment(ctx, segment, layerOpacity, layerColorOverride, layer.fill, layer.fontSize);
     }
   } finally {
     ctx.restore();
@@ -132,32 +132,49 @@ function drawSegment(
   layerOpacity: number,
   layerColorOverride: string | undefined,
   layerFill: string,
+  fontSize: number,
 ): void {
   const ov = segment.effectOverrides;
 
   ctx.save();
   try {
-    // translate to layout position + effect positionOffset (if present).
+    // translate to layout position + effect positionOffset (if present). The
+    // local origin here is the glyph BASELINE (fillText draws at (0,0) with
+    // textBaseline "alphabetic").
     const layoutX = finiteOr(segment.layoutX, 0);
     const layoutY = finiteOr(segment.layoutY, 0);
     const ovOffX = ov?.positionOffset ? finiteOr(ov.positionOffset[0], 0) : 0;
     const ovOffY = ov?.positionOffset ? finiteOr(ov.positionOffset[1], 0) : 0;
     ctx.translate(layoutX + ovOffX, layoutY + ovOffY);
 
-    // segment rotation (deg → rad), identity when absent / non-finite.
-    if (ov?.rotation !== undefined) {
-      const rotDeg = finiteOr(ov.rotation, 0);
-      if (rotDeg !== 0) {
+    // Resolve the segment's scale/rotation overrides (clamped, identity-guarded)
+    // so we can decide whether a pivot transform is needed at all.
+    const rotDeg =
+      ov?.rotation !== undefined ? finiteOr(ov.rotation, 0) : 0;
+    const scaleVal =
+      ov?.scale !== undefined ? clamp(finiteOr(ov.scale, 1), 0, 100) : 1;
+    const needsRotate = rotDeg !== 0;
+    const needsScale = scaleVal !== 1;
+
+    // Requirement 17: pivot segment scale/rotation about the approximate glyph
+    // center `(px, py)` — the horizontal center of the advance width at roughly
+    // the vertical center of capital letters above the baseline. The pivot
+    // wrapping is emitted ONLY when a finite non-identity scale and/or finite
+    // non-zero rotation override is present, so segments without either (every
+    // typewriter / fade-slide segment) produce a byte-identical call sequence
+    // to before and keep existing golden images pixel-identical. Each non-finite
+    // pivot component degrades to 0 independently.
+    if (needsRotate || needsScale) {
+      const px = Number.isFinite(segment.width) ? segment.width / 2 : 0;
+      const py = Number.isFinite(fontSize) ? -0.35 * fontSize : 0;
+      ctx.translate(px, py);
+      if (needsRotate) {
         ctx.rotate((rotDeg * Math.PI) / 180);
       }
-    }
-
-    // segment scale, identity when absent / non-finite; clamp to [0, 100].
-    if (ov?.scale !== undefined) {
-      const s = clamp(finiteOr(ov.scale, 1), 0, 100);
-      if (s !== 1) {
-        ctx.scale(s, s);
+      if (needsScale) {
+        ctx.scale(scaleVal, scaleVal);
       }
+      ctx.translate(-px, -py);
     }
 
     // final alpha = layerOpacity * (effect opacity ?? 1), clamped to [0, 1].
