@@ -644,6 +644,11 @@
         "executionId": "1ae75c6f-1725-4dde-badd-55af7165fe49",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794038838250
+      },
+      {
+        "executionId": "8a005fe3-3e94-4b3c-b4d4-a02e3835b3e0",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794051738838
       }
     ],
     "8.4 Checkpoint — Group 8": [
@@ -844,6 +849,11 @@
         "executionId": "d181fa0f-267b-4b0d-993f-4c47ffc8fe27",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794047440548
+      },
+      {
+        "executionId": "8a005fe3-3e94-4b3c-b4d4-a02e3835b3e0",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794051739416
       }
     ],
     "13.1 Verify ESLint `no-restricted-properties` rule covers all banned calls": [
@@ -980,6 +990,13 @@
         "executionId": "92948208-37a1-4547-8f85-f4ff59dfc0a1",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794051645068
+      }
+    ],
+    "8. Group 8: computeFrameState": [
+      {
+        "executionId": "8a005fe3-3e94-4b3c-b4d4-a02e3835b3e0",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794051738887
       }
     ]
   }

@@ -280,7 +280,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
-- [ ] 8. Group 8: computeFrameState
+- [x] 8. Group 8: computeFrameState
   - [x] 8.1 Implement `computeFrameState`
     - Create `packages/engine/src/compute.ts` exporting `computeFrameState(project: Project, t: number, opts: ComputeOpts): FrameState`:
     - Step 1: clamp `t` — NaN or non-finite → `0`; `< 0` → `0`; `> durationSeconds` → `durationSeconds`.
@@ -297,7 +297,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 5.5, Requirement 5.6, Requirement 5.7, Requirement 5.8, Requirement 5.9, Requirement 5.10, Requirement 5.13, Requirement 5.14
     - **Completion:** `pnpm vitest run src/compute.test.ts` passes with zero failures.
 
-  - [ ] 8.3 Write property-based tests for `computeFrameState` (Properties 3, 4, 5, 6, 9, 10, 11)
+  - [x] 8.3 Write property-based tests for `computeFrameState` (Properties 3, 4, 5, 6, 9, 10, 11)
     - In `packages/engine/src/compute.test.ts`, add the following fast-check property-based tests:
     - Property 3 tagged `// Feature: engine-core, Property 3: computeFrameState total function` — for any `arbValidProject` and `arbT(project)`, assert `computeFrameState` does not throw and returns a `FrameState`.
     - Property 4 tagged `// Feature: engine-core, Property 4: computeFrameState determinism` — for any `arbValidProject` and `arbT`, assert two sequential calls return deeply equal results.
@@ -394,7 +394,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Completion:** `pnpm --filter @studio/engine exec playwright test --project=chromium` writes golden PNGs on first run and passes on subsequent runs with zero pixel-diff failures.
     - Commit: `feat(engine-core): Playwright golden-image tests for drawFrame (typewriter, fade-slide, Tamil)`
 
-  - [ ] 12.4 Checkpoint — Group 12
+  - [x] 12.4 Checkpoint — Group 12
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
