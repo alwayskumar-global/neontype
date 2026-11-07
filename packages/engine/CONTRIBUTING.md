@@ -28,6 +28,24 @@ If you change the on-disk effect-pack format, update
 See the two reference effects for the full shape:
 `src/effects/typewriter/` and `src/effects/fade-slide/`.
 
+### Built-in preset effects
+
+Beyond the two reference effects, the engine ships ten preset effects:
+`blur-in`, `glitch-reveal`, `kinetic-pop`, `letter-spread`, `line-wipe`,
+`neon-flicker`, `rotate-drop`, `scale-bounce`, `spotlight`, and `wave`. All
+support the `character`, `word`, and `line` granularities. `neon-flicker` and
+`wave` are looping effects (they repeat every `periodSeconds` and are exempt
+from the terminal-identity rule); the rest end in the identity state once
+complete. Three effects use documented approximations — `letter-spread`
+(per-group additive offset for letter spacing), `line-wipe` (per-group opacity
+threshold sweep for a clip wipe), and `spotlight` (distance-based opacity for a
+focus gradient). Note that for staggered effects a group whose stagger start
+time falls at or after the layer's active end never completes; choose
+`delayPerGroup` and the layer duration together. See
+[`docs/effect-pack-format.md`](../../docs/effect-pack-format.md) for the full
+per-effect reference and the machine-readable `presetCatalog` export for
+ids, display names, default params, and loop flags.
+
 ## 2. Registration pattern
 
 An effect's `index.ts` exports a single registration function:

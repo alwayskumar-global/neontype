@@ -148,15 +148,15 @@ This plan converts the `effect-presets` design into an ordered series of coding 
     - Run `pnpm --filter @studio/engine exec tsc --noEmit`, `pnpm --filter @studio/engine lint`, and `pnpm vitest run src/effects/index.test.ts src/effects/catalog.test.ts` (from `packages/engine`).
     - **Completion:** All three commands exit with code 0 and zero failures.
 
-- [ ] 7. Group 5: Documentation
-  - [ ] 7.1 Document the ten new effects and their approximations
+- [x] 7. Group 5: Documentation
+  - [x] 7.1 Document the ten new effects and their approximations
     - Update `packages/engine/CONTRIBUTING.md` and `docs/effect-pack-format.md` to describe the ten new effects and each effect's supported granularities, and to state the explicit approximations: `letter-spread` → per-group additive `positionOffset` standing in for letter spacing; `line-wipe` → per-group opacity threshold sweep plus short fade standing in for a continuous clip wipe; `spotlight` → distance-based opacity modulation standing in for a true spotlight gradient.
     - Add the caveat that for staggered effects a group whose stagger start time falls at or after the layer's active end never reaches `p = 1` and therefore never completes — authors must choose `delayPerGroup`, `startDelay`, `durationSeconds`, and the layer duration together. No new dependency.
     - **Covers:** Requirement 2.1, Requirement 2.9, Requirement 6.2, Requirement 7.2, Requirement 11.2, Requirement 13.7
     - **Completion:** Both docs describe all ten effects, their supported granularities, the three approximations, and the stagger-past-end caveat; no dependency added.
     - Commit: `docs(effect-presets): document new effects, approximations, and stagger-past-end caveat`
 
-  - [ ] 7.2 Checkpoint — Group 5
+  - [x] 7.2 Checkpoint — Group 5
     - Review the updated docs for completeness (markdown sanity); confirm no new dependency was introduced.
     - **Completion:** Docs reviewed; both files render as valid markdown and reference every new effect.
 
