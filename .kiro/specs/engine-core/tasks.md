@@ -151,7 +151,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 3.6, Requirement 11 — Property 2
     - **Completion:** `pnpm vitest run src/schemas/effect-pack.test.ts` passes with zero failures.
 
-  - [-] 3.10 Write property-based test for hard-limits rejection (Property 12)
+  - [x] 3.10 Write property-based test for hard-limits rejection (Property 12)
     - In `packages/engine/src/schemas/project.test.ts`, add a fast-check property-based test tagged `// Feature: engine-core, Property 12: Hard-limits rejection`.
     - Using `arbOutOfBoundsProject` (generates project-like objects where at least one of canvas dimensions, fps, durationSeconds, layer count, text length, keyframe count, or effect-instance count exceeds defined hard limits), assert that `ProjectSchema.safeParse` returns `{ success: false }` and does not throw.
     - **Covers:** Requirement 11.11 — Property 12
@@ -187,18 +187,18 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 5. Group 5: Metrics Providers and Segmentation / Layout
-  - [ ] 5.1 Implement `TextMetricsProvider` interface, `FakeMetricsProvider`, and `CanvasMetricsProvider`
+  - [x] 5.1 Implement `TextMetricsProvider` interface, `FakeMetricsProvider`, and `CanvasMetricsProvider`
     - Create `packages/engine/src/metrics.ts` exporting: `FontSpec` interface (`{ fontFamily, fontSize, fontWeight, letterSpacing }`), `TextMetricsProvider` interface (`{ measure(text, fontSpec): { width, ascent, descent } }`), `FakeMetricsProvider` (deterministic test double: `width = text.length * fontSize * 0.6`, `ascent = fontSize * 0.8`, `descent = fontSize * 0.2`; no DOM access), and `CanvasMetricsProvider` class (backed by `CanvasRenderingContext2D.measureText`; used in browser contexts only).
     - Re-export all from `src/index.ts`.
     - **Covers:** Requirement 5.1, Requirement 11.1, Requirement 12.4
     - **Completion:** TypeScript compiles `metrics.ts` without errors. Unit test asserts `FakeMetricsProvider.measure("Hello", { fontFamily: "sans-serif", fontSize: 16, fontWeight: "400", letterSpacing: 0 })` returns `{ width: 48, ascent: 12.8, descent: 3.2 }`.
 
-  - [ ] 5.2 Implement grapheme-cluster segmentation (`segment.ts`)
+  - [x] 5.2 Implement grapheme-cluster segmentation (`segment.ts`)
     - Create `packages/engine/src/segment.ts` exporting `SegmentToken` interface (`{ text, charIndex, wordIndex, lineIndex }`) and `segmentText(text: string): SegmentToken[]` using `Intl.Segmenter` with `granularity: "grapheme"`. Assigns `charIndex` (0-based, increments per cluster including `\n`), `wordIndex` (0-based word index; `\n` inherits the preceding wordIndex or `0`), and `lineIndex` (incremented after each `\n`; the `\n` cluster itself takes the current lineIndex). The `\n` cluster appears in the output with its own `SegmentToken`.
     - **Covers:** Requirement 5.9, Requirement 11.12
     - **Completion:** Unit tests assert: for `"ab\ncd"`, charIndexes are `[0,1,2,3,4]` and lineIndexes are `[0,0,0,1,1]`; for a ZWJ emoji sequence, the entire sequence is a single `SegmentToken`.
 
-  - [ ] 5.3 Implement layout geometry computation with memoization (`layout.ts`)
+  - [-] 5.3 Implement layout geometry computation with memoization (`layout.ts`)
     - Create `packages/engine/src/layout.ts` exporting `LayoutGeometry` interface (`{ layoutX, layoutY, width, height }`) and `layoutSegments(tokens, layer, metricsProvider, cache): LayoutGeometry[]`. Cache key is `JSON.stringify([layer.text, layer.fontFamily, layer.fontSize, layer.fontWeight, layer.letterSpacing, layer.lineHeight, layer.maxWidth])`. Cache hit: return stored array directly. Cache miss: compute per-cluster layout (advance `layoutX` by `width + letterSpacing`; break to new line when `layoutX + nextWidth > maxWidth` or at `\n`; `layoutY` advances by `fontSize * lineHeight` per line), freeze each `LayoutGeometry` object (`Object.freeze`), insert into cache. Origin `(0,0)` is the top-left of the first character.
     - **Covers:** Requirement 5.9, Requirement 15.1, Requirement 15.2
     - **Completion:** Unit test asserts identical layer params with a warm cache skip calling `metricsProvider.measure`; layout of `"ab"` produces two segments with `layoutX[1] = layoutX[0] + width[0] + letterSpacing`.

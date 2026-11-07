@@ -311,6 +311,11 @@
         "executionId": "84c4c6dd-d74c-4c1f-837e-39d7b48e3ba9",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794032296941
+      },
+      {
+        "executionId": "84c4c6dd-d74c-4c1f-837e-39d7b48e3ba9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794032509554
       }
     ],
     "3.11 Write property-based test for invalid-input rejection (Property 13)": [
@@ -390,6 +395,37 @@
         "executionId": "9d600c13-6c3b-4b0d-a3fa-3fb3acbe8eb9",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794031318961
+      }
+    ],
+    "5.1 Implement `TextMetricsProvider` interface, `FakeMetricsProvider`, and `CanvasMetricsProvider`": [
+      {
+        "executionId": "84c4c6dd-d74c-4c1f-837e-39d7b48e3ba9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794032519929
+      },
+      {
+        "executionId": "84c4c6dd-d74c-4c1f-837e-39d7b48e3ba9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794032678044
+      }
+    ],
+    "5.2 Implement grapheme-cluster segmentation (`segment.ts`)": [
+      {
+        "executionId": "84c4c6dd-d74c-4c1f-837e-39d7b48e3ba9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794032683261
+      },
+      {
+        "executionId": "84c4c6dd-d74c-4c1f-837e-39d7b48e3ba9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794032825896
+      }
+    ],
+    "5.3 Implement layout geometry computation with memoization (`layout.ts`)": [
+      {
+        "executionId": "84c4c6dd-d74c-4c1f-837e-39d7b48e3ba9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794032831459
       }
     ]
   }

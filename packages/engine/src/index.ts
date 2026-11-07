@@ -31,3 +31,6 @@ export { serializeProject, parseProject } from "./serialize.js";
 
 export { migrateProject } from "./migrate.js";
 export type { MigrationFn, MigrationMap } from "./migrate.js";
+
+export { FakeMetricsProvider, CanvasMetricsProvider } from "./metrics.js";
+export type { FontSpec, TextMetricsProvider } from "./metrics.js";
