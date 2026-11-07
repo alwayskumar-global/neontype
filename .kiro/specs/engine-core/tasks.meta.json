@@ -121,6 +121,42 @@
         "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794019851092
+      },
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794019971751
+      }
+    ],
+    "2.6 Implement easing evaluation": [
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794019977066
+      },
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794020091999
+      }
+    ],
+    "2.7 Write unit tests for easing": [
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794020096906
+      },
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794020200307
+      }
+    ],
+    "2.8 Write property-based test for easing invariant (Property 7)": [
+      {
+        "executionId": "140defad-138a-4d71-8c09-28184c47fb7f",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794020205336
       }
     ]
   }

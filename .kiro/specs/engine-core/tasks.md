@@ -70,24 +70,24 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 4.2, Requirement 11 — Property 8
     - **Completion:** `pnpm vitest run src/prng.test.ts` passes with zero failures.
 
-  - [-] 2.5 Write property-based test for PRNG layer independence (Property 17)
+  - [x] 2.5 Write property-based test for PRNG layer independence (Property 17)
     - In `packages/engine/src/prng.test.ts`, add a fast-check property-based test tagged `// Feature: engine-core, Property 17: PRNG layer independence`.
     - For any integer `seed`, two distinct non-empty strings `layerA` and `layerB` (via `fc.string({ minLength: 1 })` filtered to be distinct), integer `effectInstanceIndex`, string `granularity`, and integer `segmentIndex`, assert that the first `next()` value of `derivePRNG(seed, layerA, ...)` differs from `derivePRNG(seed, layerB, ...)`.
     - **Covers:** Requirement 11.16 — Property 17
     - **Completion:** `pnpm vitest run src/prng.test.ts` passes with zero failures.
     - Commit: `feat(engine-core): implement PRNG (mulberry32, FNV-1a) with unit and property tests`
 
-  - [ ] 2.6 Implement easing evaluation
+  - [x] 2.6 Implement easing evaluation
     - Create `packages/engine/src/easing.ts` exporting `evaluate(easing: Easing, a: number, b: number, p: number): number` implementing all six variants: `linear`, `easeIn` (cubic), `easeOut` (cubic), `easeInOut` (cubic), `cubicBezier` (Newton–Raphson or binary search), and `step` (at `p = 1` returns exactly `b`; at `p` in `[0,1)` returns one of exactly `N` discrete values). The output must be a finite number for all valid inputs.
     - **Covers:** Requirement 6.1, Requirement 6.2, Requirement 6.3, Requirement 6.4, Requirement 6.5, Requirement 6.6
     - **Completion:** Unit test in `easing.test.ts` passes: `p=0` returns `a`, `p=1` returns `b` for all easing types; `step` with `steps=4` produces exactly 4 distinct values across `p` in `[0,1)`.
 
-  - [ ] 2.7 Write unit tests for easing
+  - [x] 2.7 Write unit tests for easing
     - Create `packages/engine/src/easing.test.ts` with unit tests for each easing variant: `linear` at `p=0`, `p=0.5`, `p=1`; boundary values for `easeIn`, `easeOut`, `easeInOut`; `cubicBezier` at `p=0` and `p=1`; with control points `(0,0,1,1)` behaves as linear; `step` with `N=4` produces distinct evenly-spaced values at `p=0, 0.25, 0.5, 0.75`; at `p=1` returns exactly `b`.
     - **Covers:** Requirement 6.1, Requirement 6.2, Requirement 6.3, Requirement 6.4, Requirement 6.5, Requirement 6.6
     - **Completion:** `pnpm vitest run src/easing.test.ts` passes with zero failures.
 
-  - [ ] 2.8 Write property-based test for easing invariant (Property 7)
+  - [-] 2.8 Write property-based test for easing invariant (Property 7)
     - In `packages/engine/src/easing.test.ts`, add a fast-check property-based test tagged `// Feature: engine-core, Property 7: Easing invariant — finite output`.
     - For any `Easing` value, any `a` and `b` (`fc.float({ noNaN: true, noDefaultInfinity: true })`), and any `p` in `[0, 1]` (`fc.float({ min: 0, max: 1, noNaN: true })`), assert `evaluate(easing, a, b, p)` returns a finite number (no `NaN` or `Infinity`).
     - **Covers:** Requirement 6.5, Requirement 11.3 — Property 7
