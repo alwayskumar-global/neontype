@@ -1,0 +1,178 @@
+{
+  "canvasWidth": 800,
+  "canvasHeight": 450,
+  "background": "#101018",
+  "layers": [
+    {
+      "layerId": "typewriter-ascii",
+      "fill": "#f5f5ff",
+      "fontFamily": "Noto Sans",
+      "fontSize": 48,
+      "fontWeight": "400",
+      "align": "left",
+      "anchor": {
+        "x": 80,
+        "y": 220
+      },
+      "letterSpacing": 0,
+      "lineHeight": 1.2,
+      "transform": {
+        "positionOffset": [
+          0,
+          0
+        ],
+        "scale": 1,
+        "rotation": 0,
+        "opacity": 1,
+        "blur": 0,
+        "colorOverride": null
+      },
+      "segments": [
+        {
+          "text": "H",
+          "charIndex": 0,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 0,
+          "layoutY": 0,
+          "width": 28.799999999999997,
+          "height": 48.00000000000001,
+          "effectOverrides": {
+            "opacity": 1
+          }
+        },
+        {
+          "text": "e",
+          "charIndex": 1,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 28.799999999999997,
+          "layoutY": 0,
+          "width": 28.799999999999997,
+          "height": 48.00000000000001,
+          "effectOverrides": {
+            "opacity": 1
+          }
+        },
+        {
+          "text": "l",
+          "charIndex": 2,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 57.599999999999994,
+          "layoutY": 0,
+          "width": 28.799999999999997,
+          "height": 48.00000000000001,
+          "effectOverrides": {
+            "opacity": 1
+          }
+        },
+        {
+          "text": "l",
+          "charIndex": 3,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 86.39999999999999,
+          "layoutY": 0,
+          "width": 28.799999999999997,
+          "height": 48.00000000000001,
+          "effectOverrides": {
+            "opacity": 1
+          }
+        },
+        {
+          "text": "o",
+          "charIndex": 4,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 115.19999999999999,
+          "layoutY": 0,
+          "width": 28.799999999999997,
+          "height": 48.00000000000001,
+          "effectOverrides": {
+            "opacity": 0
+          }
+        },
+        {
+          "text": " ",
+          "charIndex": 5,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 144,
+          "layoutY": 0,
+          "width": 28.799999999999997,
+          "height": 48.00000000000001,
+          "effectOverrides": {
+            "opacity": 0
+          }
+        },
+        {
+          "text": "W",
+          "charIndex": 6,
+          "wordIndex": 1,
+          "lineIndex": 0,
+          "layoutX": 172.8,
+          "layoutY": 0,
+          "width": 28.799999999999997,
+          "height": 48.00000000000001,
+          "effectOverrides": {
+            "opacity": 0
+          }
+        },
+        {
+          "text": "o",
+          "charIndex": 7,
+          "wordIndex": 1,
+          "lineIndex": 0,
+          "layoutX": 201.60000000000002,
+          "layoutY": 0,
+          "width": 28.799999999999997,
+          "height": 48.00000000000001,
+          "effectOverrides": {
+            "opacity": 0
+          }
+        },
+        {
+          "text": "r",
+          "charIndex": 8,
+          "wordIndex": 1,
+          "lineIndex": 0,
+          "layoutX": 230.40000000000003,
+          "layoutY": 0,
+          "width": 28.799999999999997,
+          "height": 48.00000000000001,
+          "effectOverrides": {
+            "opacity": 0
+          }
+        },
+        {
+          "text": "l",
+          "charIndex": 9,
+          "wordIndex": 1,
+          "lineIndex": 0,
+          "layoutX": 259.20000000000005,
+          "layoutY": 0,
+          "width": 28.799999999999997,
+          "height": 48.00000000000001,
+          "effectOverrides": {
+            "opacity": 0
+          }
+        },
+        {
+          "text": "d",
+          "charIndex": 10,
+          "wordIndex": 1,
+          "lineIndex": 0,
+          "layoutX": 288.00000000000006,
+          "layoutY": 0,
+          "width": 28.799999999999997,
+          "height": 48.00000000000001,
+          "effectOverrides": {
+            "opacity": 0
+          }
+        }
+      ]
+    }
+  ],
+  "warnings": []
+}

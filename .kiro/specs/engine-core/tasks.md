@@ -355,7 +355,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
-- [ ] 11. Group 11: JSON Schema Generation Script and Staleness Test
+- [x] 11. Group 11: JSON Schema Generation Script and Staleness Test
   - [x] 11.1 Implement `generate-schemas.ts` build script
     - Create `packages/engine/scripts/generate-schemas.ts`: import `ProjectSchema`, `EffectPackSchema`, and each built-in effect's `paramSchema` from the engine package; call `z.toJSONSchema(schema)` (Zod v4 native — `zod-to-json-schema` MUST NOT be used) for each schema; write resulting JSON to `packages/engine/schema/project.json`, `packages/engine/schema/effect-pack.json`, and `packages/engine/schema/<effectId>-params.json` for each built-in effect. Add a `"generate-schemas"` script entry to `packages/engine/package.json`. Run the script once to produce and commit the initial `schema/*.json` files.
     - **Covers:** Requirement 3.3, Requirement 3.4, Requirement 3.5, Requirement 14.1
@@ -367,12 +367,12 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Completion:** `pnpm vitest run src/schemas/schema-staleness.test.ts` passes with zero failures. Manually mutating `schema/project.json` causes the staleness test to fail.
     - Commit: `feat(engine-core): add JSON Schema generation script and staleness test`
 
-  - [~] 11.3 Checkpoint — Group 11
+  - [x] 11.3 Checkpoint — Group 11
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
 - [ ] 12. Group 12: Playwright Visual Test Setup
-  - [~] 12.1 Create Vite visual test app
+  - [x] 12.1 Create Vite visual test app
     - Create `packages/engine/tests/visual/app/index.html` with a single `<canvas id="canvas" width="800" height="450">` and a module script tag.
     - Create `packages/engine/tests/visual/app/main.ts` importing `drawFrame` from `@studio/engine`, self-hosting OFL fonts (Noto Sans, Noto Sans Tamil) via CSS `@font-face` declarations pointing to `../fonts/`, awaiting `document.fonts.ready`, and exposing `window.fontsReady = true` and `window.render = (state) => { const ctx = canvas.getContext("2d"); drawFrame(ctx, state); }`.
     - Create `packages/engine/tests/visual/app/vite.config.ts` with `root: "tests/visual/app"` and `server.port: 5173`.
@@ -380,13 +380,13 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 12.1, Requirement 12.4, Requirement 12.5
     - **Completion:** TypeScript in `main.ts` compiles without errors. Directory structure matches the design spec.
 
-  - [~] 12.2 Create `generate-visual-fixtures.ts` and commit fixture JSON
+  - [x] 12.2 Create `generate-visual-fixtures.ts` and commit fixture JSON
     - Create `packages/engine/scripts/generate-visual-fixtures.ts` constructing at least three representative projects: (1) a project with a single layer using the `typewriter` effect and ASCII text; (2) a project with a single layer using the `fade-slide` effect; (3) a project with a single layer using the `typewriter` effect and Tamil text (`"வணக்கம்"`) with `fontFamily: "Noto Sans Tamil"`. For each, call `computeFrameState(project, t, { metricsProvider: FakeMetricsProvider })` and write each `FrameState` to `tests/visual/fixtures/<name>.json`.
     - Run the script once and commit the resulting fixture JSON files.
     - **Covers:** Requirement 12.4, Requirement 12.5
     - **Completion:** `pnpm --filter @studio/engine generate-visual-fixtures` exits with code 0 and writes at least three JSON files to `tests/visual/fixtures/`.
 
-  - [~] 12.3 Configure Playwright and write golden-image tests
+  - [x] 12.3 Configure Playwright and write golden-image tests
     - Run `pnpm exec playwright install chromium` to install the Chromium browser binary before the first Playwright run.
     - Create `packages/engine/playwright.config.ts` with `projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }]` (Chromium only — no Firefox or WebKit), `webServer: { command: "vite tests/visual/app --port 5173", port: 5173, reuseExistingServer: !process.env.CI }`, `testDir: "tests/visual"`, and `snapshotDir: "tests/visual/__snapshots__"`.
     - Create `packages/engine/tests/visual/draw-frame.spec.ts`: for each committed fixture in `tests/visual/fixtures/`, navigate to `http://localhost:5173`, wait for `window.fontsReady`, call `page.evaluate(fixture => window.render(fixture), fixtureJson)`, capture canvas screenshot, compare to golden PNG with `{ maxDiffPixelRatio: 0.001 }`. On mismatch, include the diff path in the failure output. The test MUST NOT call `computeFrameState` or `renderFrame`.

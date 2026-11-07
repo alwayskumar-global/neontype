@@ -12,3 +12,5 @@
 | ajv | 8.20.0 | MIT | Validates generated JSON Schema in tests. |
 | vite | 8.3.6 | MIT | Dev server for the visual test page. |
 | tsx | 4.23.15 | MIT | Runs `generate-schemas.ts` and `generate-visual-fixtures.ts`. |
+| @fontsource/noto-sans | 5.3.0 | OFL-1.1 | Self-hosted Latin font for Playwright golden-image visual tests (woff2 copied into tests/visual/fonts). |
+| @fontsource/noto-sans-tamil | 5.3.0 | OFL-1.1 | Self-hosted Tamil font for Playwright golden-image visual tests (woff2 copied into tests/visual/fonts). |

@@ -1,0 +1,239 @@
+{
+  "canvasWidth": 800,
+  "canvasHeight": 450,
+  "background": "#181024",
+  "layers": [
+    {
+      "layerId": "fade-slide-ascii",
+      "fill": "#9cffd6",
+      "fontFamily": "Noto Sans",
+      "fontSize": 44,
+      "fontWeight": "400",
+      "align": "left",
+      "anchor": {
+        "x": 80,
+        "y": 240
+      },
+      "letterSpacing": 1,
+      "lineHeight": 1.2,
+      "transform": {
+        "positionOffset": [
+          0,
+          0
+        ],
+        "scale": 1,
+        "rotation": 0,
+        "opacity": 1,
+        "blur": 0,
+        "colorOverride": null
+      },
+      "segments": [
+        {
+          "text": "R",
+          "charIndex": 0,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 0,
+          "layoutY": 0,
+          "width": 26.4,
+          "height": 44,
+          "effectOverrides": {
+            "opacity": 0.875,
+            "positionOffset": [
+              0,
+              5
+            ]
+          }
+        },
+        {
+          "text": "e",
+          "charIndex": 1,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 27.4,
+          "layoutY": 0,
+          "width": 26.4,
+          "height": 44,
+          "effectOverrides": {
+            "opacity": 0.833625,
+            "positionOffset": [
+              0,
+              6.655000000000002
+            ]
+          }
+        },
+        {
+          "text": "s",
+          "charIndex": 2,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 54.8,
+          "layoutY": 0,
+          "width": 26.4,
+          "height": 44,
+          "effectOverrides": {
+            "opacity": 0.784,
+            "positionOffset": [
+              0,
+              8.639999999999999
+            ]
+          }
+        },
+        {
+          "text": "u",
+          "charIndex": 3,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 82.19999999999999,
+          "layoutY": 0,
+          "width": 26.4,
+          "height": 44,
+          "effectOverrides": {
+            "opacity": 0.7253749999999999,
+            "positionOffset": [
+              0,
+              10.985000000000005
+            ]
+          }
+        },
+        {
+          "text": "r",
+          "charIndex": 4,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 109.6,
+          "layoutY": 0,
+          "width": 26.4,
+          "height": 44,
+          "effectOverrides": {
+            "opacity": 0.657,
+            "positionOffset": [
+              0,
+              13.719999999999999
+            ]
+          }
+        },
+        {
+          "text": "r",
+          "charIndex": 5,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 137,
+          "layoutY": 0,
+          "width": 26.4,
+          "height": 44,
+          "effectOverrides": {
+            "opacity": 0.578125,
+            "positionOffset": [
+              0,
+              16.875
+            ]
+          }
+        },
+        {
+          "text": "e",
+          "charIndex": 6,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 164.4,
+          "layoutY": 0,
+          "width": 26.4,
+          "height": 44,
+          "effectOverrides": {
+            "opacity": 0.4879999999999999,
+            "positionOffset": [
+              0,
+              20.480000000000004
+            ]
+          }
+        },
+        {
+          "text": "c",
+          "charIndex": 7,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 191.8,
+          "layoutY": 0,
+          "width": 26.4,
+          "height": 44,
+          "effectOverrides": {
+            "opacity": 0.38587499999999986,
+            "positionOffset": [
+              0,
+              24.565000000000005
+            ]
+          }
+        },
+        {
+          "text": "t",
+          "charIndex": 8,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 219.20000000000002,
+          "layoutY": 0,
+          "width": 26.4,
+          "height": 44,
+          "effectOverrides": {
+            "opacity": 0.2709999999999999,
+            "positionOffset": [
+              0,
+              29.160000000000004
+            ]
+          }
+        },
+        {
+          "text": "i",
+          "charIndex": 9,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 246.60000000000002,
+          "layoutY": 0,
+          "width": 26.4,
+          "height": 44,
+          "effectOverrides": {
+            "opacity": 0.1426250000000001,
+            "positionOffset": [
+              0,
+              34.294999999999995
+            ]
+          }
+        },
+        {
+          "text": "o",
+          "charIndex": 10,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 274,
+          "layoutY": 0,
+          "width": 26.4,
+          "height": 44,
+          "effectOverrides": {
+            "opacity": 0,
+            "positionOffset": [
+              0,
+              40
+            ]
+          }
+        },
+        {
+          "text": "n",
+          "charIndex": 11,
+          "wordIndex": 0,
+          "lineIndex": 0,
+          "layoutX": 301.4,
+          "layoutY": 0,
+          "width": 26.4,
+          "height": 44,
+          "effectOverrides": {
+            "opacity": 0,
+            "positionOffset": [
+              0,
+              40
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "warnings": []
+}

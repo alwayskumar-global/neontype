@@ -791,6 +791,16 @@
         "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794036287618
+      },
+      {
+        "executionId": "d181fa0f-267b-4b0d-993f-4c47ffc8fe27",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794040386979
+      },
+      {
+        "executionId": "d181fa0f-267b-4b0d-993f-4c47ffc8fe27",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794040399028
       }
     ],
     "12.1 Create Vite visual test app": [
@@ -798,6 +808,11 @@
         "executionId": "2b4f28e2-b0ab-47c4-8ad1-948932153fcb",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794036287722
+      },
+      {
+        "executionId": "d181fa0f-267b-4b0d-993f-4c47ffc8fe27",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794040419286
       }
     ],
     "12.2 Create `generate-visual-fixtures.ts` and commit fixture JSON": [
@@ -882,6 +897,13 @@
         "executionId": "d181fa0f-267b-4b0d-993f-4c47ffc8fe27",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794039919026
+      }
+    ],
+    "11. Group 11: JSON Schema Generation Script and Staleness Test": [
+      {
+        "executionId": "d181fa0f-267b-4b0d-993f-4c47ffc8fe27",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794040399073
       }
     ]
   }
