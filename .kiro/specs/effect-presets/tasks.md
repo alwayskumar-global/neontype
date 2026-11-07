@@ -160,8 +160,8 @@ This plan converts the `effect-presets` design into an ordered series of coding 
     - Review the updated docs for completeness (markdown sanity); confirm no new dependency was introduced.
     - **Completion:** Docs reviewed; both files render as valid markdown and reference every new effect.
 
-- [ ] 8. Group 6: Final checkpoint
-  - [ ] 8.1 Run the full workspace suite and confirm no drift
+- [x] 8. Group 6: Final checkpoint
+  - [x] 8.1 Run the full workspace suite and confirm no drift
     - Run the root `pnpm test` (whole workspace) and confirm zero failures across typecheck, lint, and the full Vitest suite.
     - Confirm no new third-party dependency was added (no change to any `package.json` dependencies/devDependencies) and that `tsconfig` files are unchanged.
     - **Covers:** Requirement 1.12, Requirement 16.6

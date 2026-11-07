@@ -224,6 +224,20 @@
         "chatSessionId": "sess_effect_presets_impl",
         "timestamp": 1794059491525
       }
+    ],
+    "8.1 Run the full workspace suite and confirm no drift": [
+      {
+        "executionId": "b9bc0725-cf3c-4dba-8044-a65b60341f3a",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059533967
+      }
+    ],
+    "8. Group 6: Final checkpoint": [
+      {
+        "executionId": "b9bc0725-cf3c-4dba-8044-a65b60341f3a",
+        "chatSessionId": "sess_effect_presets_impl",
+        "timestamp": 1794059533967
+      }
     ]
   }
 }
