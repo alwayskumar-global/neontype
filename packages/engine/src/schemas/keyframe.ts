@@ -51,11 +51,39 @@ export const EasingSchema = z.union([
  */
 export type Easing = z.infer<typeof EasingSchema>;
 
+// Keyframe value magnitude limits.
+// Stated in requirements R1.4:
+const POSITION_MIN = -32000;
+const POSITION_MAX = 32000; // px, per axis
+const SCALE_MAX = 100; // scale is strictly positive (> 0), max 100
+const OPACITY_MIN = 0;
+const OPACITY_MAX = 1;
+// NOT stated in R1.4 — added as a hostile-input guard against absurd values:
+const ROTATION_MIN = -36000; // degrees (100 full turns) — NOT in R1.4
+const ROTATION_MAX = 36000; // degrees — NOT in R1.4
+const BLUR_MAX = 1000; // px — NOT in R1.4 (min is 0)
+
 /** Six-digit hex color string, e.g. `#1a2b3c`. */
 const hexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
 /** A `[x, y]` tuple value, used by `position` tracks. */
 const tupleValueSchema = z.tuple([z.number(), z.number()]);
+
+/**
+ * Per-property value schemas enforcing shape, numeric magnitude range, and
+ * finiteness (R1.4, plus the hostile-input guards above). The matching schema is
+ * selected by the track's `property` in `KeyframeTrackSchema.superRefine()`.
+ * `z.number().finite()` rejects NaN and Infinity.
+ */
+const positionValueSchema = z.tuple([
+  z.number().finite().min(POSITION_MIN).max(POSITION_MAX),
+  z.number().finite().min(POSITION_MIN).max(POSITION_MAX),
+]);
+const scaleValueSchema = z.number().finite().positive().max(SCALE_MAX);
+const rotationValueSchema = z.number().finite().min(ROTATION_MIN).max(ROTATION_MAX);
+const opacityValueSchema = z.number().finite().min(OPACITY_MIN).max(OPACITY_MAX);
+const blurValueSchema = z.number().finite().min(0).max(BLUR_MAX);
+const colorValueSchema = hexColorSchema;
 
 /**
  * Generic keyframe value: a 2-number tuple, a number, or a hex-color string.
@@ -81,25 +109,27 @@ const KeyframePropertySchema = z.union([
 ]);
 
 type KeyframeProperty = z.infer<typeof KeyframePropertySchema>;
-type KeyframeValue = z.infer<typeof KeyframeValueSchema>;
 
 /**
- * Returns true when `value` matches the shape expected for `property` (R1.4):
- * - `position` → `[x, y]` number tuple
- * - `scale` / `rotation` / `opacity` / `blur` → number
- * - `color` → hex-color string
+ * Returns the per-property value schema for `property` (R1.4 plus hostile-input
+ * guards). Each schema enforces the correct value SHAPE, numeric MAGNITUDE
+ * range, and FINITENESS (NaN / Infinity rejected), so a single `safeParse`
+ * replaces the old pure type-match check.
  */
-function valueMatchesProperty(property: KeyframeProperty, value: KeyframeValue): boolean {
+function valueSchemaForProperty(property: KeyframeProperty): z.ZodType {
   switch (property) {
     case "position":
-      return Array.isArray(value);
+      return positionValueSchema;
     case "scale":
+      return scaleValueSchema;
     case "rotation":
+      return rotationValueSchema;
     case "opacity":
+      return opacityValueSchema;
     case "blur":
-      return typeof value === "number";
+      return blurValueSchema;
     case "color":
-      return typeof value === "string";
+      return colorValueSchema;
   }
 }
 
@@ -125,10 +155,11 @@ export const KeyframeTrackSchema = z
         });
       }
 
-      if (!valueMatchesProperty(track.property, kf.value)) {
+      const valueResult = valueSchemaForProperty(track.property).safeParse(kf.value);
+      if (!valueResult.success) {
         ctx.addIssue({
           code: "custom",
-          message: `Keyframe value does not match property "${track.property}".`,
+          message: `Keyframe value does not match property "${track.property}" (shape, range, or finiteness).`,
           path: ["keyframes", i, "value"],
         });
       }

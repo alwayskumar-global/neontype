@@ -306,6 +306,11 @@
         "executionId": "9356ceb6-36be-41fe-bc94-fcdfdc9dbeae",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794030469621
+      },
+      {
+        "executionId": "84c4c6dd-d74c-4c1f-837e-39d7b48e3ba9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794032296941
       }
     ],
     "3.11 Write property-based test for invalid-input rejection (Property 13)": [
@@ -361,6 +366,30 @@
         "executionId": "9d600c13-6c3b-4b0d-a3fa-3fb3acbe8eb9",
         "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
         "timestamp": 1794031152111
+      },
+      {
+        "executionId": "9d600c13-6c3b-4b0d-a3fa-3fb3acbe8eb9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794031297229
+      }
+    ],
+    "4.3 Checkpoint — Group 4": [
+      {
+        "executionId": "9d600c13-6c3b-4b0d-a3fa-3fb3acbe8eb9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794031302476
+      },
+      {
+        "executionId": "9d600c13-6c3b-4b0d-a3fa-3fb3acbe8eb9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794031318921
+      }
+    ],
+    "4. Group 4: Migration": [
+      {
+        "executionId": "9d600c13-6c3b-4b0d-a3fa-3fb3acbe8eb9",
+        "chatSessionId": "sess_9446a21d-c9a3-458a-a534-8f1ad69fb8f4",
+        "timestamp": 1794031318961
       }
     ]
   }

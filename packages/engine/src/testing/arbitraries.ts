@@ -341,6 +341,8 @@ export const arbOutOfBoundsProject: fc.Arbitrary<unknown> = fc
     "layers",
     "textLength",
     "fontSize",
+    "keyframeCount",
+    "effectInstanceCount",
   )
   .chain((violation): fc.Arbitrary<unknown> => {
     const baseLayer = {
@@ -404,6 +406,44 @@ export const arbOutOfBoundsProject: fc.Arbitrary<unknown> = fc
           ...base,
           layers: [{ ...baseLayer, text: "a".repeat(3000) }],
         });
+      case "keyframeCount": {
+        // 501 keyframes exceeds the max of 500. To make the COUNT the sole
+        // violation, use a large canvas duration and a layer spanning the full
+        // duration, then place 501 strictly-increasing t values (t = i, i in
+        // 0..500 → max t 500) comfortably inside the layer-local range
+        // [0, 600]. Every value stays within the R1.4 opacity range [0, 1].
+        const bigDuration = 600;
+        const keyframes = Array.from({ length: 501 }, (_unused, i) => ({
+          t: i,
+          value: i % 2 === 0 ? 0 : 1,
+          easing: "linear" as const,
+        }));
+        return fc.constant({
+          ...base,
+          canvas: { ...base.canvas, durationSeconds: bigDuration },
+          layers: [
+            {
+              ...baseLayer,
+              startSeconds: 0,
+              endSeconds: bigDuration,
+              tracks: [{ property: "opacity", keyframes }],
+            },
+          ],
+        });
+      }
+      case "effectInstanceCount": {
+        // 17 effect instances exceeds the max of 16. Each instance is valid, so
+        // the COUNT is the sole violation.
+        const effectInstances = Array.from({ length: 17 }, (_unused, i) => ({
+          effectId: `effect-${i}`,
+          granularity: "character" as const,
+          params: {},
+        }));
+        return fc.constant({
+          ...base,
+          layers: [{ ...baseLayer, effectInstances }],
+        });
+      }
       case "fontSize":
       default:
         return fc.constant({

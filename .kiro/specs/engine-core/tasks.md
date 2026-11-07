@@ -151,7 +151,7 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 3.6, Requirement 11 — Property 2
     - **Completion:** `pnpm vitest run src/schemas/effect-pack.test.ts` passes with zero failures.
 
-  - [x] 3.10 Write property-based test for hard-limits rejection (Property 12)
+  - [-] 3.10 Write property-based test for hard-limits rejection (Property 12)
     - In `packages/engine/src/schemas/project.test.ts`, add a fast-check property-based test tagged `// Feature: engine-core, Property 12: Hard-limits rejection`.
     - Using `arbOutOfBoundsProject` (generates project-like objects where at least one of canvas dimensions, fps, durationSeconds, layer count, text length, keyframe count, or effect-instance count exceeds defined hard limits), assert that `ProjectSchema.safeParse` returns `{ success: false }` and does not throw.
     - **Covers:** Requirement 11.11 — Property 12
@@ -168,21 +168,21 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
-- [ ] 4. Group 4: Migration
+- [x] 4. Group 4: Migration
   - [x] 4.1 Implement `migrateProject` and `MigrationMap`
     - Create `packages/engine/src/migrate.ts` exporting `MigrationFn`, `MigrationMap` types, and `migrateProject(raw: unknown, migrations?: MigrationMap): Project | MigrationError`: reads `schemaVersion` from raw; if `> CURRENT_PROJECT_VERSION` returns `MigrationError` without throwing; if equal runs `ProjectSchema.safeParse` directly; if less applies each migration step from version N to `CURRENT_PROJECT_VERSION` in order (using `migrations` map override when provided). Since `CURRENT_PROJECT_VERSION` is `1`, the initial implementation handles `schemaVersion === 1` and `schemaVersion > 1`.
     - Re-export `migrateProject`, `MigrationFn`, `MigrationMap` from `src/index.ts`.
     - **Covers:** Requirement 2.1, Requirement 2.2, Requirement 2.3, Requirement 2.4, Requirement 2.6
     - **Completion:** Unit test asserts `migrateProject` with `schemaVersion > CURRENT_PROJECT_VERSION` returns a `MigrationError`; with a valid version-1 document returns a valid `Project`.
 
-  - [-] 4.2 Create synthetic version-1 fixture and fixture migration tests
+  - [x] 4.2 Create synthetic version-1 fixture and fixture migration tests
     - Create `packages/engine/src/testing/fixtures/project-v1.json` — a minimal but complete committed JSON fixture at `schemaVersion: 1` satisfying all `ProjectSchema` constraints (at least one layer, one keyframe track, one effect instance).
     - Create `packages/engine/src/migrate.test.ts` with: a test that reads `project-v1.json`, calls `migrateProject`, and asserts the result passes `ProjectSchema.safeParse`; a test exercising `migrateProject` with a custom `MigrationMap` for synthetic version-0 → version-1 migration; a test asserting `migrateProject({ schemaVersion: 999 })` returns a `MigrationError` with `code: "FUTURE_VERSION"`.
     - **Covers:** Requirement 2.5, Requirement 11.5
     - **Completion:** `pnpm vitest run src/migrate.test.ts` passes with zero failures.
     - Commit: `feat(engine-core): implement migrateProject with fixtures and migration tests`
 
-  - [ ] 4.3 Checkpoint — Group 4
+  - [x] 4.3 Checkpoint — Group 4
     - Run `pnpm vitest run` from `packages/engine` and `pnpm eslint packages/engine/src` — all pass with zero errors.
     - **Completion:** Both commands exit with code 0 and zero failures.
 
