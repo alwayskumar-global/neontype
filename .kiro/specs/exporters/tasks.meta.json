@@ -1,0 +1,47 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Scaffold the `packages/exporters` package": [
+      {
+        "executionId": "022befe7-e2ae-43f8-9ad1-3b6a2cd964c0",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794103909328
+      }
+    ],
+    "1.2 Implement the error model and result constructors": [
+      {
+        "executionId": "022befe7-e2ae-43f8-9ad1-3b6a2cd964c0",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794103909328
+      }
+    ],
+    "1.3 Implement public types, limits, and defaults": [
+      {
+        "executionId": "022befe7-e2ae-43f8-9ad1-3b6a2cd964c0",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794103909328
+      }
+    ],
+    "1.4 Implement option validation": [
+      {
+        "executionId": "022befe7-e2ae-43f8-9ad1-3b6a2cd964c0",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794103909328
+      }
+    ],
+    "1.5 Checkpoint \u2014 Group 1": [
+      {
+        "executionId": "022befe7-e2ae-43f8-9ad1-3b6a2cd964c0",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794103909328
+      }
+    ],
+    "1. Group 1: Scaffold, core types, error model, limits, and option validation": [
+      {
+        "executionId": "022befe7-e2ae-43f8-9ad1-3b6a2cd964c0",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794103909328
+      }
+    ]
+  }
+}
