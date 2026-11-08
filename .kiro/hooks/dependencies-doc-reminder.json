@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Dependency doc reminder",
+      "trigger": "PostFileSave",
+      "action": {
+        "type": "command",
+        "command": "echo 'package.json or pnpm-lock.yaml changed: update docs/dependencies.md with a row (name, exact version, license, reason) for any new dependency, and verify every added package is pinned to an exact version (no ^ or ~).'"
+      },
+      "description": "When a package.json or pnpm-lock.yaml is saved, reminds to update docs/dependencies.md and to verify exact version pins. Report only, edits nothing.",
+      "matcher": "package.json",
+      "enabled": true
+    }
+  ]
+}

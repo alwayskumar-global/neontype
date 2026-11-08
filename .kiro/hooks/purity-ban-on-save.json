@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Purity ban check on save",
+      "trigger": "PostFileSave",
+      "action": {
+        "type": "command",
+        "command": "grep -rnE 'Math\\.random|Date\\.now|performance\\.now' packages/*/src apps/studio/src --include='*.ts' --include='*.tsx' | grep -vE 'apps/studio/src/playback/' || echo 'No banned wall-clock/random calls outside the studio playback clock.'"
+      },
+      "description": "On save of any .ts/.tsx under a package or app src, reports any Math.random/Date.now/performance.now outside apps/studio/src/playback/ (the only place the studio spec allows the playback clock). Report only, edits nothing.",
+      "matcher": "src/",
+      "enabled": true
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Package tests on save",
+      "trigger": "PostFileSave",
+      "action": {
+        "type": "command",
+        "command": "pnpm -r exec tsc --noEmit && pnpm -r exec vitest run"
+      },
+      "description": "When a source file under packages/*/src or apps/studio/src is saved, typecheck and run the Vitest suites (no Playwright) so regressions surface immediately. Report only, edits nothing.",
+      "matcher": "src/",
+      "enabled": true
+    }
+  ]
+}
