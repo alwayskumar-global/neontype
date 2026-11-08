@@ -17,6 +17,11 @@
 | mp4-muxer | 5.2.2 | MIT | Mux encoded H.264 video + AAC audio chunks into an MP4 container, client-side, Worker-safe. |
 | client-zip | 2.5.1 | MIT | Package PNG frames into a ZIP (stored entries, per-entry CRC-32) for the PNG-sequence export; small, Worker-safe, no runtime deps. |
 | gifenc | 1.0.3 | MIT | Quantize frames to a <=256-color palette and encode an animated GIF (single-color transparency); no runtime deps. |
+| react | 19.3.1 | MIT | React UI framework for apps/studio (mandated by steering: Vite + React). Published 2026-10-14. Differs from the indicative spec table (19.2.0): resolved to latest stable at install. |
+| react-dom | 19.3.1 | MIT | React DOM renderer for the studio shell. Published 2026-10-14. Differs from the indicative spec table (19.2.0). |
+| @vitejs/plugin-react | 6.2.1 | MIT | Vite plugin for React (JSX / dev transform) in apps/studio; compatible with the repo's Vite 8. Published 2026-11-02. Differs from the indicative spec table (6.0.1). |
+| @types/react | 19.3.0 | MIT | React type definitions (strict TS) for apps/studio. Published 2026-09-09. Differs from the indicative spec table (19.2.2). |
+| @types/react-dom | 19.3.0 | MIT | React DOM type definitions (strict TS) for apps/studio. Published 2026-09-09. Differs from the indicative spec table (19.2.1). |
 
 > **Not added:** `webm-muxer` (5.1.4) was approved for the WebM-with-alpha
 > exporter, but that format is deferred in this release (see the exporters
