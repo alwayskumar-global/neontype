@@ -83,3 +83,22 @@ button:disabled { opacity: 0.5; cursor: default; }
 }
 .transport input[type="range"] { flex: 1; }
 .readout { color: var(--color-text-muted); font-size: var(--text-caption-size); white-space: nowrap; }
+
+
+.export-open { margin-left: auto; }
+.dialog-overlay {
+  position: fixed; inset: 0; background: var(--color-bg-overlay);
+  display: grid; place-items: center; z-index: 10;
+}
+.dialog {
+  background: var(--color-bg-panel); color: var(--color-text);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-lg);
+  padding: var(--space-6); min-width: 360px; max-width: 90vw;
+  box-shadow: var(--shadow-panel);
+}
+.dialog-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
+.dialog-head h2 { margin: 0; font-size: var(--text-title-size); }
+.format-buttons { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-3); }
+.export-running { display: flex; align-items: center; gap: var(--space-3); }
+.export-running progress { flex: 1; }
+.note { color: var(--color-accent-2); font-size: var(--text-caption-size); }
