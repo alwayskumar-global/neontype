@@ -16,7 +16,7 @@
 
 import { ProjectSchema, type Project } from "@studio/engine";
 
-import type { ExportResult, Mp4Options } from "./types.js";
+import type { ExportResult, Mp4Options, PngSequenceOptions } from "./types.js";
 import { fail } from "./errors.js";
 import { dispatchExport } from "./worker/dispatch.js";
 import type { WorkerOptions, WorkerPcm } from "./worker/protocol.js";
@@ -107,6 +107,22 @@ export async function exportMp4(project: Project, options: Mp4Options = {}): Pro
     format: "mp4",
     project,
     options: workerOptions,
+    limits: { ...DEFAULT_LIMITS, ...options.limits },
+    onProgress: options.onProgress,
+    signal: options.signal,
+  });
+}
+
+/** Exports a PNG sequence as a ZIP of stored entries. Never throws. */
+export function exportPngSequence(
+  project: Project,
+  options: PngSequenceOptions = {},
+): Promise<ExportResult> {
+  return dispatchExport({
+    driverId: "png-sequence",
+    format: "png-sequence",
+    project,
+    options: { output: options.output },
     limits: { ...DEFAULT_LIMITS, ...options.limits },
     onProgress: options.onProgress,
     signal: options.signal,

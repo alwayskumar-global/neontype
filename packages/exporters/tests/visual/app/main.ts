@@ -446,7 +446,7 @@ window.renderBlurFrameWithWrapper = renderBlurFrameWithWrapper;
 
 /* --------------------------- MP4 real-encode harness ---------------------- */
 
-import { exportMp4 } from "../../../src/api.js";
+import { exportMp4, exportPngSequence } from "../../../src/api.js";
 
 /** A small valid project for MP4: even 160x96, 1s at 12fps, one text layer. */
 function mp4Project(): Project {
@@ -569,3 +569,61 @@ declare global {
 
 window.runMp4Export = runMp4Export;
 window.runMp4AudioUnsupported = runMp4AudioUnsupported;
+
+
+/* --------------------------- PNG sequence harness ------------------------- */
+
+/** A tiny project for the PNG sequence: 48x32, 0.3s at 10fps -> 3 frames. */
+function pngProject(background: string): Project {
+  return {
+    schemaVersion: 1,
+    canvas: { width: 48, height: 32, fps: 10, durationSeconds: 0.3 },
+    background,
+    seed: 2,
+    layers: [
+      {
+        id: "p",
+        text: "x",
+        tracks: [],
+        effectInstances: [],
+        fontFamily: "sans-serif",
+        fontSize: 20,
+        fontWeight: "bold",
+        fill: "#ffffff",
+        align: "left",
+        letterSpacing: 0,
+        lineHeight: 1.2,
+        maxWidth: null,
+        startSeconds: 0,
+        endSeconds: 0.3,
+        anchor: { x: 24, y: 24 },
+      },
+    ],
+  } as Project;
+}
+
+/** Runs a PNG sequence export through the worker; returns ZIP bytes + summary. */
+async function runPngExport(background: string): Promise<{
+  ok: boolean;
+  code?: string;
+  bytes: number[];
+  frameCount?: number;
+}> {
+  const result = await exportPngSequence(pngProject(background));
+  if (!result.ok) return { ok: false, code: result.error.code, bytes: [] };
+  const buf = await result.file.arrayBuffer();
+  return { ok: true, bytes: Array.from(new Uint8Array(buf)), frameCount: result.summary.frameCount };
+}
+
+declare global {
+  interface Window {
+    runPngExport: (background: string) => Promise<{
+      ok: boolean;
+      code?: string;
+      bytes: number[];
+      frameCount?: number;
+    }>;
+  }
+}
+
+window.runPngExport = runPngExport;

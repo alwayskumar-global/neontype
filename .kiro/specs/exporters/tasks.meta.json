@@ -17,6 +17,18 @@
       "consecutivePasses": 3,
       "lastRun": 1794110000000,
       "status": "passed"
+    },
+    "Property 5: ZIP CRC-32 correctness": {
+      "file": "packages/exporters/src/formats/png-seq.test.ts",
+      "consecutivePasses": 3,
+      "lastRun": 1794111500000,
+      "status": "passed"
+    },
+    "Property 6: PNG entry-name padding and ordering": {
+      "file": "packages/exporters/src/formats/png-seq.test.ts",
+      "consecutivePasses": 3,
+      "lastRun": 1794111500000,
+      "status": "passed"
     }
   },
   "executionHistory": {
@@ -151,6 +163,34 @@
         "executionId": "9f4a1c6b-2d7e-4f33-b8a1-6c2e9d4a7b10",
         "chatSessionId": "sess_exporters_impl",
         "timestamp": 1794110000000
+      }
+    ],
+    "4.3 Implement the PNG sequence exporter": [
+      {
+        "executionId": "b1e7a3d9-4c82-4e15-9a6f-7d3b2c8e5f44",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794111500000
+      }
+    ],
+    "4.4 Write property-based tests and the MP4 muxer sanity and real-encode tests": [
+      {
+        "executionId": "b1e7a3d9-4c82-4e15-9a6f-7d3b2c8e5f44",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794111500000
+      }
+    ],
+    "4.5 Checkpoint \u2014 Group 4": [
+      {
+        "executionId": "b1e7a3d9-4c82-4e15-9a6f-7d3b2c8e5f44",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794111500000
+      }
+    ],
+    "4. Group 4: MP4 export, muxer sanity, and PNG sequence": [
+      {
+        "executionId": "b1e7a3d9-4c82-4e15-9a6f-7d3b2c8e5f44",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794111500000
       }
     ]
   }

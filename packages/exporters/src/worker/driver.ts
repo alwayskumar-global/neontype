@@ -24,6 +24,7 @@ import { runExport, type ExportEncoder } from "./host.js";
 import { frameCountYield } from "./yield.js";
 import type { WorkerOptions } from "./protocol.js";
 import { runMp4Export } from "../formats/mp4.js";
+import { runPngSequenceExport } from "../formats/png-seq.js";
 
 /** Everything a driver needs to run an export (cloneable; worker-safe). */
 export interface DriverArgs {
@@ -163,10 +164,20 @@ export const mp4Driver: ExportDriver = (args, onProgress, isAborted) => {
   );
 };
 
+/** The PNG-sequence driver: adapts `runPngSequenceExport` to the driver shape. */
+export const pngSequenceDriver: ExportDriver = (args, onProgress, isAborted) =>
+  runPngSequenceExport(
+    args.project,
+    { output: args.options.output, limits: args.limits },
+    (fraction, frame, frameCount) => onProgress({ fraction, frame, frameCount }),
+    isAborted,
+  );
+
 /** The driver registry, keyed by a driver id. */
 const registry = new Map<string, ExportDriver>([
   ["recording", recordingDriver],
   ["mp4", mp4Driver],
+  ["png-sequence", pngSequenceDriver],
 ]);
 
 /** Registers a driver under `id` (later groups register format drivers). */

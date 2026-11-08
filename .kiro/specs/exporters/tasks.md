@@ -112,7 +112,7 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, `pnpm --filter @studio/exporters exec vitest run`, and `pnpm --filter @studio/exporters exec playwright test`.
     - **Completion:** All four commands exit with code 0 and zero failures.
 
-- [ ] 4. Group 4: MP4 export, muxer sanity, and PNG sequence
+- [x] 4. Group 4: MP4 export, muxer sanity, and PNG sequence
   - [x] 4.1 Implement the MP4 muxer adapter and H.264 video exporter
     - Add `mp4-muxer` 5.2.2 to `packages/exporters/package.json` (exact pin) and create `packages/exporters/src/muxers/mp4.ts` as a thin adapter over it.
     - Create `packages/exporters/src/formats/mp4.ts` exporting `exportMp4`: validate `Project` (engine `ProjectSchema`) and options before frame 0, encode frames to H.264 via `VideoEncoder` → the MP4 muxer, round odd dimensions up to even then clamp to canvas bounds (reported in the summary), paint a transparent background over the solid `backgroundFallback` and add the `mp4-no-transparency` note; return an `ExportResult` on every path and never throw.
@@ -128,14 +128,14 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - **Covers:** Requirement 2.6, Requirement 2.7, Requirement 2.8, Requirement 2.9, Requirement 2.10, Requirement 3.6, Requirement 3.7, Requirement 11.1, Requirement 11.2, Requirement 11.7
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/audio` passes with zero failures.
 
-  - [ ] 4.3 Implement the PNG sequence exporter
+  - [x] 4.3 Implement the PNG sequence exporter
     - Add `client-zip` 2.5.1 to `packages/exporters/package.json` (exact pin) and create `packages/exporters/src/formats/png-seq.ts` exporting `exportPngSequence`: render `round(fps * durationSeconds)` frames (minimum 1), encode each as a PNG via `convertToBlob('image/png')`, package into a single ZIP of stored (uncompressed) entries each carrying a CRC-32 over its PNG bytes, name each entry zero-padded to at least 4 digits (widening past 9999) so lexical order matches frame order, report the file count, require no video codec, abort without a partial ZIP on any frame-encode or assembly failure. Preserve alpha for transparent background; fill opaque for a hex background.
     - Add a row for `client-zip` (2.5.1, MIT, "Package PNG frames into a ZIP (stored entries) for the PNG-sequence export; small, Worker-safe, no runtime deps") to `docs/dependencies.md`.
     - Add unit tests to `packages/exporters/src/formats/png-seq.test.ts` for per-background PNG alpha/opacity and partial-ZIP abort on an injected frame failure.
     - **Covers:** Requirement 4.1, Requirement 4.2, Requirement 4.3, Requirement 4.4, Requirement 4.5, Requirement 4.6, Requirement 4.7, Requirement 11.1, Requirement 12.1, Requirement 12.2, Requirement 12.3
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/formats/png-seq.test.ts` passes with zero failures; `docs/dependencies.md` has the `client-zip` row.
 
-  - [ ] 4.4 Write property-based tests and the MP4 muxer sanity and real-encode tests
+  - [x] 4.4 Write property-based tests and the MP4 muxer sanity and real-encode tests
     - Create `packages/exporters/src/__tests__/helpers/mp4-box-reader.ts` — a minimal hand-written MP4 box reader (no MP4 parser package).
     - Add a fast-check test tagged `// Feature: exporters, Property 5: ZIP CRC-32 correctness` to `packages/exporters/src/formats/png-seq.test.ts` asserting, for any byte buffer, the stored-entry CRC-32 equals an independent reference CRC-32.
     - Add a fast-check test tagged `// Feature: exporters, Property 6: PNG entry-name padding and ordering` asserting, for any `frameCount`, every entry name is zero-padded to at least 4 digits (widening past 9999) and lexical order matches numeric frame order.
@@ -145,7 +145,7 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/formats/png-seq.test.ts src/audio/trim-pad.test.ts` passes; `pnpm --filter @studio/exporters exec playwright test tests/visual/mp4-sanity.spec.ts` passes with zero failures.
     - Commit: `feat(exporters): add MP4 (H.264+AAC) and PNG-sequence exporters with muxer sanity and real-encode tests`
 
-  - [ ] 4.5 Checkpoint — Group 4
+  - [x] 4.5 Checkpoint — Group 4
     - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, `pnpm --filter @studio/exporters exec vitest run`, and `pnpm --filter @studio/exporters exec playwright test`.
     - **Completion:** All four commands exit with code 0 and zero failures.
 
