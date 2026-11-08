@@ -170,3 +170,35 @@ describe("ErrorCode closure (Property 11)", () => {
     expect([...ERROR_CODES].sort()).toEqual([...expected].sort());
   });
 });
+
+describe("validateOutputSize — exact larger-axis aspect rule (R14.3)", () => {
+  it("rejects the Property-4 counterexample (canvas 17x38, output 4x10)", () => {
+    const r = validateOutputSize({ width: 4, height: 10 }, { width: 17, height: 38 });
+    expectInvalid(r, "output");
+  });
+
+  it("accepts a case whose larger-axis mismatch is just under 1px", () => {
+    // Canvas 100x201; output width 50 → expected height = 201*50/100 = 100.5,
+    // request 100 → mismatch 0.5 <= 1 (larger axis is height). Accepted.
+    expect(validateOutputSize({ width: 50, height: 100 }, { width: 100, height: 201 })).toBeNull();
+  });
+
+  it("accepts a landscape scale (1920x1080 → 1280x720)", () => {
+    expect(validateOutputSize({ width: 1280, height: 720 }, { width: 1920, height: 1080 })).toBeNull();
+  });
+
+  it("accepts a portrait scale (1080x1920 → 540x960)", () => {
+    expect(validateOutputSize({ width: 540, height: 960 }, { width: 1080, height: 1920 })).toBeNull();
+  });
+
+  it("accepts output equal to the canvas size (landscape and portrait)", () => {
+    expect(validateOutputSize({ width: 1920, height: 1080 }, { width: 1920, height: 1080 })).toBeNull();
+    expect(validateOutputSize({ width: 1080, height: 1920 }, { width: 1080, height: 1920 })).toBeNull();
+  });
+
+  it("rejects a clearly-mismatched aspect ratio on the larger axis", () => {
+    // Canvas 1920x1080; output 1000x1000 → larger axis width, expected width
+    // = 1920*1000/1080 = 1777.8, mismatch 777.8 > 1. Rejected.
+    expectInvalid(validateOutputSize({ width: 1000, height: 1000 }, { width: 1920, height: 1080 }), "output");
+  });
+});

@@ -138,18 +138,22 @@ export function validateOutputSize(
   if (!isIntInRange(output.height, HEIGHT_MIN, HEIGHT_MAX)) {
     return fail("invalid-options", `output height must be an integer in [${HEIGHT_MIN}, ${HEIGHT_MAX}]`, ["output.height"]);
   }
-  // Aspect check: the ideal output height for the output width under the canvas
-  // aspect ratio must be within 1px of the requested output height (checked on
-  // the larger axis so the 1px tolerance is uniform).
-  const canvasAspect = canvas.width / canvas.height;
-  const outputAspect = output.width / output.height;
-  const largerAxis = Math.max(output.width, output.height);
-  // Difference in aspect ratios scaled to a pixel difference on the larger axis.
-  const pixelDiff = Math.abs(outputAspect - canvasAspect) * largerAxis;
-  if (pixelDiff > 1) {
+  // Aspect check (Req 14.3): the mismatch is measured on the LARGER output axis.
+  // The larger axis is whichever output dimension is greater; its expected
+  // length is derived from the OTHER axis under the canvas ratio, and the
+  // mismatch is the absolute pixel difference there. Accept only when <= 1.
+  let mismatch: number;
+  if (output.height >= output.width) {
+    const expectedHeight = (canvas.height * output.width) / canvas.width;
+    mismatch = Math.abs(expectedHeight - output.height);
+  } else {
+    const expectedWidth = (canvas.width * output.height) / canvas.height;
+    mismatch = Math.abs(expectedWidth - output.width);
+  }
+  if (mismatch > 1) {
     return fail(
       "invalid-options",
-      "output aspect ratio must match the canvas aspect ratio within 1 pixel",
+      "output aspect ratio must match the canvas aspect ratio within 1 pixel on the larger axis",
       ["output"],
     );
   }

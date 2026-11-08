@@ -54,26 +54,26 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, and `pnpm --filter @studio/exporters exec vitest run`.
     - **Completion:** All three commands exit with code 0 and zero failures.
 
-- [ ] 2. Group 2: Deterministic frame stepper, uniform scaling, and capability detection
-  - [ ] 2.1 Implement the deterministic frame stepper
+- [x] 2. Group 2: Deterministic frame stepper, uniform scaling, and capability detection
+  - [x] 2.1 Implement the deterministic frame stepper
     - Create `packages/exporters/src/frame-stepper.ts` computing `frameCount = round(durationSeconds * fps)` with round-half-away-from-zero, yielding frame jobs `{ index, t: index / fps }` for integer indices `[0, frameCount - 1]`, constructing exactly one text-metrics-provider instance per export and passing it to every `renderFrame` call, awaiting font readiness before frame 0 with a 30-second timeout (`font-not-ready` on timeout), and returning `empty-frame-range` when `frameCount < 1`. No `Date.now`/`performance.now`/`requestAnimationFrame` anywhere.
     - Create `packages/exporters/src/frame-stepper.test.ts` with unit tests for the single-metrics-provider identity, the `empty-frame-range` boundary, and the font-not-ready timeout path (mocked clock, no wall-clock in the stepper itself).
     - **Covers:** Requirement 1.1, Requirement 1.2, Requirement 1.3, Requirement 1.5, Requirement 1.6, Requirement 1.7, Requirement 1.9, Property 1
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/frame-stepper.test.ts` passes with zero failures.
 
-  - [ ] 2.2 Implement uniform output scaling
+  - [x] 2.2 Implement uniform output scaling
     - Create `packages/exporters/src/scale.ts` applying a single uniform scale factor `outputWidth / canvasWidth` on both axes when the output size differs from the canvas (no crop, no bars), rendering directly at canvas size when they match, and enforcing the output-size range and aspect-ratio-within-1px rule via `validate.ts` before any scale is applied. Identical rule for all five formats.
     - Add unit tests to `packages/exporters/src/scale.test.ts` for the same-size no-scale path, the uniform scale factor on a differing size, and the aspect-mismatch rejection.
     - **Covers:** Requirement 14.1, Requirement 14.2, Requirement 14.6, Requirement 14.7, Property 4
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/scale.test.ts` passes with zero failures.
 
-  - [ ] 2.3 Implement capability detection
+  - [x] 2.3 Implement capability detection
     - Create `packages/exporters/src/capabilities.ts` exporting `detectCapabilities(): Promise<CapabilityReport>`: probe `VideoEncoder.isConfigSupported` for MP4 (H.264) and WebM-alpha (VP9 `alpha:"keep"`) and `AudioEncoder.isConfigSupported` for AAC, each resolving to `supported`/`unsupported`/`unknown` (a reject/throw/unclassifiable/2-second-timeout → `unknown`, never propagated); always report GIF `supported`; probe WebP via a still-frame `image/webp` `convertToBlob`; map an absent `VideoEncoder` global to MP4 and WebM-alpha `unsupported` while GIF, PNG sequence, and embed stay available; complete within 2 seconds with no encode and no network request.
     - Add unit tests to `packages/exporters/src/capabilities.test.ts` using a mocked `VideoEncoder`/`AudioEncoder` `isConfigSupported` returning each of `supported`/`unsupported`/`unknown` (and rejecting/hanging), plus the `VideoEncoder`-global-absent case asserting MP4/WebM `unsupported` while GIF/PNG/embed remain available.
     - **Covers:** Requirement 3.1, Requirement 3.2, Requirement 3.3, Requirement 3.4, Requirement 3.5, Requirement 3.6, Requirement 3.7, Requirement 3.8, Requirement 3.9, Requirement 3.10, Requirement 3.11, Requirement 14.2
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/capabilities.test.ts` passes with zero failures.
 
-  - [ ] 2.4 Write property-based tests for frame count, determinism, and scaling
+  - [x] 2.4 Write property-based tests for frame count, determinism, and scaling
     - In `packages/exporters/src/frame-stepper.test.ts`, add a fast-check test tagged `// Feature: exporters, Property 1: Frame count formula` asserting, for `fps` in `[1, 120]` and `durationSeconds` in `[0.1, 600]`, that `frameCount === round(durationSeconds * fps)` (half-away-from-zero) and the rendered index set is exactly `[0, frameCount - 1]`.
     - Add a fast-check test tagged `// Feature: exporters, Property 2: Deterministic rendered-and-scaled frames` asserting that rendering (and scaling, where output size differs) the same frame index twice in one runtime over an `arbValidProject` from `@studio/engine` yields byte-identical output, run against `FakeMetricsProvider`.
     - In `packages/exporters/src/scale.test.ts`, add a fast-check test tagged `// Feature: exporters, Property 4: Uniform scaling with no bars, and aspect/range validation` asserting the equal-axis scale factor and exact fill on aspect-match, and `invalid-options` on aspect-mismatch or out-of-range dimensions. Each property runs a minimum of 100 iterations.
@@ -81,7 +81,7 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/frame-stepper.test.ts src/scale.test.ts` passes with zero failures.
     - Commit: `feat(exporters): add deterministic frame stepper, uniform scaling, and capability detection`
 
-  - [ ] 2.5 Checkpoint — Group 2
+  - [x] 2.5 Checkpoint — Group 2
     - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, and `pnpm --filter @studio/exporters exec vitest run`.
     - **Completion:** All three commands exit with code 0 and zero failures.
 

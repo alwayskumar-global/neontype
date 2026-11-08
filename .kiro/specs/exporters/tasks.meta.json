@@ -42,6 +42,48 @@
         "chatSessionId": "sess_exporters_impl",
         "timestamp": 1794103909328
       }
+    ],
+    "2.1 Implement the deterministic frame stepper": [
+      {
+        "executionId": "4b261a25-9a0d-4834-89c4-7e9be25d5706",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794104404334
+      }
+    ],
+    "2.2 Implement uniform output scaling": [
+      {
+        "executionId": "4b261a25-9a0d-4834-89c4-7e9be25d5706",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794104404334
+      }
+    ],
+    "2.3 Implement capability detection": [
+      {
+        "executionId": "4b261a25-9a0d-4834-89c4-7e9be25d5706",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794104404334
+      }
+    ],
+    "2.4 Write property-based tests for frame count, determinism, and scaling": [
+      {
+        "executionId": "4b261a25-9a0d-4834-89c4-7e9be25d5706",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794104404334
+      }
+    ],
+    "2.5 Checkpoint \u2014 Group 2": [
+      {
+        "executionId": "4b261a25-9a0d-4834-89c4-7e9be25d5706",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794104404334
+      }
+    ],
+    "2. Group 2: Deterministic frame stepper, uniform scaling, and capability detection": [
+      {
+        "executionId": "4b261a25-9a0d-4834-89c4-7e9be25d5706",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794104404334
+      }
     ]
   }
 }
