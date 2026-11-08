@@ -48,7 +48,16 @@ export function PreviewCanvas({ store, canvasRef }: { store: Store; canvasRef: R
     (canvas as unknown as { __clock: PlaybackClock }).__clock = clock;
     paint(store.getState().ui.playhead);
 
-    return () => clock.dispose();
+    // Live preview: repaint at the current playhead on any store change (edits),
+    // except while playing (the clock already paints each frame then).
+    const unsub = store.subscribe(() => {
+      if (!clock.isPlaying) paint(store.getState().ui.playhead);
+    });
+
+    return () => {
+      unsub();
+      clock.dispose();
+    };
     // Re-init when the canvas backing size changes (new project dimensions).
   }, [store, width, height]);
 

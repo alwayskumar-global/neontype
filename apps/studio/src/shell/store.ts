@@ -39,11 +39,18 @@ export class Store {
 
   /** Dispatch a pure model action (replaces the project). */
   dispatch(action: Action): void {
+    this.dispatchGuarded(action);
+  }
+
+  /** Dispatch and report whether the action was accepted (true) or rejected. */
+  dispatchGuarded(action: Action): boolean {
     const next = applyAction(this.state.project, action);
     if (next !== this.state.project) {
       this.state = { ...this.state, project: next };
       this.emit();
+      return true;
     }
+    return false;
   }
 
   /** Replace the whole project (save/load). */

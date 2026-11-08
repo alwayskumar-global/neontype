@@ -6,11 +6,15 @@
 import { useEffect, useRef, useState } from "react";
 
 import "./../fonts/fonts.css";
+import "./layout.css";
 import { whenFontsReady, type FontStatus } from "../fonts/fonts.js";
 import { Store } from "./store.js";
 import { PreviewCanvas } from "../preview/PreviewCanvas.js";
 import { Transport } from "../preview/Transport.js";
 import { runParityProbe } from "../preview/parity-probe.js";
+import { SettingsPanel } from "../panels/SettingsPanel.js";
+import { LayersPanel } from "../panels/LayersPanel.js";
+import { EffectsPanel } from "../panels/EffectsPanel.js";
 
 declare global {
   interface Window {
@@ -30,21 +34,23 @@ export function App() {
     void whenFontsReady().then((s) => {
       if (active) setFonts(s);
     });
-    window.__studioParityProbe = runParityProbe;
-    window.__studioWorkerProbe = async () => {
-      const worker = new Worker(new URL("../playback/probe-worker.js", import.meta.url), { type: "module" });
-      return await new Promise<boolean>((resolve) => {
-        worker.addEventListener("message", (e: MessageEvent) => {
-          worker.terminate();
-          resolve(e.data === "pong");
+    if (import.meta.env.DEV) {
+      window.__studioParityProbe = runParityProbe;
+      window.__studioWorkerProbe = async () => {
+        const worker = new Worker(new URL("../playback/probe-worker.js", import.meta.url), { type: "module" });
+        return await new Promise<boolean>((resolve) => {
+          worker.addEventListener("message", (e: MessageEvent) => {
+            worker.terminate();
+            resolve(e.data === "pong");
+          });
+          worker.addEventListener("error", () => {
+            worker.terminate();
+            resolve(false);
+          });
+          worker.postMessage("ping");
         });
-        worker.addEventListener("error", () => {
-          worker.terminate();
-          resolve(false);
-        });
-        worker.postMessage("ping");
-      });
-    };
+      };
+    }
     return () => {
       active = false;
     };
@@ -62,10 +68,21 @@ export function App() {
   }
 
   return (
-    <main className="app-shell">
-      <h1>Studio</h1>
-      <PreviewCanvas store={store} canvasRef={canvasRef} />
-      <Transport store={store} canvasRef={canvasRef} />
-    </main>
+    <div className="app-shell">
+      <header className="app-topbar">
+        <h1>Studio</h1>
+      </header>
+      <aside className="app-left">
+        <SettingsPanel store={store} />
+        <LayersPanel store={store} />
+      </aside>
+      <main className="app-center">
+        <PreviewCanvas store={store} canvasRef={canvasRef} />
+        <Transport store={store} canvasRef={canvasRef} />
+      </main>
+      <aside className="app-right">
+        <EffectsPanel store={store} />
+      </aside>
+    </div>
   );
 }
