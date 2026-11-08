@@ -358,22 +358,56 @@ editing feels responsive.
 ### Requirement 14: Workspace, dependencies, and tooling
 
 **User Story:** As a maintainer, I want the app to fit the monorepo's conventions
-with no new runtime dependencies, so that the build stays clean and client-only.
+and use only the approved, exact-pinned dependencies, so that the build stays
+clean and client-only.
 
 #### Acceptance criteria
 
-1. THE app SHALL live in `apps/studio` as a pnpm workspace member and SHALL
-   declare runtime dependencies on `@studio/engine` and `@studio/exporters` only.
+1. THE app SHALL live in `apps/studio` as a pnpm workspace member. Its RUNTIME
+   dependencies SHALL be exactly `@studio/engine`, `@studio/exporters`, `react`,
+   and `react-dom` (the repo steering mandates Vite + React). *(unit for manifest)*
+2. THE app's DEV dependencies SHALL be the minimum for Vite + React + TypeScript
+   — the Vite React plugin (`@vitejs/plugin-react`) and the React type packages
+   (`@types/react`, `@types/react-dom`) — plus the tooling already present in the
+   repo (Vite, TypeScript, Vitest, Playwright, Zod, ESLint, typescript-eslint).
    *(unit for manifest)*
-2. THE app SHALL use the repo's existing tooling (Vite, TypeScript strict,
-   Vitest, Playwright, Zod, ESLint flat config with the three purity bans in
-   `src`) and SHALL add NO new runtime dependency in this scope. *(unit)*
-3. THE app SHALL NOT change any `tsconfig` outside `apps/studio`. *(unit)*
-4. THE build SHALL be fully static (no server code) and SHALL emit no runtime
+3. EVERY added package SHALL be exact-pinned (no `^`/`~`), MIT or OSI-approved
+   licensed, and SHALL have a row in `docs/dependencies.md` (name, exact version,
+   license, reason). See the "Approved dependencies" section. *(unit for pins, manual for licences)*
+4. THE app SHALL introduce NO UI component library, state-management library, CSS
+   framework, router, icon package, or testing-library; component behaviour is
+   verified through the pure model layer plus Playwright. ANY package beyond the
+   approved list requires explicit owner approval and SHALL be proposed in
+   `design.md` (not installed) first. *(unit for manifest, manual)*
+5. THE app SHALL NOT change any `tsconfig` outside `apps/studio`. *(unit)*
+6. THE build SHALL be fully static (no server code) and SHALL emit no runtime
    network dependency. *(unit, manual)*
-5. ANY UI-framework choice SHALL follow repo steering; if steering mandates one,
-   the app uses it, and no additional UI dependency beyond what steering already
-   establishes is introduced in this scope. *(manual — resolved in design.md)*
+
+### Requirement 15: Repository readiness
+
+**User Story:** As a newcomer or evaluator, I want a complete root README, so
+that I can understand, install, run, test, and build the project and know how it
+was made.
+
+#### Acceptance criteria
+
+1. THE repository root SHALL have a `README.md` with a product summary (the
+   browser-only, client-side motion-text studio) and no legacy product name or
+   assets. *(manual)*
+2. THE README SHALL list prerequisites with concrete versions (the required
+   Node.js version and the pnpm version used by the repo). *(manual)*
+3. THE README SHALL document the install, dev, test, and build commands
+   (`pnpm install`; the dev command for `apps/studio`; `pnpm test`; the
+   per-package Playwright commands; the build command). *(manual)*
+4. THE README SHALL describe the workspace layout (`packages/engine`,
+   `packages/exporters`, `apps/studio`, `docs/`, `.kiro/`). *(manual)*
+5. THE README SHALL include a "Built with Kiro" section covering the specs,
+   steering, hooks, and property-based testing used to build the project.
+   *(manual)*
+6. THE README SHALL include a third-party and disclosure section stating that
+   planning and visual design were produced OUTSIDE Kiro (with Claude and Claude
+   Design) while all CODE was written in Kiro, and SHALL link the dependency list
+   to `docs/dependencies.md`. *(manual)*
 
 ---
 
@@ -393,32 +427,52 @@ with no new runtime dependencies, so that the build stays clean and client-only.
 
 ---
 
+## Approved dependencies
+
+Runtime and dev dependencies for `apps/studio`, in the exporters-spec style:
+exact-pinned, OSI-licensed, each with a `docs/dependencies.md` row. Exact
+versions below are the current stable releases and SHALL be confirmed against
+the registry at install time (design/implementation phase); no package is
+installed during the requirements phase.
+
+| Package | Type | Version | License | Reason |
+| --- | --- | --- | --- | --- |
+| `@studio/engine` | runtime | workspace:* | — (internal) | Pure render path + `Project` schema; the only source of pixels and the data model. |
+| `@studio/exporters` | runtime | workspace:* | — (internal) | MP4 / PNG-sequence / GIF export and `detectCapabilities`. |
+| `react` | runtime | 19.2.0 | MIT | UI framework mandated by repo steering (Vite + React). |
+| `react-dom` | runtime | 19.2.0 | MIT | React DOM renderer for the app shell. |
+| `@vitejs/plugin-react` | dev | 6.0.1 | MIT | Vite plugin for React (JSX/Fast Refresh); Vite 8 compatible. |
+| `@types/react` | dev | 19.2.2 | MIT | React type definitions (strict TS). |
+| `@types/react-dom` | dev | 19.2.1 | MIT | React DOM type definitions (strict TS). |
+
+Tooling already present in the repo (Vite, TypeScript, Vitest, Playwright, Zod,
+ESLint, typescript-eslint) is reused and not re-listed as new. No UI component
+library, state library, CSS framework, router, icon package, or testing-library
+is used; any candidate beyond this table is proposed in `design.md` for approval
+before installation.
+
+---
+
 ## Open questions
 
-1. **Default new-project settings.** What canvas/fps/duration/background should a
-   fresh project start with?
-   *Recommended default:* 1280×720, 30 fps, 5 s, opaque `#101018`, one starter
-   text layer with the `fade-slide` effect.
-2. **Bundled font set.** Which exact open-licensed families (Latin + Tamil) ship,
-   and how many weights?
-   *Recommended default:* reuse the fonts already vendored for the engine visual
-   tests — Noto Sans (Latin) and Noto Sans Tamil (OFL-1.1) — one or two weights
-   each, self-hosted as woff2.
-3. **Effect granularity selection.** Should the UI let the user choose
-   per-effect granularity (character/word/line), or default to the first
-   supported granularity?
-   *Recommended default:* default to the effect's first `supportedGranularity`
-   with an optional dropdown to change it among `supportedGranularities`.
-4. **Preview resolution vs. canvas size.** Should the preview render at full
-   canvas pixels or fit-to-container with CSS scaling?
-   *Recommended default:* render at canvas pixel size into the backing store and
-   fit-to-container via CSS transform, so preview pixels equal export pixels
-   (preserving parity) regardless of on-screen size.
-5. **Export output size default.** Should the export default to the project
-   canvas size or offer a downscale preset?
-   *Recommended default:* default to the exact project canvas size (no scale),
-   with optional common downscale presets that keep the aspect ratio within the
-   exporter's 1-pixel rule.
+All five questions are RESOLVED; the owner accepted the recommended defaults.
+They are recorded here as decisions.
+
+1. **Default new-project settings.** *Resolved:* a fresh project is 1280×720,
+   30 fps, 5 s, opaque `#101018`, with one starter text layer carrying the
+   `fade-slide` effect.
+2. **Bundled font set.** *Resolved:* reuse the engine's vendored fonts — Noto
+   Sans (Latin) and Noto Sans Tamil (OFL-1.1) — one or two weights each,
+   self-hosted as woff2.
+3. **Effect granularity selection.** *Resolved:* default to the effect's first
+   `supportedGranularity`, with an optional dropdown to change it among the
+   effect's `supportedGranularities`.
+4. **Preview resolution vs. canvas size.** *Resolved:* render at canvas pixel
+   size into the backing store and fit-to-container via CSS transform, so preview
+   pixels equal export pixels (preserving parity) regardless of on-screen size.
+5. **Export output size default.** *Resolved:* default to the exact project
+   canvas size (no scale), with optional common downscale presets that keep the
+   aspect ratio within the exporter's 1-pixel rule.
 
 ---
 
