@@ -14,3 +14,4 @@
 | tsx | 4.23.15 | MIT | Runs `generate-schemas.ts` and `generate-visual-fixtures.ts`. |
 | @fontsource/noto-sans | 5.3.0 | OFL-1.1 | Self-hosted Latin font for Playwright golden-image visual tests (woff2 copied into tests/visual/fonts). |
 | @fontsource/noto-sans-tamil | 5.3.0 | OFL-1.1 | Self-hosted Tamil font for Playwright golden-image visual tests (woff2 copied into tests/visual/fonts). |
+| mp4-muxer | 5.2.2 | MIT | Mux encoded H.264 video + AAC audio chunks into an MP4 container, client-side, Worker-safe. |

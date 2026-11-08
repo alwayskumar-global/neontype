@@ -442,3 +442,130 @@ window.runMainExport = runMainExport;
 window.runWorkerAbort = runWorkerAbort;
 window.renderBlurFrameNoWrapper = renderBlurFrameNoWrapper;
 window.renderBlurFrameWithWrapper = renderBlurFrameWithWrapper;
+
+
+/* --------------------------- MP4 real-encode harness ---------------------- */
+
+import { exportMp4 } from "../../../src/api.js";
+
+/** A small valid project for MP4: even 160x96, 1s at 12fps, one text layer. */
+function mp4Project(): Project {
+  return {
+    schemaVersion: 1,
+    canvas: { width: 160, height: 96, fps: 12, durationSeconds: 1 },
+    background: "#101018",
+    seed: 3,
+    layers: [
+      {
+        id: "t",
+        text: "Go",
+        tracks: [],
+        effectInstances: [
+          {
+            effectId: "blur-in",
+            granularity: "character",
+            params: { startDelay: 0, durationSeconds: 0.4, startBlur: 8, delayPerGroup: 0.05, easing: "easeOut" },
+          },
+        ],
+        fontFamily: "sans-serif",
+        fontSize: 40,
+        fontWeight: "bold",
+        fill: "#ffcc00",
+        align: "left",
+        letterSpacing: 0,
+        lineHeight: 1.2,
+        maxWidth: null,
+        startSeconds: 0,
+        endSeconds: 1,
+        anchor: { x: 80, y: 60 },
+      },
+    ],
+  } as Project;
+}
+
+/** Builds a tiny mono 16-bit PCM WAV of `seconds` at 48kHz (a 440Hz tone). */
+function makeWav(seconds: number): Uint8Array {
+  const sampleRate = 48000;
+  const n = Math.round(seconds * sampleRate);
+  const dataBytes = n * 2;
+  const buf = new ArrayBuffer(44 + dataBytes);
+  const dv = new DataView(buf);
+  const w4 = (o: number, s: string) => { for (let i = 0; i < 4; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  w4(0, "RIFF"); dv.setUint32(4, 36 + dataBytes, true); w4(8, "WAVE");
+  w4(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, sampleRate, true); dv.setUint32(28, sampleRate * 2, true);
+  dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+  w4(36, "data"); dv.setUint32(40, dataBytes, true);
+  for (let i = 0; i < n; i++) {
+    const v = Math.sin((2 * Math.PI * 440 * i) / sampleRate) * 0.3;
+    dv.setInt16(44 + i * 2, Math.max(-1, Math.min(1, v)) * 32767, true);
+  }
+  return new Uint8Array(buf);
+}
+
+/** Audio mode for the MP4 harness: none, exact, short, long, or silent. */
+type AudioMode = "none" | "exact" | "short" | "long" | "silent";
+
+/** Runs an MP4 export (worker path via exportMp4) and returns bytes + summary. */
+async function runMp4Export(mode: AudioMode): Promise<{
+  ok: boolean;
+  code?: string;
+  bytes: number[];
+  summary?: { width: number; height: number; fps: number; frameCount: number; notes: string[] };
+}> {
+  // Project duration is 1s; vary the WAV length to exercise pad/trim.
+  const opts: Parameters<typeof exportMp4>[1] = {};
+  if (mode === "exact") opts.audio = { bytes: makeWav(1) };
+  else if (mode === "short") opts.audio = { bytes: makeWav(0.5) };
+  else if (mode === "long") opts.audio = { bytes: makeWav(2) };
+  else if (mode === "silent") opts.addSilentTrack = true;
+
+  const result = await exportMp4(mp4Project(), opts);
+  if (!result.ok) return { ok: false, code: result.error.code, bytes: [] };
+  const buf = await result.file.arrayBuffer();
+  return {
+    ok: true,
+    bytes: Array.from(new Uint8Array(buf)),
+    summary: {
+      width: result.summary.width,
+      height: result.summary.height,
+      fps: result.summary.fps,
+      frameCount: result.summary.frameCount,
+      notes: result.summary.notes,
+    },
+  };
+}
+
+/**
+ * Runs an audio MP4 export with `AudioEncoder.isConfigSupported` temporarily
+ * stubbed to report AAC UNSUPPORTED, to prove the main-thread capability gate
+ * returns browser-unsupported (never ok-without-audio). Restores the original.
+ */
+async function runMp4AudioUnsupported(): Promise<{ ok: boolean; code?: string }> {
+  const AE = (globalThis as { AudioEncoder?: { isConfigSupported?: unknown } }).AudioEncoder;
+  const original = AE?.isConfigSupported;
+  if (AE) {
+    AE.isConfigSupported = async () => ({ supported: false, config: {} });
+  }
+  try {
+    const result = await exportMp4(mp4Project(), { audio: { bytes: makeWav(1) } });
+    return { ok: result.ok, code: result.ok ? undefined : result.error.code };
+  } finally {
+    if (AE && original) AE.isConfigSupported = original;
+  }
+}
+
+declare global {
+  interface Window {
+    runMp4Export: (mode: "none" | "exact" | "short" | "long" | "silent") => Promise<{
+      ok: boolean;
+      code?: string;
+      bytes: number[];
+      summary?: { width: number; height: number; fps: number; frameCount: number; notes: string[] };
+    }>;
+    runMp4AudioUnsupported: () => Promise<{ ok: boolean; code?: string }>;
+  }
+}
+
+window.runMp4Export = runMp4Export;
+window.runMp4AudioUnsupported = runMp4AudioUnsupported;

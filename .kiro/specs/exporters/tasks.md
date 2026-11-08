@@ -113,7 +113,7 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - **Completion:** All four commands exit with code 0 and zero failures.
 
 - [ ] 4. Group 4: MP4 export, muxer sanity, and PNG sequence
-  - [ ] 4.1 Implement the MP4 muxer adapter and H.264 video exporter
+  - [x] 4.1 Implement the MP4 muxer adapter and H.264 video exporter
     - Add `mp4-muxer` 5.2.2 to `packages/exporters/package.json` (exact pin) and create `packages/exporters/src/muxers/mp4.ts` as a thin adapter over it.
     - Create `packages/exporters/src/formats/mp4.ts` exporting `exportMp4`: validate `Project` (engine `ProjectSchema`) and options before frame 0, encode frames to H.264 via `VideoEncoder` → the MP4 muxer, round odd dimensions up to even then clamp to canvas bounds (reported in the summary), paint a transparent background over the solid `backgroundFallback` and add the `mp4-no-transparency` note; return an `ExportResult` on every path and never throw.
     - Add a row for `mp4-muxer` (5.2.2, MIT, "Mux encoded H.264 video + AAC audio chunks into an MP4 container, client-side, Worker-safe") to `docs/dependencies.md`.
@@ -121,7 +121,7 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - **Covers:** Requirement 2.1, Requirement 2.2, Requirement 2.3, Requirement 2.4, Requirement 2.5, Requirement 2.11, Requirement 2.12, Requirement 12.1, Requirement 12.2, Requirement 12.3
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/formats/mp4.test.ts` passes with zero failures; `docs/dependencies.md` has the `mp4-muxer` row.
 
-  - [ ] 4.2 Implement audio decode and trim/pad for the optional AAC track
+  - [x] 4.2 Implement audio decode and trim/pad for the optional AAC track
     - Create `packages/exporters/src/audio/decode.ts` decoding imported audio via `OfflineAudioContext.decodeAudioData` on the main thread, enforcing the 50 MB (52,428,800-byte) untrusted-file cap before decode and the 600-second / 512 MB (536,870,912-byte) decoded-PCM caps (`audio-decode-failed`, buffers released, project unchanged, able to accept a subsequent request).
     - Create `packages/exporters/src/audio/trim-pad.ts` padding with silence when the decoded duration is short by more than one audio frame, truncating when long by more than one audio frame, leaving it unchanged when within one audio frame, and producing a silent track for the `addSilentTrack` option; the encoded AAC length equals `durationSeconds`. Wire one AAC `AudioEncoder` track into `exportMp4`, gated on AAC capability (`browser-unsupported` when requested with audio while AAC is unsupported).
     - Add unit tests to `packages/exporters/src/audio/decode.test.ts` for the size-cap and decoded-cap rejections and the AAC-unsupported-with-audio path.

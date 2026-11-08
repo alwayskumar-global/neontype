@@ -11,6 +11,12 @@
       "consecutivePasses": 3,
       "lastRun": 1794106200000,
       "status": "passed"
+    },
+    "Property 8: AAC track length equals durationSeconds": {
+      "file": "packages/exporters/src/audio/trim-pad.test.ts",
+      "consecutivePasses": 3,
+      "lastRun": 1794110000000,
+      "status": "passed"
     }
   },
   "executionHistory": {
@@ -131,6 +137,20 @@
         "executionId": "7c3d9f2a-8b1e-4a6c-9d2f-3e5a7c1b4d8e",
         "chatSessionId": "sess_exporters_impl",
         "timestamp": 1794106200000
+      }
+    ],
+    "4.1 Implement the MP4 muxer adapter and H.264 video exporter": [
+      {
+        "executionId": "9f4a1c6b-2d7e-4f33-b8a1-6c2e9d4a7b10",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794110000000
+      }
+    ],
+    "4.2 Implement audio decode and trim/pad for the optional AAC track": [
+      {
+        "executionId": "9f4a1c6b-2d7e-4f33-b8a1-6c2e9d4a7b10",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794110000000
       }
     ]
   }

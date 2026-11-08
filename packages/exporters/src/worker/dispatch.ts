@@ -84,7 +84,14 @@ function runOnWorker(args: DispatchArgs): Promise<ExportResult> {
       options: args.options,
       limits: args.limits,
     };
-    worker.postMessage(start);
+    // Transfer the decoded-PCM buffers (zero-copy) rather than clone them. After
+    // this the main thread's copies are detached; it must not reuse them.
+    const transfer: Transferable[] = [];
+    const pcm = args.options.audioPcm;
+    if (pcm) {
+      for (const ch of pcm.channels) transfer.push(ch.buffer as ArrayBuffer);
+    }
+    worker.postMessage(start, transfer);
   });
 }
 

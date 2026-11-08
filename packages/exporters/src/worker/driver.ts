@@ -23,6 +23,7 @@ import { FrameRenderer, type ExportContext2D } from "../render-frame.js";
 import { runExport, type ExportEncoder } from "./host.js";
 import { frameCountYield } from "./yield.js";
 import type { WorkerOptions } from "./protocol.js";
+import { runMp4Export } from "../formats/mp4.js";
 
 /** Everything a driver needs to run an export (cloneable; worker-safe). */
 export interface DriverArgs {
@@ -136,8 +137,37 @@ export const recordingDriver: ExportDriver = async (args, onProgress, isAborted)
   });
 };
 
+/**
+ * The MP4 driver: adapts `exportMp4` to the `ExportDriver` shape. The
+ * `WorkerOptions` carry the MP4-specific fields (videoBitrate,
+ * backgroundFallback, addSilentTrack); `output` becomes the Mp4Options output.
+ */
+export const mp4Driver: ExportDriver = (args, onProgress, isAborted) => {
+  const o = args.options;
+  // The PCM was decoded + trim/padded on the main thread and TRANSFERRED here.
+  const audio = o.audioPcm
+    ? { channels: o.audioPcm.channels, sampleRate: o.audioPcm.sampleRate, length: o.audioPcm.length }
+    : null;
+  return runMp4Export(
+    args.project,
+    {
+      output: o.output,
+      videoBitrate: o.videoBitrate,
+      backgroundFallback: o.backgroundFallback,
+      addSilentTrack: o.addSilentTrack,
+      limits: args.limits,
+    },
+    (fraction, frame, frameCount) => onProgress({ fraction, frame, frameCount }),
+    isAborted,
+    audio,
+  );
+};
+
 /** The driver registry, keyed by a driver id. */
-const registry = new Map<string, ExportDriver>([["recording", recordingDriver]]);
+const registry = new Map<string, ExportDriver>([
+  ["recording", recordingDriver],
+  ["mp4", mp4Driver],
+]);
 
 /** Registers a driver under `id` (later groups register format drivers). */
 export function registerDriver(id: string, driver: ExportDriver): void {

@@ -8,6 +8,20 @@
 
 import type { ExportFormat, ExportResult, Project, ExportLimits } from "../types.js";
 
+/**
+ * Decoded PCM handed to the worker for muxing (Req 2.6-2.10). The audio is
+ * decoded + trim/padded on the MAIN thread (OfflineAudioContext is window-only);
+ * only finished PCM crosses the boundary. The channel buffers are TRANSFERRED
+ * (zero-copy), so the main thread must not reuse them after dispatch.
+ */
+export interface WorkerPcm {
+  /** Per-channel Float32 samples (transferred). */
+  channels: Float32Array[];
+  sampleRate: number;
+  /** Frames per channel. */
+  length: number;
+}
+
 /** Options posted to the worker: no callbacks, no signal (not cloneable). */
 export interface WorkerOptions {
   output?: { width: number; height: number };
@@ -15,6 +29,8 @@ export interface WorkerOptions {
   backgroundFallback?: string;
   quality?: number;
   addSilentTrack?: boolean;
+  /** Pre-decoded audio PCM for the AAC track; absent when there is no audio. */
+  audioPcm?: WorkerPcm;
 }
 
 /** Main thread → worker. */
