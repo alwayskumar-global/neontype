@@ -225,10 +225,15 @@ union, so a change to `ErrorCode` fails to compile (property/unit guard).
 
 ### CSP and security
 
-- **No inline scripts.** Vite is configured to not inline the entry script
-  (`build.modulePreload` + a real `<script type="module" src>`), so the CSP needs
-  no `'unsafe-inline'` for scripts. No `eval`/`new Function` anywhere;
-  `@vitejs/plugin-react` in Vite 8 uses Oxc (no Babel-eval dev transform).
+- **No inline scripts.** Vite emits the entry as an external
+  `<script type="module" src>` (no inlined script), so the CSP needs no
+  `'unsafe-inline'` for scripts. The source `index.html` carries NO CSP meta; a
+  build-only Vite plugin (`transformIndexHtml`, `apply: "build"`) injects the
+  strict CSP meta into the EMITTED `index.html` only. The Vite DEV server runs
+  with NO CSP (HMR needs inline styles + eval); the authoritative CSP check runs
+  against `vite preview` of the production build (and the `vercel.json` header in
+  prod). The one runtime `new Function("")` is Zod's guarded, caught `allowsEval`
+  probe (see Deviations / Requirement 11.3), not app code.
 - **Exact CSP** (served as an HTTP header in production and mirrored as a
   `<meta http-equiv>` for local static serving):
 
@@ -256,8 +261,10 @@ union, so a change to `ErrorCode` fails to compile (property/unit guard).
   URL) and for export output object-URLs. `connect-src 'self'` with no remote
   origins, combined with the no-network test, enforces "no runtime network"
   (`img-src`/`font-src` are `'self'` only — no CDN).
-- For a Vercel static deploy the same header is set in `vercel.json` `headers`;
-  design/ is excluded from the build input entirely (see risks).
+- The injected META omits `frame-ancestors` (browsers ignore it in a meta —
+  header-only); `vercel.json` sets the FULL CSP (incl. `frame-ancestors 'none'`)
+  as an HTTP header for production, which is where clickjacking protection
+  applies. design/ is excluded from the build input entirely (see risks).
 - **No `innerHTML` with user text**: all user text is rendered via React text
   children (auto-escaped) or canvas `fillText`; `errors.ts` strings are static.
 - **`design/` not served/bundled**: `apps/studio` has its own Vite `root`; the
@@ -379,10 +386,16 @@ recorded in `docs/dependencies.md` (see risk 1).
    compatible with the repo's Vite major; `@types` majors matching `react`), and
    its ACTUAL version/licence/publish date is recorded in `docs/dependencies.md`;
    any deviation from the table is reported.
-2. **No inline styles or scripts.** The CSP uses `style-src 'self'` (no
-   `'unsafe-inline'`); all dynamic styling goes through the CSSOM (React `style`
-   prop / `setProperty`), never `style="..."`/`<style>` markup. A `csp.spec`
-   Playwright test asserts zero CSP violations.
+2. **CSP: dev vs production, and one allowed probe.** No `'unsafe-inline'` for
+   scripts or styles; dynamic styling is CSSOM-only. The strict CSP is injected
+   into the BUILT `index.html` (build-only Vite plugin) and set as a `vercel.json`
+   header; the DEV server runs with no CSP (HMR needs inline/eval). The `csp.spec`
+   runs against `vite preview` of the production build and asserts ZERO
+   violations EXCEPT exactly one named, caught probe: Zod `allowsEval`
+   (`new Function("")`) → `script-src` / `eval`. Zod is required by the engine
+   `ProjectSchema`; the probe is guarded + try/caught and falls back to the
+   interpreted validator, so functionality is unaffected. `'unsafe-eval'` is NOT
+   added; any other or second violation fails (Requirement 11.3).
 3. **Excluding `design/` from the build**: because `apps/studio` has its own Vite
    root, the repo-root `design/` is naturally outside the build graph; the
    grep-based guard is a belt-and-suspenders check, not the primary mechanism.
@@ -395,3 +408,9 @@ recorded in `docs/dependencies.md` (see risk 1).
 6. **Worker + CSP `blob:`**: the exporter worker and object-URL downloads require
    `worker-src blob:` and `connect-src blob:`; these are scoped to `blob:` only,
    not remote origins, preserving the no-network guarantee.
+7. **Exporters ambient types**: `@studio/exporters` ships `gifenc`'s ambient
+   `declare module` in its own `src/types`, invisible to a consumer's tsconfig.
+   `apps/studio/tsconfig.json` adds `../../packages/exporters/src/types/*.d.ts`
+   to its `include` (studio-only; no exporters change, no shim copy) so importing
+   the exporters barrel typechecks. The shipping shell stays exporters-free until
+   Group 3.

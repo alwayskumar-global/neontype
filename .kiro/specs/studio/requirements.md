@@ -312,9 +312,18 @@ file or typing text cannot execute code or leak data.
    `CSSStyleDeclaration`, and `setProperty` on CSS custom properties), which CSP
    permits; no code path SHALL inject `style` or `script` markup. *(unit for build
    check, Playwright, manual)*
-3. THE app SHALL produce ZERO CSP violation reports during the Playwright run,
-   verified by listening for `securitypolicyviolation` events and CSP-related
-   console errors across a representative session. *(Playwright)*
+3. THE app SHALL produce zero CSP violation reports during the Playwright run
+   against the production build under the strict CSP, EXCEPT exactly one named,
+   caught feature probe: Zod's `allowsEval` (`new Function("")`, guarded by
+   jitless/Cloudflare checks and a try/catch), which surfaces as a `script-src`
+   directive with blocked value `eval`. The test asserts that single allowance by
+   exact match (package: `zod`; directive: `script-src`; blocked: `eval`);
+   `'unsafe-eval'` is NOT added. Any OTHER violation, or a second occurrence of
+   anything (including a second eval probe), fails the test. Verified by
+   listening for `securitypolicyviolation` events and non-eval CSP console errors
+   across a representative session. The Vite dev server runs with no CSP meta
+   (HMR needs inline/eval); the authoritative check runs against `vite preview` of
+   the production build. *(Playwright)*
 4. THE app SHALL make NO network request at runtime (verified by failing the test
    if any `fetch`/`XMLHttpRequest`/`WebSocket`/`sendBeacon`/dynamic font/CDN
    request occurs during a representative session). *(Playwright)*
