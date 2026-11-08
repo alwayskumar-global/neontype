@@ -1,3 +1,4 @@
+import { gotoStudio } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 
 /**
@@ -14,9 +15,7 @@ async function canvasHash(page: import("@playwright/test").Page): Promise<string
 }
 
 test("add layer, edit text, change effect updates the preview", async ({ page }) => {
-  await page.goto("http://localhost:5273/");
-  await expect(page.getByRole("heading", { name: "Studio" })).toBeVisible();
-  await expect(page.locator("canvas.preview-canvas")).toBeVisible();
+  await gotoStudio(page, true);
 
   // Scrub to a time where effects have settled so content is visible.
   const scrub = page.getByLabel("Scrub");

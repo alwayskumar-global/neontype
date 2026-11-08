@@ -1,3 +1,4 @@
+import { gotoStudio } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 
 /**
@@ -30,8 +31,7 @@ async function openDialog(page: import("@playwright/test").Page): Promise<void> 
 const ascii = (b: number[]): string => String.fromCharCode(...b);
 
 test("exports MP4 with a valid ftyp header", async ({ page }) => {
-  await page.goto("http://localhost:5273/");
-  await expect(page.getByRole("heading", { name: "Studio" })).toBeVisible();
+  await gotoStudio(page, true);
   await shrink(page, "0.3");
   await openDialog(page);
   await page.getByRole("button", { name: /Export mp4/ }).click();
@@ -42,8 +42,7 @@ test("exports MP4 with a valid ftyp header", async ({ page }) => {
 });
 
 test("exports GIF with a GIF8 header", async ({ page }) => {
-  await page.goto("http://localhost:5273/");
-  await expect(page.getByRole("heading", { name: "Studio" })).toBeVisible();
+  await gotoStudio(page, true);
   await shrink(page, "0.3");
   await openDialog(page);
   await page.getByRole("button", { name: /Export gif/ }).click();
@@ -54,8 +53,7 @@ test("exports GIF with a GIF8 header", async ({ page }) => {
 });
 
 test("cancel during export ends in the cancelled state", async ({ page }) => {
-  await page.goto("http://localhost:5273/");
-  await expect(page.getByRole("heading", { name: "Studio" })).toBeVisible();
+  await gotoStudio(page, true);
   await shrink(page, "4");
   await openDialog(page);
   await page.getByRole("button", { name: /Export mp4/ }).click();

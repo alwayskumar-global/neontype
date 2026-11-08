@@ -113,3 +113,11 @@ button:disabled { opacity: 0.5; cursor: default; }
   background: var(--color-magenta-900, #3a0b30); color: var(--color-accent-hover);
   font-size: var(--text-caption-size);
 }
+
+
+.brand-link {
+  background: none; border: none; color: var(--color-text);
+  font-weight: var(--font-weight-bold); font-size: var(--text-title-size);
+  cursor: pointer; padding: 0; margin-right: var(--space-2);
+}
+.brand-link:hover { color: var(--color-accent-hover); }

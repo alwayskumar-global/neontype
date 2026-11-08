@@ -16,7 +16,7 @@ declare global {
 
 test("scaffold renders and a module worker round-trips", async ({ page }) => {
   await page.goto("http://localhost:5273/");
-  await expect(page.getByRole("heading", { name: "Studio" })).toBeVisible();
+  await page.waitForFunction(() => typeof window.__studioWorkerProbe === "function");
   const probeOk = await page.evaluate(async () => {
     const fn = window.__studioWorkerProbe;
     return fn ? await fn() : false;

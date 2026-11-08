@@ -35,13 +35,12 @@ test("production build emits only the one allowed Zod eval probe CSP violation",
   });
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Studio" })).toBeVisible();
-  // Exercise the worker path too (blob: worker under CSP).
-  await page.evaluate(async () => {
-    const fn = (window as unknown as { __studioWorkerProbe?: () => Promise<boolean> }).__studioWorkerProbe;
-    if (fn) await fn();
-  });
-  await page.waitForTimeout(200);
+  // Representative session under the strict CSP: landing (with live previews),
+  // then open the studio (loads the worker-backed export path indirectly).
+  await expect(page.getByRole("heading", { name: "Animated titles, made in your browser." })).toBeVisible();
+  await page.getByRole("button", { name: "Open the studio" }).first().click();
+  await expect(page.locator("canvas.preview-canvas")).toBeVisible();
+  await page.waitForTimeout(300);
 
   const violations = await page.evaluate(
     () => (window as unknown as { __csp: { directive: string; blocked: string }[] }).__csp,

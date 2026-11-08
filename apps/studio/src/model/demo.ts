@@ -50,3 +50,29 @@ export function demoProject(): Project {
     ],
   };
 }
+
+/** A small single-effect project for a landing gallery tile (480x270, ~2.5s). */
+export function galleryProject(effectId: "fade-slide" | "kinetic-pop" | "typewriter", text: string): Project {
+  const params: Record<string, Record<string, unknown>> = {
+    "fade-slide": { durationSeconds: 0.6, slideDistance: 24, slideAxis: "y", delayPerSegment: 0.08, easing: "easeOut" },
+    "kinetic-pop": { startDelay: 0, durationSeconds: 0.5, delayPerGroup: 0.05, startScale: 0.2, overshoot: 0.3 },
+    typewriter: { startDelay: 0, delayPerCharacter: 0.07, direction: "forward" },
+  };
+  return {
+    schemaVersion: 1,
+    canvas: { width: 480, height: 270, fps: 30, durationSeconds: 2.5 },
+    background: "#101018",
+    seed: 5,
+    layers: [
+      {
+        id: "g",
+        text,
+        tracks: [],
+        effectInstances: [{ effectId, granularity: "character", params: params[effectId] }],
+        fontFamily: "Noto Sans", fontSize: 56, fontWeight: "700", fill: "#ffcc00",
+        align: "center", letterSpacing: 0, lineHeight: 1.2, maxWidth: null,
+        startSeconds: 0, endSeconds: 2.5, anchor: { x: 240, y: 150 },
+      },
+    ],
+  };
+}

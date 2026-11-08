@@ -1,3 +1,4 @@
+import { gotoStudio } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 
 /**
@@ -19,8 +20,7 @@ async function nonBlankCanvas(page: import("@playwright/test").Page): Promise<bo
 }
 
 test("demo loads on start with a non-blank canvas at a visible time", async ({ page }) => {
-  await page.goto("http://localhost:5273/");
-  await expect(page.getByRole("heading", { name: "Studio" })).toBeVisible();
+  await gotoStudio(page, true);
   await page.getByLabel("Scrub").fill("3");
   await page.waitForTimeout(80);
   expect(await nonBlankCanvas(page)).toBe(true);
@@ -29,8 +29,7 @@ test("demo loads on start with a non-blank canvas at a visible time", async ({ p
 });
 
 test("save then reopen round-trips the project", async ({ page }) => {
-  await page.goto("http://localhost:5273/");
-  await expect(page.getByRole("heading", { name: "Studio" })).toBeVisible();
+  await gotoStudio(page, true);
 
   // Edit so the project differs from the demo, then Save.
   await page.getByRole("button", { name: "New" }).click();
@@ -48,8 +47,7 @@ test("save then reopen round-trips the project", async ({ page }) => {
 });
 
 test("opening an invalid file shows a clear error and keeps the project", async ({ page }) => {
-  await page.goto("http://localhost:5273/");
-  await expect(page.getByRole("heading", { name: "Studio" })).toBeVisible();
+  await gotoStudio(page, true);
   // Build an invalid File in the browser and fire the input's change handler
   // (avoids Playwright's buffer path, which needs a Node Buffer).
   await page.evaluate(() => {

@@ -18,7 +18,6 @@ declare global {
 
 test("preview frames match the exporter FrameRenderer within tolerance", async ({ page }) => {
   await page.goto("http://localhost:5273/");
-  await expect(page.getByRole("heading", { name: "Studio" })).toBeVisible();
   await page.waitForFunction(() => typeof window.__studioParityProbe === "function");
 
   const ratios = await page.evaluate(() => window.__studioParityProbe!());
