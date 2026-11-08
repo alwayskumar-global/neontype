@@ -230,7 +230,7 @@ union, so a change to `ErrorCode` fails to compile (property/unit guard).
   ```
   default-src 'none';
   script-src 'self';
-  style-src 'self' 'unsafe-inline';
+  style-src 'self';
   img-src 'self' data: blob:;
   media-src 'self' blob:;
   font-src 'self';
@@ -241,12 +241,16 @@ union, so a change to `ErrorCode` fails to compile (property/unit guard).
   frame-ancestors 'none'
   ```
 
-  Notes: `style-src 'unsafe-inline'` is the one allowance (React inline
-  `style`/CSS-in-JS-free design tokens still set `style` attributes); it does not
-  weaken script safety. `blob:` is required for the worker (`@studio/exporters`
-  builds its worker from a bundler URL) and for export output object-URLs.
-  `connect-src 'self'` with no remote origins, combined with the no-network test,
-  enforces "no runtime network" (`img-src`/`font-src` are `'self'` only — no CDN).
+  Notes: there is NO `'unsafe-inline'` for scripts or styles. `index.html` and
+  any server-rendered string contain no inline `<script>`, no `<style>` element,
+  and no `style="..."` attribute; no code path injects `style` or `script`
+  markup. Dynamic styling is applied ONLY through the CSSOM — React's `style`
+  prop (which writes to the element's `CSSStyleDeclaration`) and `setProperty` on
+  CSS custom properties — which CSP allows without `'unsafe-inline'`. `blob:` is
+  required for the worker (`@studio/exporters` builds its worker from a bundler
+  URL) and for export output object-URLs. `connect-src 'self'` with no remote
+  origins, combined with the no-network test, enforces "no runtime network"
+  (`img-src`/`font-src` are `'self'` only — no CDN).
 - For a Vercel static deploy the same header is set in `vercel.json` `headers`;
   design/ is excluded from the build input entirely (see risks).
 - **No `innerHTML` with user text**: all user text is rendered via React text
@@ -336,6 +340,7 @@ failures to `font-not-ready` / `font-decode-failed`. No code path uses
 | `export.spec` | dialog offers MP4/PNG/GIF only; capability gating; progress; cancel→cancelled; success download; mp4-no-transparency note; error mapping | ~6 s |
 | `parity.spec` | preview frame vs exporter FrameRenderer frame within tolerance (Req 9) | ~3 s |
 | `security.spec` | no network requests during a representative session; no design/ asset loaded | ~3 s |
+| `csp.spec` | zero `securitypolicyviolation` events and no CSP console errors across a representative session (Req 11.2, 11.3) | ~3 s |
 | `a11y.spec` | keyboard operability, labels present, visible focus, dialog focus-trap + Escape | ~3 s |
 | `perf.spec` | 1280×720 / 5-layer playback frame-interval mean + p95 (reports numbers) | ~12 s |
 
@@ -356,15 +361,23 @@ NOT proposed (and the chosen alternative):
 If any of these is later judged necessary, it will be proposed for approval
 before installation (Requirement 14.4).
 
+The approved packages' versions in the requirements table are indicative; the
+actual exact versions are resolved from the npm registry at install time and
+recorded in `docs/dependencies.md` (see risk 1).
+
 ## Deviations and risks
 
-1. **React version pins** (`react`/`react-dom` 19.2.0, `@vitejs/plugin-react`
-   6.0.1, `@types/react` 19.2.2, `@types/react-dom` 19.2.1) are the current
-   stable at design time; exact versions are re-confirmed against the registry at
-   install, and `docs/dependencies.md` rows are written then.
-2. **`style-src 'unsafe-inline'`** is allowed for inline `style` attributes
-   (design tokens / dynamic layout). It does not permit inline scripts; script
-   safety is unaffected. If we later eliminate inline styles we can drop it.
+1. **Dependency versions are INDICATIVE** (the Approved-dependencies table shows
+   current-stable values only). At the first task that touches `package.json`,
+   each package is resolved with `npm view`, pinned to the exact latest stable
+   mutually-compatible versions (`react`/`react-dom` identical; `@vitejs/plugin-react`
+   compatible with the repo's Vite major; `@types` majors matching `react`), and
+   its ACTUAL version/licence/publish date is recorded in `docs/dependencies.md`;
+   any deviation from the table is reported.
+2. **No inline styles or scripts.** The CSP uses `style-src 'self'` (no
+   `'unsafe-inline'`); all dynamic styling goes through the CSSOM (React `style`
+   prop / `setProperty`), never `style="..."`/`<style>` markup. A `csp.spec`
+   Playwright test asserts zero CSP violations.
 3. **Excluding `design/` from the build**: because `apps/studio` has its own Vite
    root, the repo-root `design/` is naturally outside the build graph; the
    grep-based guard is a belt-and-suspenders check, not the primary mechanism.

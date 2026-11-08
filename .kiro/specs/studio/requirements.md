@@ -304,15 +304,23 @@ file or typing text cannot execute code or leak data.
 
 1. THE app SHALL render all user text via DOM text nodes / canvas `fillText`,
    never via `innerHTML` or any HTML-injecting sink. *(unit, Playwright)*
-2. THE app SHALL run under a strict CSP with no `eval`, no `new Function`, and no
-   inline scripts; the build output SHALL contain no inline `<script>` with
-   executable code. *(unit for build check, manual)*
-3. THE app SHALL make NO network request at runtime (verified by failing the test
+2. THE app SHALL run under a strict CSP with NO `'unsafe-inline'` for scripts OR
+   styles and no `eval`/`new Function`: `index.html` and any server-rendered
+   string SHALL contain no inline `<script>`, no `<style>` element, and no
+   `style="..."` attribute. Dynamic styling SHALL be applied only through the
+   CSSOM (React's `style` prop, which sets properties on the element's
+   `CSSStyleDeclaration`, and `setProperty` on CSS custom properties), which CSP
+   permits; no code path SHALL inject `style` or `script` markup. *(unit for build
+   check, Playwright, manual)*
+3. THE app SHALL produce ZERO CSP violation reports during the Playwright run,
+   verified by listening for `securitypolicyviolation` events and CSP-related
+   console errors across a representative session. *(Playwright)*
+4. THE app SHALL make NO network request at runtime (verified by failing the test
    if any `fetch`/`XMLHttpRequest`/`WebSocket`/`sendBeacon`/dynamic font/CDN
    request occurs during a representative session). *(Playwright)*
-4. AN opened project file SHALL be validated (Requirement 7.3) before any field
+5. AN opened project file SHALL be validated (Requirement 7.3) before any field
    is read by the app. *(unit)*
-5. THE `design/` directory SHALL NOT be served or bundled, and `support.js` SHALL
+6. THE `design/` directory SHALL NOT be served or bundled, and `support.js` SHALL
    NOT be imported; a build/config check SHALL fail if either is referenced.
    *(unit)*
 
@@ -430,10 +438,15 @@ was made.
 ## Approved dependencies
 
 Runtime and dev dependencies for `apps/studio`, in the exporters-spec style:
-exact-pinned, OSI-licensed, each with a `docs/dependencies.md` row. Exact
-versions below are the current stable releases and SHALL be confirmed against
-the registry at install time (design/implementation phase); no package is
-installed during the requirements phase.
+exact-pinned, OSI-licensed, each with a `docs/dependencies.md` row. The versions
+in the table below are INDICATIVE ONLY. At install time (the first task that
+touches `package.json`) each package SHALL be resolved against the npm registry
+with `npm view`, pinned to the exact latest stable version that is mutually
+compatible (`react`/`react-dom` the same version; `@vitejs/plugin-react`
+compatible with the repo's Vite major; `@types` majors matching `react`), and
+its ACTUAL version, licence, and publish date SHALL be recorded in
+`docs/dependencies.md`. Any deviation from this table SHALL be reported. No
+package is installed during the requirements phase.
 
 | Package | Type | Version | License | Reason |
 | --- | --- | --- | --- | --- |
