@@ -27,6 +27,8 @@ function makeRecorder(tag: string) {
     textBaseline: "alphabetic",
     save: () => void calls.push(`${tag}.save`),
     restore: () => void calls.push(`${tag}.restore`),
+    clearRect: (x, y, w, h) => void calls.push(`${tag}.clearRect(${x},${y},${w},${h})`),
+    fillRect: (x, y, w, h) => void calls.push(`${tag}.fillRect(${x},${y},${w},${h})`),
     translate: (x, y) => void calls.push(`${tag}.translate(${x},${y})`),
     rotate: (a) => void calls.push(`${tag}.rotate(${a})`),
     scale: (x, y) => void calls.push(`${tag}.scale(${x},${y})`),

@@ -17,13 +17,19 @@ declare global {
     runWorkerExport: () => Promise<{ ok: boolean; bytes: number[]; code?: string }>;
     runMainExport: () => Promise<{ ok: boolean; bytes: number[]; code?: string }>;
     runWorkerAbort: () => Promise<{ ok: boolean; code?: string }>;
+    renderBlurFrameNoWrapper: () => number[];
+    renderBlurFrameWithWrapper: () => { bytes: number[]; blurFilterSetOnReal: boolean };
   }
 }
 
-test("worker and main-thread paths produce byte-identical frames", async ({ page }) => {
+test("worker and main-thread paths produce byte-identical frames through the blur wrapper", async ({
+  page,
+}) => {
   await page.goto("http://localhost:5273/");
   await page.waitForFunction(() => typeof window.runWorkerExport === "function");
 
+  // Both paths run the recording driver, which renders through the shared
+  // FrameRenderer (FilterStrippingContext + R14 scaling). Frames must match.
   const worker = await page.evaluate(() => window.runWorkerExport());
   const main = await page.evaluate(() => window.runMainExport());
 
@@ -32,6 +38,24 @@ test("worker and main-thread paths produce byte-identical frames", async ({ page
   expect(worker.bytes.length).toBeGreaterThan(0);
   expect(worker.bytes.length).toBe(main.bytes.length);
   expect(worker.bytes).toEqual(main.bytes);
+
+  // The blurred segment really goes through the wrapper: the wrapped render
+  // differs from a wrapper-less native render (blur is applied by the exporter),
+  // and the real context's `filter` is never set to a blur value (Req 8.1-8.4).
+  const noWrapper = await page.evaluate(() => window.renderBlurFrameNoWrapper());
+  const withWrapper = await page.evaluate(() => window.renderBlurFrameWithWrapper());
+
+  expect(withWrapper.blurFilterSetOnReal, "real ctx.filter never set to a blur").toBe(false);
+  expect(withWrapper.bytes.length).toBe(noWrapper.length);
+  // They must differ somewhere (blur changes pixels), proving the wrapper acted.
+  let differs = false;
+  for (let i = 0; i < noWrapper.length; i++) {
+    if (noWrapper[i] !== withWrapper.bytes[i]) {
+      differs = true;
+      break;
+    }
+  }
+  expect(differs, "wrapped render differs from unwrapped where blur applies").toBe(true);
 });
 
 test("aborting a worker export ends with cancelled and leaves the bridge reusable", async ({

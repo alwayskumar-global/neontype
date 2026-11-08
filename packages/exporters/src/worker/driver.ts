@@ -13,12 +13,15 @@
  * neither path hard-codes a format.
  */
 
-import { renderFrame, type Project } from "@studio/engine";
+import type { Project } from "@studio/engine";
 
 import type { ExportResult, ExportProgress, ExportFormat, ExportLimits } from "../types.js";
 import { fail } from "../errors.js";
 import { frameCountFor, validateFrameRange } from "../frame-stepper.js";
+import { resolveScalePlan, isScalePlan } from "../scale.js";
+import { FrameRenderer, type ExportContext2D } from "../render-frame.js";
 import { runExport, type ExportEncoder } from "./host.js";
+import { frameCountYield } from "./yield.js";
 import type { WorkerOptions } from "./protocol.js";
 
 /** Everything a driver needs to run an export (cloneable; worker-safe). */
@@ -37,15 +40,15 @@ export type ExportDriver = (
 ) => Promise<ExportResult>;
 
 /**
- * Creates an `OffscreenCanvas` 2D context for a size, or `null` when the
+ * Creates an output-sized `OffscreenCanvas` 2D context, or `null` when the
  * runtime has no `OffscreenCanvas` (the worker path is only taken when it
- * exists, but the main-thread fallback uses a DOM canvas instead).
+ * exists; the main-thread fallback also has `OffscreenCanvas` in supported
+ * browsers).
  */
-function offscreenContext(width: number, height: number): OffscreenCanvasRenderingContext2D | null {
+function offscreenContext(width: number, height: number): ExportContext2D | null {
   if (typeof OffscreenCanvas === "undefined") return null;
   const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext("2d");
-  return ctx;
+  return canvas.getContext("2d");
 }
 
 /**
@@ -56,18 +59,24 @@ function offscreenContext(width: number, height: number): OffscreenCanvasRenderi
  */
 export const recordingDriver: ExportDriver = async (args, onProgress, isAborted) => {
   const { project, options, limits } = args;
-  const { width: cw, height: ch, fps, durationSeconds } = project.canvas;
-  const width = options.output?.width ?? cw;
-  const height = options.output?.height ?? ch;
+  const { fps, durationSeconds } = project.canvas;
 
   const rangeError = validateFrameRange(durationSeconds, fps);
   if (rangeError) return rangeError;
   const frameCount = frameCountFor(durationSeconds, fps);
 
+  const planOrError = resolveScalePlan(project.canvas, options.output);
+  if (!isScalePlan(planOrError)) return planOrError;
+  const plan = planOrError;
+  const { outputWidth: width, outputHeight: height } = plan;
+
   const ctx = offscreenContext(width, height);
   if (!ctx) {
     return fail("browser-unsupported", "OffscreenCanvas is not available in this runtime.");
   }
+
+  // Blur and scaling go through the ONE shared frame renderer (Req 8, Req 14).
+  const renderer = new FrameRenderer(plan);
 
   const frames: Uint8Array[] = [];
   let held = 0;
@@ -81,9 +90,7 @@ export const recordingDriver: ExportDriver = async (args, onProgress, isAborted)
     },
     encode(index: number) {
       const t = index / fps;
-      // The engine paints a standard 2D context subset; an OffscreenCanvas 2D
-      // context supports it. Cross the type boundary explicitly.
-      renderFrame(project, t, { ctx: ctx as unknown as CanvasRenderingContext2D });
+      renderer.render(project, t, ctx);
       const img = ctx.getImageData(0, 0, width, height);
       const bytes = new Uint8Array(img.data.buffer.slice(0));
       frames.push(bytes);
@@ -110,13 +117,10 @@ export const recordingDriver: ExportDriver = async (args, onProgress, isAborted)
     },
   };
 
-  // In a worker (no `document`) yield to a macrotask each frame so a posted
-  // `abort` message is delivered between frames; on the main thread this is
-  // unnecessary and omitted.
+  // In a worker (no `document`) yield to a macrotask every few frames so a
+  // posted `abort` message is delivered; on the main thread it is unnecessary.
   const inWorker = typeof document === "undefined";
-  const yieldControl = inWorker
-    ? (): Promise<void> => new Promise<void>((resolve) => setTimeout(resolve, 0))
-    : undefined;
+  const yieldControl = inWorker ? frameCountYield() : undefined;
 
   return runExport({
     format: args.format,

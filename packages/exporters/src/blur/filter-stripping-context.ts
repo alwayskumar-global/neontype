@@ -33,6 +33,8 @@ export interface CanvasLike {
   textBaseline: CanvasTextBaseline;
   save(): void;
   restore(): void;
+  clearRect(x: number, y: number, w: number, h: number): void;
+  fillRect(x: number, y: number, w: number, h: number): void;
   translate(x: number, y: number): void;
   rotate(angle: number): void;
   scale(x: number, y: number): void;
@@ -196,6 +198,12 @@ export class FilterStrippingContext implements CanvasLike {
   }
   setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void {
     this.target().setTransform(a, b, c, d, e, f);
+  }
+  clearRect(x: number, y: number, w: number, h: number): void {
+    this.target().clearRect(x, y, w, h);
+  }
+  fillRect(x: number, y: number, w: number, h: number): void {
+    this.target().fillRect(x, y, w, h);
   }
   fillText(text: string, x: number, y: number): void {
     this.target().fillText(text, x, y);

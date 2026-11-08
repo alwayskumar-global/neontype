@@ -265,8 +265,10 @@ window.blurImage = blurImage;
 /* ----------------------- Worker-bridge parity harness ---------------------- */
 
 import type { Project } from "../../../src/types.js";
+import { renderFrame, CanvasMetricsProvider } from "@studio/engine";
 import { dispatchExport } from "../../../src/worker/dispatch.js";
 import { recordingDriver } from "../../../src/worker/driver.js";
+import { makeOffscreenLayerFactory } from "../../../src/render-frame.js";
 import { DEFAULT_LIMITS } from "../../../src/types.js";
 
 /** A tiny valid project: a few frames, one text layer with a blur-in effect. */
@@ -357,14 +359,86 @@ async function runWorkerAbort(): Promise<{ ok: boolean; code?: string }> {
   return { ok: result.ok, code: result.ok ? undefined : result.error.code };
 }
 
+/**
+ * Renders the tiny project's a mid-animation frame (t=0.15, text partly visible and still blurred)
+ * WITHOUT the FilterStrippingContext: the engine paints its native
+ * `ctx.filter = blur(Npx)` directly. Returns the frame bytes. Compared against
+ * the wrapper path to prove the wrapper actually changes pixels where blur
+ * applies (the two differ) while matching elsewhere.
+ */
+function renderBlurFrameNoWrapper(): number[] {
+  const p = tinyProject();
+  const { width, height } = p.canvas;
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext("2d")!;
+  ctx.clearRect(0, 0, width, height);
+  const metrics = new CanvasMetricsProvider(ctx as unknown as CanvasRenderingContext2D);
+  renderFrame(p, 0.15, { ctx: ctx as unknown as CanvasRenderingContext2D, metricsProvider: metrics });
+  ctx.filter = "none";
+  const img = ctx.getImageData(0, 0, width, height);
+  return Array.from(new Uint8Array(img.data.buffer.slice(0)));
+}
+
+/**
+ * Renders the same mid-animation frame THROUGH the FilterStrippingContext, over a real
+ * OffscreenCanvas 2D context wrapped in a spy that records every `filter`
+ * assignment. Returns the frame bytes plus whether the real context ever had
+ * `filter` set to a blur value (it must not — Req 8.1-8.4).
+ */
+function renderBlurFrameWithWrapper(): { bytes: number[]; blurFilterSetOnReal: boolean } {
+  const p = tinyProject();
+  const { width, height } = p.canvas;
+  const canvas = new OffscreenCanvas(width, height);
+  const realCtx = canvas.getContext("2d")!;
+
+  let blurFilterSetOnReal = false;
+  const spy = new Proxy(realCtx as unknown as Record<string, unknown>, {
+    set(target, prop, value): boolean {
+      if (prop === "filter" && typeof value === "string" && /blur\(/.test(value)) {
+        blurFilterSetOnReal = true;
+      }
+      (target as Record<string | symbol, unknown>)[prop] = value;
+      return true;
+    },
+    get(target, prop): unknown {
+      const v = (target as Record<string | symbol, unknown>)[prop];
+      return typeof v === "function" ? v.bind(target) : v;
+    },
+  });
+
+  const wrapped = new FilterStrippingContext(
+    spy as never,
+    makeOffscreenLayerFactory(),
+    width,
+    height,
+  );
+  realCtx.clearRect(0, 0, width, height);
+  const metrics = new CanvasMetricsProvider(realCtx as unknown as CanvasRenderingContext2D);
+  renderFrame(p, 0.15, {
+    ctx: wrapped as unknown as CanvasRenderingContext2D,
+    metricsProvider: metrics,
+  });
+  wrapped.flush();
+
+  const img = realCtx.getImageData(0, 0, width, height);
+  return {
+    bytes: Array.from(new Uint8Array(img.data.buffer.slice(0))),
+    blurFilterSetOnReal,
+  };
+}
+
 declare global {
   interface Window {
     runWorkerExport: () => Promise<{ ok: boolean; bytes: number[]; code?: string }>;
     runMainExport: () => Promise<{ ok: boolean; bytes: number[]; code?: string }>;
     runWorkerAbort: () => Promise<{ ok: boolean; code?: string }>;
+    renderBlurFrameNoWrapper: () => number[];
+    renderBlurFrameWithWrapper: () => { bytes: number[]; blurFilterSetOnReal: boolean };
   }
 }
 
 window.runWorkerExport = runWorkerExport;
 window.runMainExport = runMainExport;
 window.runWorkerAbort = runWorkerAbort;
+window.renderBlurFrameNoWrapper = renderBlurFrameNoWrapper;
+window.renderBlurFrameWithWrapper = renderBlurFrameWithWrapper;
