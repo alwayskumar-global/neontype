@@ -16,13 +16,21 @@
 
 import { ProjectSchema, type Project } from "@studio/engine";
 
-import type { ExportResult, Mp4Options, PngSequenceOptions, GifOptions } from "./types.js";
+import type {
+  ExportResult,
+  Mp4Options,
+  PngSequenceOptions,
+  GifOptions,
+  WebmAlphaOptions,
+  WebpOptions,
+} from "./types.js";
 import { fail } from "./errors.js";
 import { dispatchExport } from "./worker/dispatch.js";
 import type { WorkerOptions, WorkerPcm } from "./worker/protocol.js";
 import { DEFAULT_LIMITS } from "./types.js";
 import { decodeAudio } from "./audio/decode.js";
 import { trimOrPad, silentTrack } from "./audio/trim-pad.js";
+import { runWebmAlphaExport, runWebpExport } from "./formats/deferred.js";
 
 /**
  * Compile-time exhaustive mapping of every `Mp4Options` field to how it reaches
@@ -140,4 +148,23 @@ export function exportGif(project: Project, options: GifOptions = {}): Promise<E
     onProgress: options.onProgress,
     signal: options.signal,
   });
+}
+
+/**
+ * Exports WebM with alpha (VP9). DEFERRED: not available in this release; always
+ * returns a typed browser-unsupported failure. Never throws.
+ */
+export function exportWebmAlpha(
+  project: Project,
+  options: WebmAlphaOptions = {},
+): Promise<ExportResult> {
+  return runWebmAlphaExport(project, options);
+}
+
+/**
+ * Exports an animated WebP. DEFERRED: not available in this release; always
+ * returns a typed browser-unsupported failure. Never throws.
+ */
+export function exportWebp(project: Project, options: WebpOptions = {}): Promise<ExportResult> {
+  return runWebpExport(project, options);
 }

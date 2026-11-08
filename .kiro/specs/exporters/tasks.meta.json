@@ -227,5 +227,14 @@
         "timestamp": 1794113000000
       }
     ]
+  },
+  "deferrals": {
+    "note": "Groups 6 (WebM-alpha) and 7 (WebP) deferred by user decision to save credits. Encoders NOT implemented; typed browser-unsupported stubs shipped instead (exportWebmAlpha/exportWebp), and detectCapabilities always reports webmAlpha/webp unsupported. webm-muxer dependency NOT added. Group 6/7 tasks remain unchecked in tasks.md.",
+    "groups": [
+      "6. Group 6: WebM-with-alpha export (capability-gated)",
+      "7. Group 7: Animated WebP export"
+    ],
+    "reason": "VP9 alpha unsupported in tested Chrome configs; animated WebP needs a hand-written RIFF container.",
+    "commit": "feat(exporters): add typed unsupported stubs for deferred formats"
   }
 }

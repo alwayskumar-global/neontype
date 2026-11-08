@@ -161,19 +161,28 @@ export async function detectCapabilities(env: CapabilityEnv = {}): Promise<Capab
   const resolved = resolveEnv(env);
   const timeoutMs = resolved.timeoutMs;
 
-  const [mp4, webmAlpha, aac, webp] = await Promise.all([
+  // The VP9-alpha and WebP probes are kept but their results are NOT reported:
+  // both formats are deferred (not shipped in this release), so the report
+  // always marks them unsupported regardless of the runtime probe (see
+  // src/formats/deferred.ts and the README "Not in this release" section).
+  const [mp4, , aac] = await Promise.all([
     probeConfig(resolved.VideoEncoder, H264_CONFIG, "VideoEncoder is unavailable", timeoutMs),
     probeConfig(resolved.VideoEncoder, VP9_ALPHA_CONFIG, "VideoEncoder is unavailable", timeoutMs),
     probeConfig(resolved.AudioEncoder, AAC_CONFIG, "AudioEncoder is unavailable", timeoutMs),
     probeWebpCapability(resolved.probeWebp!, timeoutMs),
   ]);
 
+  const deferred = (format: string): CapabilityResult => ({
+    status: "unsupported",
+    reason: `${format} export is not available in this release`,
+  });
+
   // GIF, PNG sequence, and embed never require a WebCodecs encoder (Req 3.3, 3.4).
   return {
     mp4,
-    webmAlpha,
+    webmAlpha: deferred("WebM (VP9 alpha)"),
     aac,
-    webp,
+    webp: deferred("animated WebP"),
     gif: supported(),
     pngSequence: supported(),
     embed: supported(),

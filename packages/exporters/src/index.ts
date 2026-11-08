@@ -28,7 +28,7 @@ export type { ErrorCode, ExportError, ExportNote } from "./errors.js";
 
 export { detectCapabilities } from "./capabilities.js";
 
-export { exportMp4, exportPngSequence, exportGif } from "./api.js";
+export { exportMp4, exportPngSequence, exportGif, exportWebmAlpha, exportWebp } from "./api.js";
 
 // Entry functions are exported from their format/capability modules as each
 // group lands: detectCapabilities (Group 2), exportMp4 / exportPngSequence

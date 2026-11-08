@@ -20,3 +20,18 @@ the task plan.
   END is trimmed to the project duration (priming/tail frames past the end are
   dropped), so the track does not run long; only the START carries the
   uncompensated priming offset.
+
+## Not in this release
+
+Two formats are deferred and ship as typed stubs — `exportWebmAlpha` and
+`exportWebp` exist in the public API and always return a typed
+`browser-unsupported` failure; `detectCapabilities` always reports `webmAlpha`
+and `webp` as `unsupported`.
+
+- **WebM with alpha (VP9 `alpha: "keep"`).** Unsupported in the tested Chrome
+  configurations (the encoder reports the alpha config as unsupported), so there
+  is no reliable path to ship it yet. Use a PNG sequence for an alpha-preserving
+  export in the meantime.
+- **Animated WebP.** Requires a hand-written RIFF/VP8X container writer that is
+  not implemented in this release. Use GIF for an animated raster export, or MP4
+  for video.
