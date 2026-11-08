@@ -28,3 +28,10 @@
 > README "Not in this release"), so the dependency is intentionally NOT
 > installed. The three exporter dependencies actually used are `mp4-muxer`,
 > `client-zip`, and `gifenc`.
+
+> **apps/studio bundled fonts:** the four self-hosted woff2 files under
+> `apps/studio/public/fonts/` (Noto Sans + Noto Sans Tamil, weights 400 and 700)
+> are copied from the already-installed `@fontsource/noto-sans@5.3.0` and
+> `@fontsource/noto-sans-tamil@5.3.0` packages (OFL-1.1). No network fetch and no
+> new dependency were needed; the OFL-1.1 licence text ships alongside them
+> (`OFL-Noto-Sans.txt`, `OFL-Noto-Sans-Tamil.txt`).

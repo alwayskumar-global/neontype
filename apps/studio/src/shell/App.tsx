@@ -1,31 +1,37 @@
 /**
- * App shell placeholder (Group 1). The full composition root — preview, panels,
- * timeline, export — is built in Groups 2+. This renders a minimal, CSP-clean
- * shell so the scaffold builds and runs under the strict CSP.
- *
- * A Group-1 worker/CSP probe is exposed on `window` so a Playwright smoke can
- * confirm that constructing a module Worker from a bundler URL and posting
- * messages works under the strict CSP (`worker-src 'self' blob:`). The real
- * exporter worker path is wired in Group 3 with the export dialog; see the
- * Group-1 report note about the exporters ambient-types cross-package issue.
+ * App shell (Group 2 slice). Awaits the bundled-font gate, then composes the
+ * preview canvas and transport over a single store. Panels/timeline/export come
+ * in later groups. CSP-clean (no inline styles/scripts).
  */
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { newProject } from "../model/project.js";
-import { frameCountFor } from "../model/selectors.js";
+import "./../fonts/fonts.css";
+import { whenFontsReady, type FontStatus } from "../fonts/fonts.js";
+import { Store } from "./store.js";
+import { PreviewCanvas } from "../preview/PreviewCanvas.js";
+import { Transport } from "../preview/Transport.js";
+import { runParityProbe } from "../preview/parity-probe.js";
 
 declare global {
   interface Window {
     __studioWorkerProbe?: () => Promise<boolean>;
+    __studioParityProbe?: () => Promise<number[]>;
   }
 }
 
+const store = new Store();
+
 export function App() {
-  const project = newProject();
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [fonts, setFonts] = useState<FontStatus | null>(null);
+
   useEffect(() => {
+    let active = true;
+    void whenFontsReady().then((s) => {
+      if (active) setFonts(s);
+    });
+    window.__studioParityProbe = runParityProbe;
     window.__studioWorkerProbe = async () => {
-      // A minimal module worker built from a bundler URL (same construction the
-      // exporter uses). Proves the strict CSP allows worker-src/connect blob:.
       const worker = new Worker(new URL("../playback/probe-worker.js", import.meta.url), { type: "module" });
       return await new Promise<boolean>((resolve) => {
         worker.addEventListener("message", (e: MessageEvent) => {
@@ -39,14 +45,27 @@ export function App() {
         worker.postMessage("ping");
       });
     };
+    return () => {
+      active = false;
+    };
   }, []);
+
+  if (fonts === null) {
+    return <main className="app-shell"><p>Loading fonts...</p></main>;
+  }
+  if (!fonts.ok) {
+    return (
+      <main className="app-shell">
+        <p role="alert">Fonts failed to load ({fonts.code}): {fonts.message}</p>
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell">
       <h1>Studio</h1>
-      <p>
-        {project.canvas.width}x{project.canvas.height} - {project.canvas.fps} fps -{" "}
-        {frameCountFor(project)} frames
-      </p>
+      <PreviewCanvas store={store} canvasRef={canvasRef} />
+      <Transport store={store} canvasRef={canvasRef} />
     </main>
   );
 }

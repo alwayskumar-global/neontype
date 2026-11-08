@@ -1,0 +1,30 @@
+:root { --font-tamil: "Noto Sans Tamil", "Noto Sans", sans-serif; }
+
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("/fonts/noto-sans-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("/fonts/noto-sans-latin-700-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Noto Sans Tamil";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("/fonts/noto-sans-tamil-tamil-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Noto Sans Tamil";
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("/fonts/noto-sans-tamil-tamil-700-normal.woff2") format("woff2");
+}
