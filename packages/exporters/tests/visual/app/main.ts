@@ -446,7 +446,7 @@ window.renderBlurFrameWithWrapper = renderBlurFrameWithWrapper;
 
 /* --------------------------- MP4 real-encode harness ---------------------- */
 
-import { exportMp4, exportPngSequence } from "../../../src/api.js";
+import { exportMp4, exportPngSequence, exportGif } from "../../../src/api.js";
 
 /** A small valid project for MP4: even 160x96, 1s at 12fps, one text layer. */
 function mp4Project(): Project {
@@ -627,3 +627,47 @@ declare global {
 }
 
 window.runPngExport = runPngExport;
+
+
+/* ------------------------------- GIF harness ----------------------------- */
+
+/** A tiny project for GIF: 32x24, 0.4s at 10fps -> 4 frames. */
+function gifHarnessProject(background: string): Project {
+  return {
+    schemaVersion: 1,
+    canvas: { width: 32, height: 24, fps: 10, durationSeconds: 0.4 },
+    background,
+    seed: 4,
+    layers: [
+      {
+        id: "g", text: "o", tracks: [], effectInstances: [],
+        fontFamily: "sans-serif", fontSize: 16, fontWeight: "bold", fill: "#ffcc00",
+        align: "left", letterSpacing: 0, lineHeight: 1.2, maxWidth: null,
+        startSeconds: 0, endSeconds: 0.4, anchor: { x: 16, y: 18 },
+      },
+    ],
+  } as Project;
+}
+
+/** Runs a GIF export through the worker; returns bytes + summary. */
+async function runGifExportHarness(background: string): Promise<{
+  ok: boolean;
+  code?: string;
+  bytes: number[];
+  frameCount?: number;
+}> {
+  const result = await exportGif(gifHarnessProject(background));
+  if (!result.ok) return { ok: false, code: result.error.code, bytes: [] };
+  const buf = await result.file.arrayBuffer();
+  return { ok: true, bytes: Array.from(new Uint8Array(buf)), frameCount: result.summary.frameCount };
+}
+
+declare global {
+  interface Window {
+    runGifExport: (background: string) => Promise<{
+      ok: boolean; code?: string; bytes: number[]; frameCount?: number;
+    }>;
+  }
+}
+
+window.runGifExport = runGifExportHarness;

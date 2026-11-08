@@ -23,6 +23,7 @@
   "dependencies": {
     "@studio/engine": "workspace:*",
     "client-zip": "2.5.1",
+    "gifenc": "1.0.3",
     "mp4-muxer": "5.2.2"
   }
 }

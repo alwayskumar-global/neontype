@@ -149,8 +149,8 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, `pnpm --filter @studio/exporters exec vitest run`, and `pnpm --filter @studio/exporters exec playwright test`.
     - **Completion:** All four commands exit with code 0 and zero failures.
 
-- [ ] 5. Group 5: Animated GIF export
-  - [ ] 5.1 Implement the GIF exporter
+- [x] 5. Group 5: Animated GIF export
+  - [x] 5.1 Implement the GIF exporter
     - Add `gifenc` 1.0.3 to `packages/exporters/package.json` (exact pin) and create `packages/exporters/src/types/gifenc.d.ts` — a local ambient declaration (no `@types/*` package, no `tsconfig` change).
     - Create `packages/exporters/src/formats/gif.ts` exporting `exportGif`: build a single animated GIF from engine-rendered frames at `t = i / fps`, set each frame's delay to `round(100 / fps)` centiseconds, quantize each frame to a palette of at most 256 colors, use GIF single-color transparency for a transparent background and an opaque GIF over a hex background, report "GIF · 1 file", and return `browser-unsupported` when GIF capability is `unsupported` (GIF is always reported `supported`, but the guard is wired). Implemented independently of the other formats.
     - Add a row for `gifenc` (1.0.3, MIT, "Quantize and encode frames into an animated GIF") to `docs/dependencies.md`.
@@ -158,13 +158,13 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - **Covers:** Requirement 6.1, Requirement 6.3, Requirement 6.4, Requirement 6.5, Requirement 12.1, Requirement 12.2, Requirement 12.3
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/formats/gif.test.ts` passes with zero failures; `docs/dependencies.md` has the `gifenc` row.
 
-  - [ ] 5.2 Write the GIF delay-and-palette property test
+  - [x] 5.2 Write the GIF delay-and-palette property test
     - Add a fast-check test tagged `// Feature: exporters, Property 7: GIF delay and palette bound` to `packages/exporters/src/formats/gif.test.ts` asserting, for `fps` in `[1, 120]`, every GIF frame's delay equals `round(100 / fps)` centiseconds and every frame's quantized palette has at most 256 colors. Runs a minimum of 100 iterations.
     - **Covers:** Requirement 6.2, Property 7
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/formats/gif.test.ts` passes with zero failures.
     - Commit: `feat(exporters): add animated GIF exporter`
 
-  - [ ] 5.3 Checkpoint — Group 5
+  - [x] 5.3 Checkpoint — Group 5
     - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, and `pnpm --filter @studio/exporters exec vitest run`.
     - **Completion:** All three commands exit with code 0 and zero failures.
 

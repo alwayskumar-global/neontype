@@ -25,6 +25,7 @@ import { frameCountYield } from "./yield.js";
 import type { WorkerOptions } from "./protocol.js";
 import { runMp4Export } from "../formats/mp4.js";
 import { runPngSequenceExport } from "../formats/png-seq.js";
+import { runGifExport } from "../formats/gif.js";
 
 /** Everything a driver needs to run an export (cloneable; worker-safe). */
 export interface DriverArgs {
@@ -173,11 +174,21 @@ export const pngSequenceDriver: ExportDriver = (args, onProgress, isAborted) =>
     isAborted,
   );
 
+/** The GIF driver: adapts `runGifExport` to the driver shape. */
+export const gifDriver: ExportDriver = (args, onProgress, isAborted) =>
+  runGifExport(
+    args.project,
+    { output: args.options.output, limits: args.limits },
+    (fraction, frame, frameCount) => onProgress({ fraction, frame, frameCount }),
+    isAborted,
+  );
+
 /** The driver registry, keyed by a driver id. */
 const registry = new Map<string, ExportDriver>([
   ["recording", recordingDriver],
   ["mp4", mp4Driver],
   ["png-sequence", pngSequenceDriver],
+  ["gif", gifDriver],
 ]);
 
 /** Registers a driver under `id` (later groups register format drivers). */
