@@ -17,3 +17,9 @@
 | mp4-muxer | 5.2.2 | MIT | Mux encoded H.264 video + AAC audio chunks into an MP4 container, client-side, Worker-safe. |
 | client-zip | 2.5.1 | MIT | Package PNG frames into a ZIP (stored entries, per-entry CRC-32) for the PNG-sequence export; small, Worker-safe, no runtime deps. |
 | gifenc | 1.0.3 | MIT | Quantize frames to a <=256-color palette and encode an animated GIF (single-color transparency); no runtime deps. |
+
+> **Not added:** `webm-muxer` (5.1.4) was approved for the WebM-with-alpha
+> exporter, but that format is deferred in this release (see the exporters
+> README "Not in this release"), so the dependency is intentionally NOT
+> installed. The three exporter dependencies actually used are `mp4-muxer`,
+> `client-zip`, and `gifenc`.

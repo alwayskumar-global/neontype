@@ -226,6 +226,27 @@
         "chatSessionId": "sess_exporters_impl",
         "timestamp": 1794113000000
       }
+    ],
+    "8.1 Finalize the README and dependency log": [
+      {
+        "executionId": "d3a9c5f1-6e04-4b37-9c2a-8f5d4e9b7c66",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794114500000
+      }
+    ],
+    "8.2 Run the full workspace suite and confirm no drift": [
+      {
+        "executionId": "d3a9c5f1-6e04-4b37-9c2a-8f5d4e9b7c66",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794114500000
+      }
+    ],
+    "8. Group 8: Docs and final checkpoint": [
+      {
+        "executionId": "d3a9c5f1-6e04-4b37-9c2a-8f5d4e9b7c66",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794114500000
+      }
     ]
   },
   "deferrals": {
@@ -235,6 +256,7 @@
       "7. Group 7: Animated WebP export"
     ],
     "reason": "VP9 alpha unsupported in tested Chrome configs; animated WebP needs a hand-written RIFF container.",
-    "commit": "feat(exporters): add typed unsupported stubs for deferred formats"
+    "commit": "feat(exporters): add typed unsupported stubs for deferred formats",
+    "group8Note": "Group 8 final checkpoint adapted to reduced scope: root pnpm test (engine 337 + exporters 115), exporters Playwright (18) and engine Playwright (3 goldens, unchanged) green; no-drift confirmed (only mp4-muxer/client-zip/gifenc; no webm-muxer; no tsconfig change outside packages/exporters)."
   }
 }

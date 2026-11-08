@@ -1,15 +1,94 @@
 # @studio/exporters
 
 Client-side exporters for the studio engine. Renders a validated engine
-`Project` to a downloadable file entirely in the browser, driving the engine's
-pure render path (`renderFrame`) — this package holds no render logic of its
-own and depends on `@studio/engine` only.
+`Project` to a downloadable file entirely in the browser. This package holds no
+render or schema logic of its own: every frame is produced by the engine's pure
+`renderFrame`, wrapped so blur and scaling are applied consistently. It depends
+on `@studio/engine` only.
 
-Formats (product priority): MP4 (H.264 + optional AAC), PNG sequence (ZIP),
-WebM with alpha (VP9), animated GIF, animated WebP.
+## Formats
 
-Status: in progress. See `.kiro/specs/exporters/` for requirements, design, and
-the task plan.
+In product priority order:
+
+| Format | Entry | Status |
+| --- | --- | --- |
+| MP4 (H.264 + optional AAC) | `exportMp4` | Shipped |
+| PNG sequence (ZIP) | `exportPngSequence` | Shipped |
+| Animated GIF | `exportGif` | Shipped |
+| WebM with alpha (VP9) | `exportWebmAlpha` | Deferred (typed stub) |
+| Animated WebP | `exportWebp` | Deferred (typed stub) |
+
+Every entry returns a discriminated-union `ExportResult` (`{ ok: true, ... }` or
+`{ ok: false, error }`) and NEVER throws; errors are typed by `ErrorCode`.
+
+## Usage
+
+```ts
+import { exportMp4, detectCapabilities } from "@studio/exporters";
+
+const caps = await detectCapabilities();
+if (caps.mp4.status === "supported") {
+  const result = await exportMp4(project, {
+    output: { width: 1280, height: 720 }, // optional; defaults to canvas size
+    videoBitrate: 8_000_000,              // optional
+    backgroundFallback: "#000000",        // solid fill for a transparent project
+    audio: { bytes: wavOrMp3Bytes },      // optional AAC track (decoded on main)
+    onProgress: (p) => console.log(p.fraction),
+    signal: abortController.signal,       // optional cancellation
+  });
+  if (result.ok) download(result.file, result.fileName);
+  else console.error(result.error.code, result.error.message);
+}
+```
+
+`exportPngSequence(project, options)` produces a ZIP of stored (uncompressed)
+PNG entries named `frame_0000.png`, `frame_0001.png`, … (widening past 9999 so
+lexical order matches frame order). `exportGif(project, options)` produces a
+single animated GIF (per-frame delay `round(100/fps)` cs, palette ≤ 256 colors,
+single-color transparency for transparent projects).
+
+## Capabilities
+
+`detectCapabilities()` probes the runtime (WebCodecs `VideoEncoder`/
+`AudioEncoder`, a still `image/webp` encode) and returns a `CapabilityReport`
+with a `supported` / `unsupported` / `unknown` status per format. It performs no
+encode and no network request and completes within ~2 seconds. GIF, PNG
+sequence, and the embed target never require a WebCodecs encoder and are always
+`supported`. `webmAlpha` and `webp` are always reported `unsupported` in this
+release (see "Not in this release").
+
+## Limits
+
+Resource limits are caller-configurable via `options.limits` (merged over
+`DEFAULT_LIMITS`): `maxFrames` (18000), `maxPixels` (3840×2160), `maxDurationSeconds`
+(600), `maxEncodeQueueSize` (8), `memoryBudgetBytes` (1.5 GiB). Exceeding a hard
+limit returns `invalid-options` before any encode; exceeding the memory budget
+mid-export returns `out-of-memory`. Imported audio is capped at 50 MB (file) and
+600 s / 512 MB (decoded).
+
+## Worker behavior
+
+Exports run on a Web Worker when `Worker` and `OffscreenCanvas` are available,
+and fall back to the main thread otherwise — byte-identically. The worker and
+main-thread paths share one `runExport` loop (progress once per encoded frame,
+monotonic, final fraction exactly 1; cancellation checked at each frame
+boundary; encode-queue backpressure; memory budget). Audio is DECODED ON THE
+MAIN THREAD (`OfflineAudioContext` is window-only), trim/padded to the project
+duration, and the finished PCM is transferred (zero-copy) to the worker for AAC
+encoding and muxing. A thrown error inside the worker comes back as a typed
+`encoder-failure`, never an unhandled worker error.
+
+## Blur and Safari
+
+The engine paints blur by assigning `ctx.filter = "blur(Npx)"`. Exporters never
+rely on the browser's `ctx.filter` for the final output: a `FilterStrippingContext`
+intercepts each blurred scope, redirects it to an offscreen layer, and composites
+it back through the package's own deterministic, premultiplied-alpha box blur
+(three separable passes approximating a Gaussian; area-average downsample +
+bilinear upsample above a radius threshold). This keeps blur reproducible across
+runtimes and avoids depending on `ctx.filter` support in engines such as Safari,
+where canvas `filter` has historically been unreliable. The same `renderFrame`
+wrapper applies the R14 uniform output scaling.
 
 ## Limitations
 
@@ -35,3 +114,8 @@ and `webp` as `unsupported`.
 - **Animated WebP.** Requires a hand-written RIFF/VP8X container writer that is
   not implemented in this release. Use GIF for an animated raster export, or MP4
   for video.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the package layout, per-format
+independence, purity rules, and commit conventions.

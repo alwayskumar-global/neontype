@@ -200,15 +200,15 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, and `pnpm --filter @studio/exporters exec vitest run`.
     - **Completion:** All three commands exit with code 0 and zero failures.
 
-- [ ] 8. Group 8: Docs and final checkpoint
-  - [ ] 8.1 Finalize the README and dependency log
+- [x] 8. Group 8: Docs and final checkpoint
+  - [x] 8.1 Finalize the README and dependency log
     - Finalize `packages/exporters/README.md` documenting the public API usage, the five-format list, and the capability notes (MP4/plain-VP9 real-encode primary path, VP9-alpha gated/skipped, GIF always available).
     - Verify `docs/dependencies.md` contains all four rows with name/exact version/license/reason and no empty field: `mp4-muxer` 5.2.2 MIT, `webm-muxer` 5.1.4 MIT, `client-zip` 2.5.1 MIT, `gifenc` 1.0.3 MIT. Add a `CONTRIBUTING`-style note to the README mirroring the engine package's pattern (directory layout, per-format independence, purity rules, Conventional Commits).
     - **Covers:** Requirement 12.1, Requirement 12.2, Requirement 12.3, Requirement 13.8
     - **Completion:** `README.md` documents the public API and format list; `docs/dependencies.md` has all four fully-populated rows.
     - Commit: `docs(exporters): package README, dependency log, and final checkpoint`
 
-  - [ ] 8.2 Run the full workspace suite and confirm no drift
+  - [x] 8.2 Run the full workspace suite and confirm no drift
     - Run the root `pnpm test` (whole-workspace typecheck + lint + vitest) AND `pnpm --filter @studio/exporters exec playwright test` (full Playwright suite).
     - Confirm no new dependency beyond the four approved exact-pinned packages (`mp4-muxer` 5.2.2, `webm-muxer` 5.1.4, `client-zip` 2.5.1, `gifenc` 1.0.3) and no `tsconfig` change outside `packages/exporters`.
     - **Covers:** Requirement 11.4, Requirement 12.1, Requirement 12.5
