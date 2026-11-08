@@ -64,12 +64,12 @@ reported). They are planning estimates, not budgets.
 
 - [ ] 1. Group 1: Scaffold + pure model layer  *(est. ~14 credits)*
   - [ ] 1.1 Scaffold `apps/studio` (Vite + React + strict TS) and resolve dependencies
-    - Create `apps/studio/package.json` (`name: "@studio/app"` or `"studio"`, `"private": true`, `"type": "module"`), scripts `dev`/`build`/`preview`/`lint`/`test`. Resolve each dependency against the npm registry with `npm view` and EXACT-pin: runtime `@studio/engine` (`workspace:*`), `@studio/exporters` (`workspace:*`), `react`, `react-dom`; dev `@vitejs/plugin-react` (compatible with the repo's Vite major), `@types/react`, `@types/react-dom`, and the repo tooling (`typescript`, `vitest`, `@playwright/test`, `eslint`, `typescript-eslint`, `vite`, `zod` as already present). Write a `docs/dependencies.md` row for each NEW package (name, exact version, license, publish date, reason); report any deviation from the requirements Approved-dependencies table.
+    - Create `apps/studio/package.json` (`name: "@studio/app"`, `"private": true`, `"type": "module"`), scripts `dev`/`build`/`preview`/`lint`/`test`. Resolve each dependency against the npm registry with `npm view` and EXACT-pin: runtime `@studio/engine` (`workspace:*`), `@studio/exporters` (`workspace:*`), `react`, `react-dom`; dev `@vitejs/plugin-react` (compatible with the repo's Vite major), `@types/react`, `@types/react-dom`, and the repo tooling (`typescript`, `vitest`, `@playwright/test`, `eslint`, `typescript-eslint`, `vite`, `zod` as already present). Write a `docs/dependencies.md` row for each NEW package (name, exact version, license, publish date, reason); report any deviation from the requirements Approved-dependencies table.
     - Create `apps/studio/tsconfig.json` (strict, React JSX, bundler resolution) — NO tsconfig change outside `apps/studio`. `pnpm-workspace.yaml` already globs `apps/*`.
     - Create `apps/studio/vite.config.ts` with `@vitejs/plugin-react`, `root` scoped to the app, static build output, and the entry `index.html`.
     - Run `pnpm install`; if pnpm blocks a build script or prompts for approval, STOP and show the prompt.
     - **Covers:** Requirement 14.1, 14.2, 14.3, 14.5, 14.6; Design "Overview", "Architecture"
-    - **Completion:** `pnpm install` succeeds; `apps/studio` resolves as a workspace member; `pnpm --filter studio exec tsc --noEmit` passes on an empty app; `docs/dependencies.md` has a row per new package with the ACTUAL resolved versions.
+    - **Completion:** `pnpm install` succeeds; `apps/studio` resolves as a workspace member; `pnpm --filter @studio/app exec tsc --noEmit` passes on an empty app; `docs/dependencies.md` has a row per new package with the ACTUAL resolved versions.
 
   - [ ] 1.2 Strict CSP, Vercel headers, and the design-token sheet
     - Create `apps/studio/index.html` with the module entry as an external `<script type="module" src>` (no inline script), a `<meta http-equiv="Content-Security-Policy">` mirroring the production CSP, and NO `<style>` element or `style="..."` attribute.
@@ -83,27 +83,27 @@ reported). They are planning estimates, not budgets.
     - Create `apps/studio/vitest.config.ts` (`environment: "node"` for model tests; `include: ["src/**/*.test.ts","src/**/*.test.tsx"]`) and `apps/studio/playwright.config.ts` (localhost web server via `vite`, bundled Chromium, `testDir: tests/`).
     - Create `apps/studio/src/__tests__/purity.test.ts` asserting the three bans fire outside `src/playback/`.
     - **Covers:** Requirement 10.4, 11.5, 14.2; Design "Module layout", Execution rules
-    - **Completion:** `pnpm --filter studio lint` passes on the scaffold; the purity guard test passes; a probe import from `design/` fails lint.
+    - **Completion:** `pnpm --filter @studio/app lint` passes on the scaffold; the purity guard test passes; a probe import from `design/` fails lint.
 
   - [ ] 1.4 Pure model: Project factory, actions, transitions, selectors
     - Create `apps/studio/src/model/project.ts` (new-project factory producing the accepted default: 1280×720, 30 fps, 5 s, opaque `#101018`, one `fade-slide` starter layer — Open Question 1), `actions.ts` (discriminated-union `Action` for settings edits, layer add/edit/delete/reorder, effect add/param/remove, timeline move/trim), `transitions.ts` (pure `(Project, Action) => Project`, rejecting schema-invalid results by returning the input unchanged), and `selectors.ts` (`frameCountFor`, layer-by-id, active layers at `t`, etc.). No DOM, no clock.
     - Create `apps/studio/src/model/timemap.ts` (pure `timeToX`/`xToTime`).
     - **Covers:** Requirement 2.1–2.5, 3.1–3.7, 4.2–4.6, 10.1, 10.2, 10.3, 10.5; Design "Data Models / State"
-    - **Completion:** `pnpm --filter studio exec vitest run src/model` passes; transitions never return a schema-invalid project.
+    - **Completion:** `pnpm --filter @studio/app exec vitest run src/model` passes; transitions never return a schema-invalid project.
 
   - [ ] 1.5 Property tests for the model (Properties 1, 2)
     - In `apps/studio/src/model/transitions.test.ts` add a fast-check test tagged `// Feature: studio, Property 1: Schema-preserving transitions` asserting that for any `ProjectSchema`-valid project (local arbitrary) and any `Action`, the result is schema-valid OR the unchanged input. In `apps/studio/src/model/timemap.test.ts` add `// Feature: studio, Property 2: Time-pixel round-trip` asserting `xToTime(timeToX(t)) ~= t` within one pixel and the integer-x inverse. Each >= 100 iterations. On any counterexample, STOP and show it.
     - **Covers:** Requirement 5.5, 10.3; Design Properties 1, 2
-    - **Completion:** `pnpm --filter studio exec vitest run src/model` passes; both properties run >= 100 iterations with no counterexample (run 3x).
+    - **Completion:** `pnpm --filter @studio/app exec vitest run src/model` passes; both properties run >= 100 iterations with no counterexample (run 3x).
 
   - [ ] 1.6 Checkpoint — Group 1
-    - Run `pnpm --filter studio exec tsc --noEmit`, `pnpm --filter studio lint`, `pnpm --filter studio exec vitest run`.
+    - Run `pnpm --filter @studio/app exec tsc --noEmit`, `pnpm --filter @studio/app lint`, `pnpm --filter @studio/app exec vitest run`.
     - **Completion:** all three exit 0 with zero failures.
     - Commit: `feat(studio): scaffold app, strict CSP, and pure model layer`
 
 - [ ] 2. Group 2: Fonts, preview pipeline, playback, transport, parity  *(est. ~16 credits)*
   - [ ] 2.1 Bundle fonts and the readiness gate
-    - Copy the engine's vendored woff2 into `apps/studio/src/fonts/` (or `public/fonts/`): `noto-sans-latin-400-normal.woff2` (family "Noto Sans", OFL-1.1) and `noto-sans-tamil-tamil-400-normal.woff2` (family "Noto Sans Tamil", OFL-1.1). Create `fonts.css` (`@font-face`, self-hosted, no network) and `fonts/fonts.ts` exposing `whenFontsReady()` that loads the `FontFace`s, adds them to `document.fonts`, awaits `document.fonts.ready`, and maps a load timeout to `font-not-ready` and a decode failure to `font-decode-failed`.
+    - Bundle four self-hosted woff2 into `apps/studio/src/fonts/` (or `public/fonts/`): weights 400 and 700 for BOTH families — `noto-sans-latin-400-normal.woff2`, `noto-sans-latin-700-normal.woff2` (family "Noto Sans", OFL-1.1) and `noto-sans-tamil-tamil-400-normal.woff2`, `noto-sans-tamil-tamil-700-normal.woff2` (family "Noto Sans Tamil", OFL-1.1); include each family's OFL-1.1 licence file. Create `fonts.css` (`@font-face` for each family/weight, self-hosted, no network) and `fonts/fonts.ts` exposing `whenFontsReady()` that loads the `FontFace`s, adds them to `document.fonts`, awaits `document.fonts.ready`, and maps a load timeout to `font-not-ready` and a decode failure to `font-decode-failed`. The layer `fontWeight` control selects 400 or 700.
     - **Covers:** Requirement 6.1–6.5; Design "Fonts"
     - **Completion:** `whenFontsReady()` resolves ready after the fonts load; a forced failure resolves the mapped error; `docs/dependencies.md` font licences noted if not already.
 
@@ -125,7 +125,7 @@ reported). They are planning estimates, not budgets.
   - [ ] 2.5 Preview/export parity test
     - Create `apps/studio/tests/parity.spec.ts` rendering a fixed project at a fixed frame index via the preview path and via the exporter's `FrameRenderer`, compositing both over the same opaque background, asserting diffRatio <= 0.01 at 24/255 per channel, each with its own `CanvasMetricsProvider` and no shared cache.
     - **Covers:** Requirement 9.1, 9.2, 9.3, 9.4; Design "Preview pipeline — parity test design"
-    - **Completion:** `pnpm --filter studio exec playwright test tests/parity.spec.ts` passes.
+    - **Completion:** `pnpm --filter @studio/app exec playwright test tests/parity.spec.ts` passes.
 
   - [ ] 2.6 Checkpoint — Group 2
     - Run typecheck, lint, Vitest, and `playwright test tests/preview.spec.ts tests/parity.spec.ts`.
@@ -163,7 +163,12 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 8.6, 10.2; Design Property 5, "Components / shell"
     - **Completion:** the property passes (>= 100 iterations, 3x); the app runs end to end (type → effect → preview → export) in `tests/export.spec.ts`.
 
-  - [ ] 3.7 Checkpoint — Group 3
+  - [ ] 3.7 Minimal root README
+    - Create a minimal repository root `README.md`: what the project is (the browser-only, client-side motion-text studio — no legacy name/assets), prerequisites, the install / dev / test / build commands, the workspace layout, and one line pointing at `docs/dependencies.md`. Group 7 expands this to the full Requirement 15 README (disclosure, "Built with Kiro", Vercel deploy).
+    - **Covers:** Requirement 15.1, 15.2, 15.3, 15.4 (minimal; full in Task 7.1)
+    - **Completion:** root `README.md` exists with those sections and the `docs/dependencies.md` pointer.
+
+  - [ ] 3.8 Checkpoint — Group 3
     - Run typecheck, lint, Vitest, and `playwright test tests/settings.spec.ts tests/layers.spec.ts tests/effects.spec.ts tests/export.spec.ts`.
     - **Completion:** all pass; a demoable studio exists.
     - Commit: `feat(studio): editing panels and export dialog`
@@ -172,7 +177,7 @@ reported). They are planning estimates, not budgets.
   - [ ] 4.1 Pure drag math
     - Create `apps/studio/src/timeline/drag.ts`: pure `move`/`trim-start`/`trim-end` returning clamped `{ startSeconds, endSeconds }` with `0 <= start < end <= durationSeconds`, `move` preserving duration. Unit tests.
     - **Covers:** Requirement 5.3, 5.4; Design "Timeline interaction model"
-    - **Completion:** `pnpm --filter studio exec vitest run src/timeline` passes.
+    - **Completion:** `pnpm --filter @studio/app exec vitest run src/timeline` passes.
 
   - [ ] 4.2 Timeline component (pointer + keyboard)
     - Create `apps/studio/src/timeline/Timeline.tsx`: one row/bar per layer mapped via `timemap`; draggable playhead scrubbing the preview; drag bar body (move) and edges (trim) through `drag.ts`; keyboard equivalents (numeric start/duration inputs + arrow nudges) routing through the same math. Completed drag/nudge dispatches one transition.
@@ -259,8 +264,8 @@ reported). They are planning estimates, not budgets.
   reference.
 - One `CanvasMetricsProvider` per canvas; the model is pure and the only clock is
   in `apps/studio/src/playback/`.
-- Per-group checkpoints run `pnpm --filter studio exec tsc --noEmit`,
-  `pnpm --filter studio lint`, `pnpm --filter studio exec vitest run`, plus the
+- Per-group checkpoints run `pnpm --filter @studio/app exec tsc --noEmit`,
+  `pnpm --filter @studio/app lint`, `pnpm --filter @studio/app exec vitest run`, plus the
   group's Playwright specs; the final checkpoint (G7) runs root `pnpm test` and
   the full studio Playwright suite.
 - On any property counterexample, stop and show the user before changing a
@@ -293,16 +298,17 @@ reported). They are planning estimates, not budgets.
     { "id": 10, "tasks": ["3.5"] },
     { "id": 11, "tasks": ["3.6"] },
     { "id": 12, "tasks": ["3.7"] },
-    { "id": 13, "tasks": ["4.1"] },
-    { "id": 14, "tasks": ["4.2", "4.3"] },
-    { "id": 15, "tasks": ["4.4"] },
-    { "id": 16, "tasks": ["5.1", "5.3"] },
-    { "id": 17, "tasks": ["5.2"] },
-    { "id": 18, "tasks": ["5.4"] },
-    { "id": 19, "tasks": ["6.1", "6.2", "6.3"] },
-    { "id": 20, "tasks": ["6.4"] },
-    { "id": 21, "tasks": ["7.1"] },
-    { "id": 22, "tasks": ["7.2"] }
+    { "id": 13, "tasks": ["3.8"] },
+    { "id": 14, "tasks": ["4.1"] },
+    { "id": 15, "tasks": ["4.2", "4.3"] },
+    { "id": 16, "tasks": ["4.4"] },
+    { "id": 17, "tasks": ["5.1", "5.3"] },
+    { "id": 18, "tasks": ["5.2"] },
+    { "id": 19, "tasks": ["5.4"] },
+    { "id": 20, "tasks": ["6.1", "6.2", "6.3"] },
+    { "id": 21, "tasks": ["6.4"] },
+    { "id": 22, "tasks": ["7.1"] },
+    { "id": 23, "tasks": ["7.2"] }
   ]
 }
 ```

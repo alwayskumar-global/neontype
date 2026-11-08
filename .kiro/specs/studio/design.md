@@ -114,14 +114,19 @@ per repo convention; the model layer is importable in Node for Vitest.
 
 ### Fonts
 
-- **Bundled files** (self-hosted woff2, reused from the engine's vendored set):
-  - `noto-sans-latin-400-normal.woff2` → family **"Noto Sans"** (Latin), OFL-1.1.
-  - `noto-sans-tamil-tamil-400-normal.woff2` → family **"Noto Sans Tamil"**
-    (Tamil), OFL-1.1.
-  Copied into `apps/studio/src/fonts/` (or `public/fonts/`) at build time; no
-  `@fontsource` runtime import, no CDN. One weight (400) each in v1; a second
-  weight may be added later without a design change. These are the only
-  `fontFamily` values offered in the layer font picker.
+- **Bundled files** (self-hosted woff2; Noto Sans reused from the engine's
+  vendored set, the 700 weights and the Tamil 400/700 added from the same
+  OFL-1.1 source), family + weight 400 (normal) and 700 (bold) for BOTH families
+  — four woff2 files:
+  - `noto-sans-latin-400-normal.woff2`, `noto-sans-latin-700-normal.woff2` →
+    family **"Noto Sans"** (Latin), OFL-1.1.
+  - `noto-sans-tamil-tamil-400-normal.woff2`, `noto-sans-tamil-tamil-700-normal.woff2`
+    → family **"Noto Sans Tamil"** (Tamil), OFL-1.1.
+  Each family ships its OFL-1.1 licence file alongside the woff2. Copied into
+  `apps/studio/src/fonts/` (or `public/fonts/`) at build time; no `@fontsource`
+  runtime import, no CDN. These two families (weights 400/700) are the only
+  `fontFamily` values offered in the layer font picker; the per-layer
+  `fontWeight` control selects 400 or 700.
 - **@font-face**: `fonts.css` declares both families with `font-display: block`
   and `src: url(...) format("woff2")` pointing at the bundled files.
 - **Readiness gate** (`fonts/fonts.ts`): on startup the app constructs `FontFace`

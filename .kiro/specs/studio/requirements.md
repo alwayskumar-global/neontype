@@ -474,9 +474,10 @@ They are recorded here as decisions.
 1. **Default new-project settings.** *Resolved:* a fresh project is 1280×720,
    30 fps, 5 s, opaque `#101018`, with one starter text layer carrying the
    `fade-slide` effect.
-2. **Bundled font set.** *Resolved:* reuse the engine's vendored fonts — Noto
-   Sans (Latin) and Noto Sans Tamil (OFL-1.1) — one or two weights each,
-   self-hosted as woff2.
+2. **Bundled font set.** *Resolved:* reuse the engine's vendored families — Noto
+   Sans (Latin) and Noto Sans Tamil — self-hosted as woff2, bundling weights 400
+   and 700 for BOTH families (four woff2 files total), each with its OFL-1.1
+   licence file.
 3. **Effect granularity selection.** *Resolved:* default to the effect's first
    `supportedGranularity`, with an optional dropdown to change it among the
    effect's `supportedGranularities`.
