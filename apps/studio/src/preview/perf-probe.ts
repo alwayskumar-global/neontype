@@ -5,6 +5,7 @@
  * Reports numbers only; it tunes nothing.
  */
 import type { Project } from "@studio/engine";
+import { demoProject } from "../model/demo.js";
 import { makePreviewRenderer, drawPreviewFrame } from "./draw.js";
 import { FrameTimer } from "../playback/perf.js";
 
@@ -45,4 +46,29 @@ export async function runPerfProbe(withBlur: boolean, seconds = 5): Promise<{ me
   await new Promise((r) => setTimeout(r, seconds * 1000));
   cancelAnimationFrame(raf);
   return timer.stop();
+}
+
+/** Plays an arbitrary project for `seconds`; returns frame-interval stats. */
+export async function measureProject(project: Project, seconds = 5): Promise<{ mean: number; p95: number; count: number }> {
+  const canvas = document.createElement("canvas");
+  canvas.width = project.canvas.width; canvas.height = project.canvas.height;
+  const ctx = canvas.getContext("2d")!;
+  const renderer = makePreviewRenderer(project);
+  const timer = new FrameTimer();
+  let raf = 0;
+  const loop = (t: number): void => {
+    const tc = (t / 1000) % project.canvas.durationSeconds;
+    drawPreviewFrame(renderer, ctx, project, tc);
+    raf = requestAnimationFrame(loop);
+  };
+  timer.start();
+  raf = requestAnimationFrame(loop);
+  await new Promise((r) => setTimeout(r, seconds * 1000));
+  cancelAnimationFrame(raf);
+  return timer.stop();
+}
+
+/** Measures the built-in demo project (DEV probe). */
+export function measureDemo(seconds = 5): Promise<{ mean: number; p95: number; count: number }> {
+  return measureProject(demoProject(), seconds);
 }
