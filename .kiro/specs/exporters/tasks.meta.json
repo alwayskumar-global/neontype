@@ -1,5 +1,18 @@
 {
-  "pbtResults": {},
+  "pbtResults": {
+    "Property 9: Exporter-local blur determinism and no-blur pass-through": {
+      "file": "packages/exporters/src/blur/filter-stripping-context.test.ts",
+      "consecutivePasses": 3,
+      "lastRun": 1794106200000,
+      "status": "passed"
+    },
+    "Property 10: Progress is monotonic and final-exact": {
+      "file": "packages/exporters/src/worker/host.test.ts",
+      "consecutivePasses": 3,
+      "lastRun": 1794106200000,
+      "status": "passed"
+    }
+  },
   "executionHistory": {
     "1.1 Scaffold the `packages/exporters` package": [
       {
@@ -83,6 +96,41 @@
         "executionId": "4b261a25-9a0d-4834-89c4-7e9be25d5706",
         "chatSessionId": "sess_exporters_impl",
         "timestamp": 1794104404334
+      }
+    ],
+    "3.1 Implement the filter-stripping context and exporter-local blur": [
+      {
+        "executionId": "7c3d9f2a-8b1e-4a6c-9d2f-3e5a7c1b4d8e",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794106200000
+      }
+    ],
+    "3.2 Implement the worker protocol and host with main-thread fallback": [
+      {
+        "executionId": "7c3d9f2a-8b1e-4a6c-9d2f-3e5a7c1b4d8e",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794106200000
+      }
+    ],
+    "3.3 Write property-based tests for blur and progress, and wire the blur golden": [
+      {
+        "executionId": "7c3d9f2a-8b1e-4a6c-9d2f-3e5a7c1b4d8e",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794106200000
+      }
+    ],
+    "3.4 Checkpoint \u2014 Group 3": [
+      {
+        "executionId": "7c3d9f2a-8b1e-4a6c-9d2f-3e5a7c1b4d8e",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794106200000
+      }
+    ],
+    "3. Group 3: Exporter-local blur, worker protocol, and main-thread fallback": [
+      {
+        "executionId": "7c3d9f2a-8b1e-4a6c-9d2f-3e5a7c1b4d8e",
+        "chatSessionId": "sess_exporters_impl",
+        "timestamp": 1794106200000
       }
     ]
   }

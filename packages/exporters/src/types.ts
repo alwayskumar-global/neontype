@@ -123,3 +123,6 @@ export interface CapabilityReport {
 }
 
 export type { ErrorCode, ExportError, ExportNote };
+
+// Re-export the engine Project type for internal modules (worker protocol).
+export type { Project } from "@studio/engine";

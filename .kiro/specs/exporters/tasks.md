@@ -85,22 +85,22 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, and `pnpm --filter @studio/exporters exec vitest run`.
     - **Completion:** All three commands exit with code 0 and zero failures.
 
-- [ ] 3. Group 3: Exporter-local blur, worker protocol, and main-thread fallback
-  - [ ] 3.1 Implement the filter-stripping context and exporter-local blur
+- [x] 3. Group 3: Exporter-local blur, worker protocol, and main-thread fallback
+  - [x] 3.1 Implement the filter-stripping context and exporter-local blur
     - Create `packages/exporters/src/blur/filter-stripping-context.ts` — a `CanvasRenderingContext2D`-shaped wrapper that maintains a `save()`/`restore()` state stack mirroring transform, `globalAlpha`, and `filter`; on a `filter = "blur(Npx)"` assignment with `N > 0` it redirects that scope's draw calls to a full-size offscreen layer and, on the matching `restore()`, composites the layer through the exporter's own deterministic blur honoring the scope `globalAlpha`, then discards it; a blur-0 / `none` / no-filter scope forwards every call unchanged and creates no layer; every created layer is composited-or-discarded on `restore()` and a dangling scope at end-of-frame is flushed safely. It never sets the real `ctx.filter` to paint a browser blur.
     - Create `packages/exporters/src/blur/box-blur.ts` — a deterministic three-pass separable box blur approximating a Gaussian with `sigma = N`, integer-weighted with no runtime-varying math, radius clamped to the engine's `[0, 1000]` bound, with a deterministic downsample-blur-upsample performance cap above a stated radius threshold; returns `blur-unsupported` when it cannot run in the runtime.
     - Create `packages/exporters/src/blur/filter-stripping-context.test.ts` with unit tests for nested `save()`/`restore()` compositing, the blur-0/`none` pass-through (byte-identical call forwarding, no offscreen layer), and the unbalanced/early-exit sequence that must not leak an un-composited or un-restored layer.
     - **Covers:** Requirement 8.1, Requirement 8.2, Requirement 8.3, Requirement 8.4, Requirement 8.6, Property 9
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/blur/filter-stripping-context.test.ts` passes with zero failures.
 
-  - [ ] 3.2 Implement the worker protocol and host with main-thread fallback
+  - [x] 3.2 Implement the worker protocol and host with main-thread fallback
     - Create `packages/exporters/src/worker/protocol.ts` defining `WorkerOptions` (`BaseExportOptions` without `onProgress`/`signal`), `MainToWorker` (`start`/`abort`), and `WorkerToMain` (`progress`/`result`/`error`) message types.
     - Create `packages/exporters/src/worker/worker-entry.ts` (worker-side harness driving `frame-stepper` + a format encoder) and `packages/exporters/src/worker/host.ts` (bridges `onProgress` and `AbortSignal`: translates `abort` into an `{ type: "abort" }` post and each `progress` message into an `onProgress` call, transfers the produced `Blob`/`ArrayBuffer` back; runs the same stepper + format code inline on the main thread when `OffscreenCanvas` or `Worker` is unavailable, byte-identical to the worker path). Emits progress once per encoded frame, monotonic non-decreasing, final `fraction === 1` and `frame === frameCount - 1`; checks the aborted flag at each frame boundary and returns `cancelled` within one frame-encode step; bounds `encodeQueueSize` to `maxEncodeQueueSize`.
     - Create `packages/exporters/src/worker/host.test.ts` with unit tests for cancel-mid-export (mocked encoder → `cancelled`, buffers released, no file), the backpressure bound, and the memory-budget overflow path (`out-of-memory`), all with a mocked encoder.
     - **Covers:** Requirement 9.1, Requirement 9.2, Requirement 9.3, Requirement 9.4, Requirement 9.5, Requirement 9.7, Requirement 9.8, Requirement 10.9, Property 2, Property 10
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/worker/host.test.ts` passes with zero failures.
 
-  - [ ] 3.3 Write property-based tests for blur and progress, and wire the blur golden
+  - [x] 3.3 Write property-based tests for blur and progress, and wire the blur golden
     - In `packages/exporters/src/blur/filter-stripping-context.test.ts`, add a fast-check test tagged `// Feature: exporters, Property 9: Exporter-local blur determinism and no-blur pass-through` asserting, for any pixel buffer and blur radius `> 0`, byte-identical blur output in the identical runtime with the real `ctx.filter` never painting a browser blur, and for any blur-0/no-filter scope that every call forwards unchanged with no offscreen layer created.
     - In `packages/exporters/src/worker/host.test.ts`, add a fast-check test tagged `// Feature: exporters, Property 10: Progress is monotonic and final-exact` asserting, for any successful export of at least one frame, non-decreasing progress fractions and a final `fraction === 1` with `frame === frameCount - 1`. Each property runs a minimum of 100 iterations.
     - Create `packages/exporters/tests/visual/blur-golden.spec.ts` (served over the localhost Vite harness in bundled Chromium) that renders a project with at least one segment with `blur > 0` twice — once letting the real `ctx.filter = blur(Npx)` paint (reference) and once through the `FilterStrippingContext` + exporter blur — and asserts the two canvases match within `maxDiffPixelRatio: 0.01`.
@@ -108,7 +108,7 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/blur src/worker` passes; `pnpm --filter @studio/exporters exec playwright test tests/visual/blur-golden.spec.ts` passes with zero pixel-diff failures.
     - Commit: `feat(exporters): add filter-stripping blur, worker protocol, and main-thread fallback`
 
-  - [ ] 3.4 Checkpoint — Group 3
+  - [x] 3.4 Checkpoint — Group 3
     - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, `pnpm --filter @studio/exporters exec vitest run`, and `pnpm --filter @studio/exporters exec playwright test`.
     - **Completion:** All four commands exit with code 0 and zero failures.
 
