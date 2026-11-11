@@ -109,7 +109,10 @@ function drawLayer(ctx: CanvasRenderingContext2D, layer: LayerState): void {
     // (f) font + alignment once per layer, from the layer style.
     const fontSize = finiteOr(layer.fontSize, 0);
     ctx.font = `${layer.fontWeight} ${fontSize}px ${layer.fontFamily}`;
-    ctx.textAlign = layer.align;
+    // Always "left": horizontal alignment is already resolved in layout (each
+    // cluster's layoutX includes the per-line align offset), so the painter must
+    // not align again. layer.align stays in LayerState as data only.
+    ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 
     // The layer's own color override is validated the same way as an effect
@@ -157,8 +160,9 @@ function drawSegment(
     const needsScale = scaleVal !== 1;
 
     // Requirement 17: pivot segment scale/rotation about the approximate glyph
-    // center `(px, py)` — the horizontal center of the advance width at roughly
-    // the vertical center of capital letters above the baseline. The pivot
+    // center `(px, py)`. With textAlign "left" the glyph spans [0, width] from the
+    // local origin, so px = width / 2 is its horizontal center; py is roughly the
+    // vertical center of capital letters above the baseline. The pivot
     // wrapping is emitted ONLY when a finite non-identity scale and/or finite
     // non-zero rotation override is present, so segments without either (every
     // typewriter / fade-slide segment) produce a byte-identical call sequence

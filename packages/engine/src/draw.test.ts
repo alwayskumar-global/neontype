@@ -571,3 +571,20 @@ describe("drawFrame — segment pivot (Property 9)", () => {
     expectBalancedSaveRestore(rc.calls);
   });
 });
+
+describe("drawFrame — alignment is resolved in layout", () => {
+  it.each(["left", "center", "right"] as const)("align %s paints with textAlign left at (0, 0)", (align) => {
+    const rc = makeRecordingContext();
+    const state = makeState({
+      layers: [makeLayerState({ align, segments: [makeSegment({ text: "a", layoutX: -9 }), makeSegment({ text: "b", layoutX: -3 })] })],
+    });
+    drawFrame(rc.ctx, state);
+    // textAlign is only ever assigned "left"; layer.align never reaches the context.
+    expect(rc.props.textAlign.length).toBeGreaterThan(0);
+    expect(rc.props.textAlign.every((v) => v === "left")).toBe(true);
+    // Every cluster is drawn at the segment origin; the position is in the translate.
+    expect(rc.args.fillText).toHaveLength(2);
+    for (const a of rc.args.fillText) expect(a.slice(1)).toEqual([0, 0]);
+    expectBalancedSaveRestore(rc.calls);
+  });
+});

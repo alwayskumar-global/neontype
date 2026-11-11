@@ -214,7 +214,7 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - **Covers:** Requirement 11.4, Requirement 12.1, Requirement 12.5
     - **Completion:** Root `pnpm test` exits with code 0 and zero failures; the full Playwright suite passes (VP9-alpha real-encode skipped with a visible reason when unsupported); no dependency beyond the four approved and no `tsconfig` change outside `packages/exporters` is present.
 
-- [ ] 9. Group 9: Font sources (worker + main-thread) — amendment
+- [x] 9. Group 9: Font sources (worker + main-thread) — amendment
   - [x] 9.1 Add the `FontSource` type, `BaseExportOptions.fonts`, and `resolveFonts` option validation
     - In `packages/exporters/src/types.ts` add `FontSource` (`{ family: string; weight: number | string; data: ArrayBuffer }`), the exported constant `MAX_FONT_BYTES` (`50 * 1024 * 1024`), and the optional `fonts?: FontSource[]` field on `BaseExportOptions`; add `fonts` to `WorkerOptions` in `packages/exporters/src/worker/protocol.ts` (it is not stripped like `onProgress`/`signal`) and set `MP4_OPTION_DISPOSITION.fonts = "worker"`.
     - In `packages/exporters/src/api.ts` add `resolveFonts(fonts)` and call it from `exportMp4`, `exportPngSequence` and `exportGif` before dispatch (not in `validate-options.ts`). A non-array value returns `invalid-options` with `fieldPaths: ["fonts"]`; an empty array is treated as `undefined`; an entry whose `family` is not 1-100 characters, whose `weight` does not match `/^(?:[1-9]00|1000|normal|bold)$/` (number or string), or whose `data` is not an `ArrayBuffer` with `byteLength > 0` returns `invalid-options` with `fieldPaths: ["fonts[i]"]` for the first offending index `i`; a `data` payload over `MAX_FONT_BYTES` returns `font-decode-failed` with `fieldPaths: ["fonts[i]"]`. The size cap is checked here only (`prepareFonts` does not re-check it), and the bytes are not copied. No new `ErrorCode` value is added.
@@ -263,7 +263,7 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - **Covers:** Requirement 15.1, Requirement 15.3, Requirement 15.5, Requirement 15.10, Requirement 15.13, Requirement 13.11, Requirement 11.4
     - **Completion:** `pnpm --filter @studio/studio exec vitest run` passes (use the studio package's actual filter name if it differs); the studio `fonts.spec` passes including assertion (d) with probe `diffRatio` of exactly `0`.
 
-  - [ ] 9.8 Checkpoint — Group 9
+  - [x] 9.8 Checkpoint — Group 9
     - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, `pnpm --filter @studio/exporters exec vitest run`, and `pnpm --filter @studio/exporters exec playwright test`; then the studio typecheck, lint, vitest, and production build, the studio Playwright suite including `fonts.spec`, and the CSP spec (`playwright.csp.config.ts`) to confirm no third-party request is introduced.
     - **Covers:** Requirement 13.8, Requirement 13.11, Requirement 13.12, Requirement 11.4, Requirement 15.9, Requirement 15.13
     - **Completion:** All commands exit with code 0 and zero failures; the VP9-alpha real-encode case may be skipped with a visible reason when unsupported.

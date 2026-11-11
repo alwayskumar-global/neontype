@@ -328,35 +328,29 @@ type MigrationMap = Map<number, MigrationFn>;
 
 **Decision.** Horizontal alignment is resolved in `layoutSegments`, not in the painter. Previously `drawFrame` set `ctx.textAlign = layer.align` while `layoutX` was always computed as left-aligned from pen position `0`, so `center` and `right` layers drew each glyph centred or right-aligned on its own `layoutX`, which is wrong for any text longer than one cluster. Resolving alignment in layout keeps one geometry source of truth for the painter, the studio hit-test, and every exporter, and keeps the painter free of logic.
 
-**Algorithm.** `layoutSegments` still computes raw per-cluster geometry exactly as before (wrap by `maxWidth` first, `layoutX` starting at `0` on each line, pen advancing by `width + letterSpacing`). A second pass then groups the raw geometry by line and shifts each line independently. Lines are identified by `layoutY`-derived line index, tracked during the first pass as a parallel `lineIndexOf[i]` array so no floating-point comparison on `layoutY` is needed.
+**Algorithm.** `layoutSegments` runs two passes. Pass 1 places clusters exactly as before (wrap by `maxWidth` first, `x` starting at `0` on each line, pen advancing by `width + letterSpacing`) into a `placed[]` array of `{x, y, width, height, line}`. While placing, it records `lineExtent[line] = x + width` for the last cluster on that line whose text does not match `COLLAPSIBLE_RE`, so later clusters on the line overwrite earlier ones. There is no separate `lineOf` array and no backward scan, and no floating-point comparison on `y` is needed to identify lines. Pass 2 maps `placed` to frozen geometries, shifting each cluster by its own line's offset.
 
 ```typescript
-// Pass 1 (unchanged): raw[i] = { layoutX, layoutY, width, height }, lineOf[i] = currentLine
+// Matches " ", "\t", "\r", "\n" and runs of them. Other Unicode whitespace (e.g. NBSP) does NOT match.
+const COLLAPSIBLE_RE = /^[ \t\r\n]+$/;
+
+// Pass 1: place clusters (left-aligned, pen from x = 0 on each line)
+const placed: Placed[] = [];          // { x, y, width, height, line }
+const lineExtent: number[] = [];
+const place = (x, line, width, height, text) => {
+  placed.push({ x, y: line * lineHeightPx, width, height, line });
+  if (!COLLAPSIBLE_RE.test(text)) lineExtent[line] = x + width;   // last non-collapsible cluster wins
+};
+
 // Pass 2: per-line alignment
-const isBlank = (text: string) => /^\s*$/.test(text);   // true for " ", "\t", "\n", ""
-
-const result: LayoutGeometry[] = new Array(raw.length);
-let start = 0;
-while (start < raw.length) {
-  let end = start;
-  while (end < raw.length && lineOf[end] === lineOf[start]) end++;   // [start, end) = one line
-
-  // extent = right edge (pre-offset) of the LAST non-whitespace cluster; 0 if none
-  let extent = 0;
-  for (let i = end - 1; i >= start; i--) {
-    if (!isBlank(tokens[i].text)) { extent = raw[i].layoutX + raw[i].width; break; }
-  }
-
-  const offset =
+const result: LayoutGeometry[] = placed.map((p) => {
+  const extent = lineExtent[p.line] ?? 0;   // 0 for a line with no non-collapsible cluster
+  const shift =
     layer.align === "center" ? -extent / 2 :
     layer.align === "right"  ? -extent     : 0;
-
-  // apply to EVERY cluster in the line, whitespace clusters included
-  for (let i = start; i < end; i++) {
-    result[i] = Object.freeze({ ...raw[i], layoutX: raw[i].layoutX + offset });
-  }
-  start = end;
-}
+  // applied to EVERY cluster in the line, collapsible ones included
+  return Object.freeze({ layoutX: p.x + shift, layoutY: p.y, width: p.width, height: p.height });
+});
 Object.freeze(result);
 cache.set(key, result);
 ```
@@ -372,8 +366,8 @@ const key = JSON.stringify([
 
 Notes:
 
-- **Extent excludes trailing whitespace and trailing `letterSpacing`.** The pen advance after the last cluster (`+ letterSpacing`) is never part of `layoutX + width`, and trailing spaces or the `"\n"` cluster are skipped by `isBlank`. A line that wrapped because of a trailing space therefore centres on its visible text.
-- **Whitespace test.** `/^\s*$/` on the cluster text. `"\n"` matches, so newline clusters never define the extent. The newline cluster is still shifted with its line.
+- **Extent excludes trailing whitespace and trailing `letterSpacing`.** The pen advance after the last cluster (`+ letterSpacing`) is never part of `layoutX + width`, and trailing spaces or the `"\n"` cluster are skipped by `COLLAPSIBLE_RE`. A line that wrapped because of a trailing space therefore centres on its visible text.
+- **Whitespace test.** `COLLAPSIBLE_RE = /^[ \t\r\n]+$/` on the cluster text (spaces, tabs, CR, LF and runs of them). `"\n"` matches, so newline clusters never define the extent. The newline cluster is still shifted with its line. Other Unicode whitespace such as NBSP does not match and counts as a visible cluster.
 - **`left` is a no-op offset** (`0`), so left-aligned layouts are bit-identical to the pre-amendment output apart from the extra frozen copies.
 - **`-0`.** `-extent / 2` and `-extent` produce `-0` when `extent` is `0`, and `layoutX + -0` can yield `-0` when `layoutX` is `0`. Layout does not special-case this; `computeFrameState`'s existing `normalizeNegativeZero` pass over the assembled `FrameState` converts it to `0` (Requirement 5.10). Layout-level unit tests compare with `toBeCloseTo` or `Object.is`-insensitive matchers accordingly.
 - **Purity.** The second pass uses only arithmetic, a regex test, `Object.freeze`, and the same `Map`. No DOM, no `Math.random`, no time APIs. `metricsProvider.measure` is still called once per cluster in pass 1 and not at all on a cache hit.
@@ -381,7 +375,7 @@ Notes:
 
 ### Painter change (`draw.ts`) — Requirement 5.2
 
-`drawFrame` currently sets `ctx.textAlign = layer.align` once per layer. That line becomes `ctx.textAlign = "left"`, set for every layer regardless of `LayerState.align`. The painter no longer reads `layer.align`. The field stays in `LayerState` as copied data (it is useful to the studio UI and to tests), but it has no effect on painting. The segment pivot is unchanged: segment `scale` and `rotation` are applied about the segment-local centre after translating to `(layoutX + dx, layoutY + dy)`, so aligned layouts need no pivot adjustment. Layer-level scale and rotation remain about the layer centre.
+`drawFrame` currently sets `ctx.textAlign = layer.align` once per layer. That line becomes `ctx.textAlign = "left"`, set for every layer regardless of `LayerState.align`. The painter no longer reads `layer.align`. The field stays in `LayerState` as copied data (it is useful to the studio UI and to tests), but it has no effect on painting. With `textAlign` `"left"` the glyph spans `[0, width]` from the translated origin, so the pivot is unchanged. The segment pivot is unchanged: segment `scale` and `rotation` are applied about the segment-local centre after translating to `(layoutX + dx, layoutY + dy)`, so aligned layouts need no pivot adjustment. Layer-level scale and rotation remain about the layer centre.
 
 ---
 
@@ -692,15 +686,15 @@ packages/engine/
 
 ### Property 18: Per-line alignment
 
-*For any* `text`, `fontSize`, `letterSpacing`, `maxWidth` (including `null`) and `align`, laid out with `FakeMetricsProvider`, every line of the resulting layout that contains at least one non-whitespace cluster (including every line produced by `maxWidth` wrapping and by explicit `"\n"`) SHALL satisfy, with `start` = the `layoutX` of the line's first cluster and `right` = `layoutX + width` of the line's last non-whitespace cluster:
+*For any* `text`, `fontSize`, `letterSpacing`, `maxWidth` (including `null`) and `align`, laid out with `FakeMetricsProvider`, every line of the resulting layout that contains at least one non-collapsible-whitespace cluster (not matching `COLLAPSIBLE_RE`; including every line produced by `maxWidth` wrapping and by explicit `"\n"`) SHALL satisfy, with `start` = the `layoutX` of the line's first cluster and `right` = `layoutX + width` of the line's last non-collapsible-whitespace cluster:
 
 - `align = "center"`: `|start + right| <= epsilon`, so the line's origin and its visible right edge are symmetric around the anchor.
 - `align = "left"`: `start` equals `0` (within `epsilon`).
 - `align = "right"`: `right` equals `0` (within `epsilon`).
 
-Lines with no non-whitespace cluster are exempt. `epsilon = 1e-9 * max(1, |start|, |right|)` (a relative tolerance), because `-extent / 2` and `layoutX + offset` are floating-point operations whose rounding error scales with the magnitude of the line.
+Lines with no non-collapsible-whitespace cluster are exempt. `epsilon = 1e-9 * max(1, |start|, |right|)` (a relative tolerance), because `-extent / 2` and `layoutX + offset` are floating-point operations whose rounding error scales with the magnitude of the line.
 
-This is the exact statement of the Requirement 11.18 min/max formulation. The two coincide when `letterSpacing >= 0` and the line has no leading whitespace. They differ otherwise: a negative `letterSpacing` below `-width` moves later clusters left of the line origin (so the minimum `layoutX` can be below `0`), and a leading space makes the minimum over non-whitespace clusters positive. Because the arbitraries below deliberately include negative `letterSpacing` and leading whitespace, the test uses the first-cluster / last-non-whitespace-cluster form, and additionally asserts the literal min/max form on the sub-population `letterSpacing >= 0` with a non-whitespace first cluster.
+This is the exact statement of the Requirement 11.18 min/max formulation. The two coincide when `letterSpacing >= 0` and the line has no leading whitespace. They differ otherwise: a negative `letterSpacing` below `-width` moves later clusters left of the line origin (so the minimum `layoutX` can be below `0`), and a leading space makes the minimum over non-collapsible-whitespace clusters positive. Because the arbitraries below deliberately include negative `letterSpacing` and leading whitespace, the test uses the first-cluster / last-non-collapsible-whitespace-cluster form, and additionally asserts the literal min/max form on the sub-population `letterSpacing >= 0` with a non-collapsible-whitespace first cluster.
 
 **Validates: Requirements 5.15, 11.18**
 
@@ -712,7 +706,9 @@ Arbitraries (in `testing/arbitraries.ts`):
 - `letterSpacing`: `fc.double({ min: -500, max: 500, noNaN: true })`, deliberately including negative values.
 - `maxWidth`: `fc.option(fc.double({ min: 1, max: 4000, noNaN: true }), { nil: null })`, deliberately including values narrower than one cluster.
 
-The test derives each cluster's line from its `layoutY` divided by `fontSize * lineHeight` (rounded) or, equivalently, from `lineIndex` in `computeFrameState` output, and classifies whitespace with the same `/^\s*$/` test as the implementation.
+The test derives each cluster's line from its `layoutY` divided by `fontSize * lineHeight` (rounded) or, equivalently, from `lineIndex` in `computeFrameState` output, and classifies clusters with the same `COLLAPSIBLE_RE` test as the implementation; for the generated alphabet of letters, spaces and newlines this is the same as "non-whitespace".
+
+**Implementation.** Property 18 lives in `packages/engine/src/layout.property.test.ts`, using `arbAlign` and `arbAlignText` from `testing/arbitraries.ts`. It runs 300 runs and has two forms: the per-line `L`/`R` form, and the `letterSpacing >= 0` bbox sub-domain form. The new unit tests are in `layout.test.ts` (`describe "alignment"`) and `draw.test.ts` (`describe "drawFrame — alignment is resolved in layout"`).
 
 ---
 
@@ -755,9 +751,9 @@ Layout never throws on any valid layer; each case below resolves to a defined re
 
 | Case | Behaviour |
 |---|---|
-| Empty line (consecutive `"\n"`) or whitespace-only line | No non-whitespace cluster, so `extent = 0` and offset is `0` (`-0` for `center`/`right`, normalised later). Its clusters keep their raw `layoutX`. No division or `NaN`. |
+| Empty line (consecutive `"\n"`) or collapsible-whitespace-only line (space, tab, CR, LF) | No non-collapsible-whitespace cluster, so `extent = 0` and offset is `0` (`-0` for `center`/`right`, normalised later). Its clusters keep their raw `layoutX`. No division or `NaN`. |
 | Single cluster on a line | `extent = width`. `center` gives `layoutX = -width / 2`, `right` gives `-width`, `left` gives `0`. |
-| Negative `letterSpacing` | Pen advance `width + letterSpacing` can shrink or reverse, so later clusters may sit left of earlier ones. The extent is still the right edge of the last non-whitespace cluster, not the maximum right edge, per Requirement 5.15. Output stays finite (range is bounded to ±500 px by the schema). Visible text can overhang the computed extent on the right when a wide earlier cluster extends past the last one; this is accepted and not corrected. |
+| Negative `letterSpacing` | Pen advance `width + letterSpacing` can shrink or reverse, so later clusters may sit left of earlier ones. The extent is still the right edge of the last non-collapsible-whitespace cluster, not the maximum right edge, per Requirement 5.15. Output stays finite (range is bounded to ±500 px by the schema). Visible text can overhang the computed extent on the right when a wide earlier cluster extends past the last one; this is accepted and not corrected. |
 | `maxWidth` wrap with trailing spaces | The wrap rule is unchanged: a space that would overflow wraps to the next line start, so a line can end in a space that fit, or begin with a space. Trailing spaces never count toward the extent, so the visible text of each wrapped line is aligned. A leading space on a wrapped line is part of the line's pen run (it occupies `layoutX = 0` before alignment) and shifts the visible text right of the line origin by its width. |
 | Single cluster wider than `maxWidth` | The existing `currentX > 0` guard still prevents an infinite loop; the overflowing cluster is aligned like any other line. |
 | `maxWidth: null` | No wrapping; only explicit `"\n"` ends lines. |

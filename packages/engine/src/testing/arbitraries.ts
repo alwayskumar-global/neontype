@@ -913,3 +913,17 @@ export const arbWaveParams: fc.Arbitrary<{
   axis: fc.constantFrom("x" as const, "y" as const),
   phasePerGroup: fin(-100, 100),
 });
+
+// ── Per-line alignment (Property 18) ─────────────────────────────────
+
+/** One of the three text alignments. */
+export const arbAlign: fc.Arbitrary<"left" | "center" | "right"> = fc.constantFrom("left", "center", "right");
+
+/**
+ * Text for alignment tests: letters of differing width, leading/trailing/inner
+ * spaces, and explicit newlines (so blank lines and multi-line text occur).
+ * Non-empty (the schema requires 1..2000 chars).
+ */
+export const arbAlignText: fc.Arbitrary<string> = fc
+  .array(fc.constantFrom("a", "b", "W", "i", " ", " ", "\n"), { minLength: 1, maxLength: 40 })
+  .map((parts) => parts.join(""));

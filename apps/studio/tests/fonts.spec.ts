@@ -68,8 +68,7 @@ test("(a) all bundled faces are ready for canvas", async ({ page }) => {
   expect(checks).toEqual({ sans700: true, tamil700: true, sans400: true, tamil400: true });
 });
 
-// (b) and (c) are the acceptance checks for engine-core Group 15 (per-line alignment); fixme until then.
-test.fixme("(b) title layer is centered on its anchor and inside the canvas", async ({ page }) => {
+test("(b) title layer is centered on its anchor and inside the canvas", async ({ page }) => {
   await enterAtT3(page);
   // Demo title "Motion Text" fill #ffcc00, anchor x = 640 on a 1280 canvas,
   // center align. At t=3 the kinetic-pop effect has fully settled.
@@ -81,7 +80,7 @@ test.fixme("(b) title layer is centered on its anchor and inside the canvas", as
   expect(b.maxX, "title not clipped right").toBeLessThanOrEqual(b.w - 1);
 });
 
-test.fixme("(c) Tamil layer is centered on its anchor and inside the canvas", async ({ page }) => {
+test("(c) Tamil layer is centered on its anchor and inside the canvas", async ({ page }) => {
   await enterAtT3(page);
   // Demo Tamil "வணக்கம்" fill #2dd3f0, anchor x = 640, center align. At t=3 the
   // typewriter has revealed all clusters. A broken (fallback) shape would shift

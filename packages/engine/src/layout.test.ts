@@ -164,3 +164,65 @@ describe("layoutSegments", () => {
     expect(Object.isFrozen(result[1])).toBe(true);
   });
 });
+
+describe("alignment", () => {
+  /** Lays out `text` with the given overrides and returns the layoutX of every cluster. */
+  function xs(overrides: Partial<TextLayer>): number[] {
+    const layer = makeLayer(overrides);
+    const cache = new Map<string, LayoutGeometry[]>();
+    // `+ 0` normalises -0 (computeFrameState does the same across the whole FrameState).
+    return layoutSegments(segmentText(layer.text), layer, FakeMetricsProvider, cache).map((g) => g.layoutX + 0);
+  }
+
+  it("aligns 'abc' left, center and right (6 px clusters)", () => {
+    expect(xs({ text: "abc", align: "left" })).toEqual([0, 6, 12]);
+    expect(xs({ text: "abc", align: "center" })).toEqual([-9, -3, 3]);
+    expect(xs({ text: "abc", align: "right" })).toEqual([-18, -12, -6]);
+  });
+
+  it("excludes the trailing letterSpacing from the extent", () => {
+    // pen advances 8 per cluster; extent = 16 + 6 = 22, not 24.
+    expect(xs({ text: "abc", align: "right", letterSpacing: 2 })).toEqual([-22, -14, -6]);
+  });
+
+  it("aligns each explicit line independently", () => {
+    expect(xs({ text: "ab\nabcd", align: "center" })).toEqual([-6, 0, 6, -12, -6, 0, 6]);
+  });
+
+  it("aligns each wrapped line independently", () => {
+    expect(xs({ text: "aaa", align: "center", maxWidth: 14 })).toEqual([-6, 0, -3]);
+  });
+
+  it("ignores trailing whitespace and the newline cluster when measuring the extent", () => {
+    const r = xs({ text: "a \nb", align: "center" });
+    expect(r[0]).toBe(-3);
+    expect(r[1]).toBe(3);
+    expect(r[3]).toBe(-3);
+  });
+
+  it("gives a line with no visible cluster an extent of 0", () => {
+    expect(xs({ text: "\nab", align: "right" })).toEqual([0, -12, -6]);
+  });
+
+  it("treats a single cluster as its own line extent", () => {
+    expect(xs({ text: "a", align: "center" })).toEqual([-3]);
+    expect(xs({ text: "a", align: "right" })).toEqual([-6]);
+  });
+
+  it("includes align in the cache key: the same text with a different align misses the cache", () => {
+    const cache = new Map<string, LayoutGeometry[]>();
+    const provider = makeCountingProvider();
+    const left = makeLayer({ text: "abc", align: "left" });
+    const center = makeLayer({ text: "abc", align: "center" });
+    const a = layoutSegments(segmentText(left.text), left, provider, cache);
+    const afterLeft = provider.count;
+    const b = layoutSegments(segmentText(center.text), center, provider, cache);
+    expect(provider.count).toBe(afterLeft * 2); // measured again
+    expect(b).not.toBe(a);
+    expect(b[0].layoutX + 0).toBe(-9);
+    // Same align again hits.
+    const again = layoutSegments(segmentText(center.text), center, provider, cache);
+    expect(again).toBe(b);
+    expect(provider.count).toBe(afterLeft * 2);
+  });
+});

@@ -18,10 +18,19 @@
  * `performance.now`, DOM, or network access, so it is safe to call from
  * `computeFrameState` in Node.
  *
+ * Alignment: `layer.align` is resolved HERE, per line, after wrapping. Each
+ * line's extent is the right edge of its last non-collapsible-whitespace
+ * cluster (trailing spaces, tabs and newline clusters, and the trailing
+ * `letterSpacing`, do not count; a line with none has extent 0). Every cluster
+ * on the line is then shifted by `0` (left), `-extent / 2` (center) or
+ * `-extent` (right), so `layoutX` is relative to the anchor INCLUDING the
+ * alignment offset. `drawFrame` therefore always paints with
+ * `textAlign = "left"`.
+ *
  * Memoization: layout is pure in `(tokens, layer-layout-params)`. Callers pass
  * in a `Map` cache keyed on the layer fields that affect layout
  * (`text, fontFamily, fontSize, fontWeight, letterSpacing, lineHeight,
- * maxWidth`). The same tokens are always derived from the same `text`, so the
+ * maxWidth, align`). The same tokens are always derived from the same `text`, so the
  * key need not include the tokens themselves. On a cache hit the stored array
  * is returned directly without calling `metricsProvider.measure` at all.
  *
@@ -58,6 +67,21 @@ import type { FontSpec, TextMetricsProvider } from "./metrics.js";
  * - `width`: the cluster's measured advance width.
  * - `height`: the cluster's full vertical box (`ascent + descent`).
  */
+/**
+ * Collapsible whitespace: a cluster made only of these never defines a line's
+ * extent. Matches " ", "\t", "\r" and "\n" clusters (and runs of them).
+ */
+const COLLAPSIBLE_RE = /^[ \t\r\n]+$/;
+
+/** A cluster placed in pass 1, before the per-line alignment shift. */
+interface Placed {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  line: number;
+}
+
 export interface LayoutGeometry {
   layoutX: number;
   layoutY: number;
@@ -90,6 +114,7 @@ export function layoutSegments(
     layer.letterSpacing,
     layer.lineHeight,
     layer.maxWidth,
+    layer.align,
   ]);
 
   const hit = cache.get(key);
@@ -106,9 +131,20 @@ export function layoutSegments(
 
   const lineHeightPx = layer.fontSize * layer.lineHeight;
 
-  const result: LayoutGeometry[] = [];
+  // Pass 1: place clusters exactly as before (left-aligned, pen from x = 0 on each
+  // line), recording each cluster's line and each line's extent.
+  const placed: Placed[] = [];
+  const lineExtent: number[] = [];
   let currentX = 0;
   let currentLine = 0;
+
+  const place = (x: number, line: number, width: number, height: number, text: string): void => {
+    placed.push({ x, y: line * lineHeightPx, width, height, line });
+    if (!COLLAPSIBLE_RE.test(text)) {
+      // Last non-collapsible cluster on the line wins: its right edge is the extent.
+      lineExtent[line] = x + width;
+    }
+  };
 
   for (const token of tokens) {
     const m = metricsProvider.measure(token.text, fontSpec);
@@ -118,14 +154,7 @@ export function layoutSegments(
       // Emit the newline cluster at the current pen position, then advance to
       // the next line. A newline is a zero-advance cluster: it does not move
       // `currentX`, it only ends the line.
-      result.push(
-        Object.freeze({
-          layoutX: currentX,
-          layoutY: currentLine * lineHeightPx,
-          width: m.width,
-          height,
-        }),
-      );
+      place(currentX, currentLine, m.width, height, token.text);
       currentLine += 1;
       currentX = 0;
       continue;
@@ -138,20 +167,17 @@ export function layoutSegments(
       currentX = 0;
     }
 
-    const layoutX = currentX;
-    const layoutY = currentLine * lineHeightPx;
-
-    result.push(
-      Object.freeze({
-        layoutX,
-        layoutY,
-        width: m.width,
-        height,
-      }),
-    );
-
+    place(currentX, currentLine, m.width, height, token.text);
     currentX += m.width + layer.letterSpacing;
   }
+
+  // Pass 2: shift every cluster by its line's alignment offset (0 for a line
+  // with no non-collapsible cluster).
+  const result: LayoutGeometry[] = placed.map((p) => {
+    const extent = lineExtent[p.line] ?? 0;
+    const shift = layer.align === "center" ? -extent / 2 : layer.align === "right" ? -extent : 0;
+    return Object.freeze({ layoutX: p.x + shift, layoutY: p.y, width: p.width, height: p.height });
+  });
 
   Object.freeze(result);
   cache.set(key, result);

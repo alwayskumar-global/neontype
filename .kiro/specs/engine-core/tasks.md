@@ -438,21 +438,21 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Completion:** Both commands exit with code 0, zero test failures, and zero lint errors. The full `packages/engine` implementation is complete.
     - Commit: `feat(engine-core): add computeFrameState benchmark (compute.bench.ts)`
 
-- [ ] 15. Group 15: Alignment amendment: per-line alignment in layout
-  - [ ] 15.1 Resolve per-line alignment in `layout.ts` (second pass)
-    - In `packages/engine/src/layout.ts`, after wrapping by `maxWidth` (wrapping unchanged), add a second pass over each line. Line extent = `layoutX + width` of the line's last non-whitespace cluster (classified with `/^\s*$/`), before the offset; trailing spaces and newline clusters do not count; a line with no non-whitespace cluster has extent `0`. Shift every cluster's `layoutX` on the line by `0` (`left`), `-extent / 2` (`center`), or `-extent` (`right`). Lines are aligned independently. Normalise `-0` to `0`.
+- [x] 15. Group 15: Alignment amendment: per-line alignment in layout
+  - [x] 15.1 Resolve per-line alignment in `layout.ts` (second pass)
+    - In `packages/engine/src/layout.ts`, after wrapping by `maxWidth` (wrapping unchanged), add a second pass over each line. Line extent = `layoutX + width` of the line's last non-collapsible-whitespace cluster (classified with `COLLAPSIBLE_RE = /^[ \t\r\n]+$/`; NBSP and other Unicode whitespace count as visible), before the offset; trailing spaces and newline clusters do not count; a line with no such cluster has extent `0`. Shift every cluster's `layoutX` on the line by `0` (`left`), `-extent / 2` (`center`), or `-extent` (`right`). Lines are aligned independently. Normalise `-0` to `0`.
     - Add `layer.align` to the layout cache key (`JSON.stringify([... , layer.align])`). Layout stays pure and deterministic with no DOM access; each `LayoutGeometry` stays `Object.freeze`d. `ProjectSchema`, the `align` enum, `LayerState`, `BaseSegment`, and `CURRENT_PROJECT_VERSION` do not change.
     - Update existing layout unit tests (`layout.test.ts`) that assumed no alignment offset. Add tests with `FakeMetricsProvider` for: `left`, `center`, `right`; a line with trailing spaces; a line terminated by a newline cluster; an empty line (extent `0`); a single-cluster line; wrapped multi-line text with lines of differing widths; non-zero and negative `letterSpacing`; and a cache-key test showing that changing `align` invalidates the cache and the previous `align`'s geometry is not returned.
     - **Covers:** Requirement 1.2, Requirement 5.2, Requirement 5.9, Requirement 5.15, Requirement 5.16, Requirement 11.17, Requirement 15.1
     - **Completion:** `pnpm vitest run src/layout.test.ts` passes with zero failures.
 
-  - [ ] 15.2 Make `drawFrame` always paint with `textAlign = "left"`
+  - [x] 15.2 Make `drawFrame` always paint with `textAlign = "left"`
     - In `packages/engine/src/draw.ts`, set `ctx.textAlign = "left"` for every grapheme cluster regardless of `LayerState.align`; alignment is already resolved in `layoutX`. `LayerState.align` is still copied verbatim as data and is not used by the painter.
     - Update `draw.test.ts` using the recording context: for `align` of `left`, `center`, and `right`, assert `ctx.textAlign` is only ever set to `"left"` while painting segments.
     - **Covers:** Requirement 5.2, Requirement 5.16, Requirement 11.19
     - **Completion:** `pnpm vitest run src/draw.test.ts` passes with zero failures.
 
-  - [ ] 15.3 Write property-based test for per-line alignment (Property 18)
+  - [x] 15.3 Write property-based test for per-line alignment (Property 18)
     - Add `arbAlign` and `arbAlignText` (and the `fontSize`, `letterSpacing`, `maxWidth` arbitraries specified in the design) to `packages/engine/src/testing/arbitraries.ts`. Add the test to `layout.test.ts` (or `layout.property.test.ts`), tagged `// Feature: engine-core, Property 18: Per-line alignment`, using `FakeMetricsProvider`.
     - For every line with at least one non-whitespace cluster, including lines produced by `maxWidth` wrapping and by explicit `"\n"`, with `L` = `layoutX` of the line's first cluster and `R` = `layoutX + width` of the line's last non-whitespace cluster: `center` gives `|L + R| <= epsilon`; `left` gives `L` equal to `0`; `right` gives `R` equal to `0`; `epsilon = 1e-9 * max(1, |L|, |R|)`. Lines with no non-whitespace cluster are exempt.
     - Add the sub-domain bbox form: for `letterSpacing >= 0` with a non-whitespace first cluster, assert the literal min/max form (min `layoutX` and max `layoutX + width` over the line's non-whitespace clusters) with the same three conditions.
@@ -460,25 +460,26 @@ This plan converts the `engine-core` design into an ordered series of coding tas
     - **Covers:** Requirement 5.15, Requirement 11.18 — Property 18
     - **Completion:** The property test passes with zero failures.
 
-  - [ ] 15.4 Reconcile compute and other tests that assumed per-glyph align
+  - [x] 15.4 Reconcile compute and other tests that assumed per-glyph align
     - Run the full engine suite (`pnpm --filter @studio/engine vitest run`). Change ONLY tests that encode the old semantics (alignment applied per glyph or by `ctx.textAlign`, or `layoutX` without a per-line offset). Do not weaken or delete unrelated assertions.
     - Record in this task each test changed (file and test name) and why, and report the list to the user.
+    - **Result:** NO existing test needed changing. The engine suite passes (349 tests).
     - **Covers:** Requirement 5.9, Requirement 5.15, Requirement 5.16
     - **Completion:** The full engine Vitest suite passes with zero failures and the list of changed tests is recorded.
 
-  - [ ] 15.5 Verify visual goldens are unchanged and fixtures are stable
+  - [x] 15.5 Verify visual goldens are unchanged and fixtures are stable
     - Run the engine Playwright golden suite WITHOUT updating snapshots (no `--update-snapshots`). Expected result: all goldens unchanged, because every fixture is left-aligned.
     - If any golden differs, STOP and report which one. Regenerate a golden only deliberately, as a reported step, and only with user approval; never automatically.
     - Run `generate-visual-fixtures` and confirm the committed fixtures regenerate byte-identically (`git diff --exit-code` on the fixtures). Confirm the JSON Schema staleness test stays green (`ProjectSchema` is unchanged).
     - **Covers:** Requirement 5.16, Requirement 12.7
     - **Completion:** Playwright goldens pass unmodified, fixtures regenerate with an empty diff, and the schema staleness test passes.
 
-  - [ ] 15.6 Studio acceptance: centered text on the anchor
+  - [x] 15.6 Studio acceptance: centered text on the anchor
     - Run the studio Playwright tests (b) and (c) in `apps/studio/tests/fonts.spec.ts`: the title bounding box and the Tamil bounding box are each centered on the anchor x within 4 px and lie inside the canvas. Both MUST pass. No studio code changes are expected; if they fail, report the failure rather than editing studio code.
     - **Covers:** Requirement 5.15, Requirement 5.16
     - **Completion:** Tests (b) and (c) in `apps/studio/tests/fonts.spec.ts` pass.
 
-  - [ ] 15.7 Checkpoint — Alignment amendment
+  - [x] 15.7 Checkpoint — Alignment amendment
     - Run `tsc --noEmit`, lint (including the engine purity rules banning `Math.random`, `Date.now`, `performance.now`), `pnpm vitest run`, the engine Playwright goldens (unmodified), and the schema staleness test.
     - **Completion:** All commands exit with code 0, zero test failures, and zero lint errors.
     - Commit: `fix(engine-core): resolve text alignment per line in layout`
