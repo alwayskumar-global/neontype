@@ -42,29 +42,35 @@ is the UI layer that holds the only playback clock.
   port `apps/studio/src/ds/` (Requirements 17 and 18) obey the same CSP and
   purity rules as the rest of `apps/studio/src`.
 
-### Deviations (pending owner confirmation)
-
+### Deviations (approved by the owner)
 These three points conflict with workspace steering or an earlier instruction. They
-are recorded here and NOT resolved silently.
+were flagged, not resolved silently, and are now approved by the owner.
 
 1. **Tokens rule.** The workspace design rule says to extract design tokens into
    a single tokens file and to hard-code no values in components. Generated CSS
    (Requirement 17) carries the design's literal values, and `ds/ds.css`
    (Requirement 18) is a second token sheet, scoped under `.ds-root`. This spec
-   accepts that for `generated/` and `ds/` only, and leaves
-   `apps/studio/src/tokens.css` untouched. *Pending owner confirmation.*
+   accepts that for `generated/` and `ds/` only. The steering exception ("no
+   hard-coded values in components", single tokens file) covers
+   `apps/studio/src/generated/` and `apps/studio/src/ds/` ONLY, and
+   `apps/studio/src/tokens.css` is untouched. *Approved by the owner.*
 2. **Dynamic style mapping.** The requested mapping "dynamic `style` to a React
    style object" is replaced by scoped CSS classes that read CSS custom
-   properties, set through `ui/cssvars.ts` `setCssVars`. This keeps Requirement
-   11.2 (no JSX `style` attribute or prop) and the ESLint style guard intact.
-   *Pending owner confirmation.*
+   properties, set through `ui/cssvars.ts` `setCssVars` from a ref (a callback ref
+   per element; inside `<sc-for>` each list item sets its own variables). This
+   keeps Requirement 11.2 (no JSX `style` attribute or prop) and the ESLint style
+   guard intact. *Approved by the owner.*
 3. **Per-file converter config rules.** The real design files need three rules in
-   `dc-convert.config.json`: Landing Page `href="Studio Editor.dc.html"` (4
-   occurrences) is rewritten to a neutral target; the Export Flow "Review bar"
-   is omitted because its source text says it is not product UI; and Error
-   States gets an icon-style rewrite for its object-valued style binding. The
-   converter also relies on the helper `src/ds/helpers.ts`. *Pending owner
-   confirmation.*
+   `dc-convert.config.json`, with these outcomes: Landing Page: every
+   `href="Studio Editor.dc.html"` (4 occurrences) is rewritten to
+   `href="#studio"` and the anchor also gets an optional `onOpenStudio` handler
+   from the data (`data.onOpenStudio`, a function, optional; no routing this
+   round); Export Flow: the "Review bar" element is omitted because its source
+   text says it is not product UI; Error States: `style="{{ w.iconStyle }}"` is
+   rewritten to a class per variant (a `data-variant` attribute set from the data,
+   plus CSS rules per variant in the screen's scoped CSS). No object-valued style
+   remains in the output. The converter also relies on the helper
+   `src/ds/helpers.ts`. *Approved by the owner.*
 
 ## Glossary
 
@@ -688,8 +694,10 @@ Library, Export Flow, Error States, Landing Page) as input only.
       object, because Requirement 11.2 forbids any JSX `style` attribute or prop.
       Each dynamic declaration SHALL become a scoped class rule reading a CSS
       custom property (`prop: var(--dc-...)`), and the element SHALL set that
-      custom property from the bound value through `ui/cssvars.ts` `setCssVars` in
-      a ref callback.
+      custom property from the bound value through `ui/cssvars.ts` `setCssVars`
+      from a CALLBACK ref on that element. Inside `<sc-for>` the callback ref is
+      created per list item, so each item sets its own custom properties
+      (owner-approved, Deviation 2).
    3. `style-hover`, `style-focus`, and `style-active` SHALL become scoped
       `:hover`, `:focus`, and `:active` rules in the generated CSS.
    4. `{{ path }}` (a dotted path, a numeric/boolean/null literal, or `$index`)
@@ -729,10 +737,17 @@ Library, Export Flow, Error States, Landing Page) as input only.
    matching a selector or condition), `replaceText` (exact text replacements,
    for example legacy wording), and `forbid` (patterns that fail the build when
    found in a file's output; at minimum the legacy product name `Flash` and
-   remote URLs). The real files need three rules: Landing Page
-   `href="Studio Editor.dc.html"` (4 occurrences) rewritten to a neutral target,
-   Export Flow "Review bar" omitted, and the Error States icon-style rewrite
-   (see criterion 3.13). *(unit)*
+   remote URLs). The real files need three owner-approved rules (Deviation 3):
+   1. Landing Page: every `href="Studio Editor.dc.html"` (4 occurrences) SHALL be
+      rewritten to `href="#studio"`, and the anchor SHALL also receive an optional
+      `onOpenStudio` handler bound to `data.onOpenStudio` (a function; absent
+      means no handler; no routing this round).
+   2. Export Flow: the element with `data-screen-label="Review bar"` SHALL be
+      omitted.
+   3. Error States: `style="{{ w.iconStyle }}"` SHALL be rewritten to a class per
+      variant: a `data-variant` attribute set from the data, plus CSS rules per
+      variant in the screen's scoped CSS. THE output SHALL contain no
+      object-valued style anywhere (criterion 3.13). *(unit)*
 5. THE converter SHALL scope CSS under a per-screen root class `.dc-<slug>`
    (slug = kebab-case of the file name): `html`, `body`, and `:root` selectors
    SHALL become that root; helmet rules SHALL be prefixed with
@@ -774,13 +789,23 @@ Library, Export Flow, Error States, Landing Page) as input only.
    5. `tsc` compiles `generated/*.tsx`;
    6. ESLint passes on `generated/` and `ds/`.
 10. THE repository SHALL provide a dev-only smoke harness that is NOT a
-    production route: a separate Vite entry and config building into its own
-    output folder (not `dist/`), served under the same strict CSP injected the
-    same way as the production build, mounting the generated Studio Editor with a
-    static fixture for its data. A Playwright spec SHALL assert that the harness
-    renders its landmarks and emits ZERO `securitypolicyviolation` events (not
-    even the Zod probe of Requirement 11.3, because the harness imports no engine
-    code). A unit test SHALL build the production app in memory with Vite
+    production route: one Vite config building two pages into its own output
+    folder (not `dist/`), served under the same strict CSP injected the same way
+    as the production build. The harness SHALL have TWO pages:
+    1. `index.html` mounts the generated Studio Editor with a static fixture for
+       its data and imports no engine code. A Playwright spec SHALL assert that
+       it renders its landmarks and emits ZERO `securitypolicyviolation` events
+       (not even the Zod probe of Requirement 11.3, because no engine code is
+       imported).
+    2. `parity.html` loads `ds.css` and exposes the export parity probe over the
+       demo project. Because the probe imports the engine, which imports Zod, at
+       most the one allowed Zod `allowsEval` probe violation is tolerated there
+       (the same assertion as `tests-csp`). With `ds.css` loaded,
+       `window.__studioExportParity(t)` SHALL be exactly 0 for t = 1, 3, and 5.5.
+    Export parity SHALL also be exactly 0 at those times on the default studio
+    route, where the app entry imports `ds.css` as a plain CSS import (it is
+    scoped under `.ds-root`, so it restyles nothing).
+    A unit test SHALL build the production app in memory with Vite
     `build({ write: false })` and scan the output paths and text for the
     patterns `design/` (word-boundary guarded), `_ds/`, `_ds_bundle`,
     `support.js`, `.dc.html`, and `MotionTextStudioDesignSystem`, and SHALL fail
@@ -810,10 +835,12 @@ have accessible, CSP-safe building blocks that do not restyle the live studio.
    `apps/studio/public/fonts` together with their SIL OFL 1.1 license texts, and
    the `@font-face` rules in `ds.css` SHALL point at `/fonts/...`. Noto Sans Tamil
    SHALL NOT be copied; `--font-tamil` SHALL resolve to the studio's own declared
-   `Noto Sans Tamil`. THE license text and copyright line SHALL come from the
-   upstream font project and be verified; IF they cannot be verified THEN the
-   implementer SHALL STOP and ask the owner and SHALL NOT invent a copyright
-   line. EACH font family SHALL have a `docs/dependencies.md` row (name, license,
+   `Noto Sans Tamil`. THE license texts SHALL be taken from the upstream
+   `google/fonts` repository (`ofl/instrumentsans/OFL.txt` and
+   `ofl/dmmono/OFL.txt`; web lookup is read-only and owner-approved), and
+   `apps/studio/public/fonts/README.md` SHALL record the source URL and the
+   commit or date of each. IF either text cannot be verified THEN the implementer
+   SHALL STOP and ask the owner and SHALL NOT invent a copyright line. EACH font family SHALL have a `docs/dependencies.md` row (name, license,
    source, reason). THE app SHALL make no network request for these fonts at
    runtime. *(unit for manifest and paths, manual for licences)*
 3. THE file `apps/studio/src/ds/index.tsx` SHALL port ONLY the 12 components the
@@ -851,6 +878,25 @@ have accessible, CSP-safe building blocks that do not restyle the live studio.
    of `ds/` (no `style=`, no import path containing `design/`). *(unit)*
 6. THE port SHALL NOT change the dependency list of Requirement 14: no new
    runtime or dev dependency. *(unit for manifest)*
+7. THE file `ds.css` SHALL NOT port the design system's `Noto Sans Tamil`
+   `@font-face`: the studio already declares that family in
+   `apps/studio/src/fonts/fonts.css`, and a second declaration with different
+   files would change which glyphs the canvas and exports use and break export
+   parity. Generated and DS UI SHALL use the studio's existing Noto faces.
+   *(unit)*
+8. THE `@font-face` rules ported into `ds.css` SHALL keep `url()` sources only;
+   `ds.css` SHALL contain no `local(`, so that a user-installed copy never
+   replaces the bundled file. *(unit)*
+9. THE file `ds.css` SHALL declare `@font-face` ONLY for families that the studio
+   does not already declare (Instrument Sans and DM Mono). A unit test SHALL parse
+   `ds.css` and `apps/studio/src/fonts/fonts.css` and assert that the two sets of
+   declared family names are disjoint, and that `ds.css` has no `local(`.
+   *(unit)*
+10. WHEN `ds.css` is loaded, THE export parity probe `window.__studioExportParity(t)`
+    SHALL return exactly 0 for t = 1, 3, and 5.5, both on the default studio route
+    (a DEV build, where the probe is installed and the app entry imports `ds.css`
+    as a plain CSS import) and in the
+    smoke-harness `parity.html` build (Requirement 17.10). *(Playwright)*
 
 ---
 
