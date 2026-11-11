@@ -17,6 +17,7 @@ import { newProject } from "../model/project.js";
 import { frameCountFor } from "../model/selectors.js";
 import { runParityProbe } from "../preview/parity-probe.js";
 import { runPerfProbe, measureDemo } from "../preview/perf-probe.js";
+import { runExportParity } from "../preview/export-parity-probe.js";
 
 declare global {
   interface Window {
@@ -24,6 +25,7 @@ declare global {
     __studioParityProbe?: () => Promise<number[]>;
     __studioPerfProbe?: (withBlur: boolean, seconds?: number) => Promise<{ mean: number; p95: number; count: number }>;
     __studioMeasureDemo?: (seconds?: number) => Promise<{ mean: number; p95: number; count: number }>;
+    __studioExportParity?: (tSeconds?: number) => Promise<number>;
   }
 }
 
@@ -49,6 +51,7 @@ export function App() {
       window.__studioParityProbe = runParityProbe;
       window.__studioPerfProbe = runPerfProbe;
       window.__studioMeasureDemo = measureDemo;
+      window.__studioExportParity = (tSeconds = 3) => runExportParity(store.getState().project, tSeconds);
       window.__studioWorkerProbe = async () => {
         const worker = new Worker(new URL("../playback/probe-worker.js", import.meta.url), { type: "module" });
         return await new Promise<boolean>((resolve) => {

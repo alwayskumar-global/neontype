@@ -10,6 +10,7 @@ import type { Project } from "@studio/engine";
 
 import { PlaybackClock } from "../playback/clock.js";
 import { drawPreviewFrame, makePreviewRenderer } from "./draw.js";
+import { onFontsLoadingDone } from "../fonts/fonts.js";
 import type { Store } from "../shell/store.js";
 
 export function PreviewCanvas({ store, canvasRef }: { store: Store; canvasRef: RefObject<HTMLCanvasElement | null> }) {
@@ -54,8 +55,19 @@ export function PreviewCanvas({ store, canvasRef }: { store: Store; canvasRef: R
       if (!clock.isPlaying) paint(store.getState().ui.playhead);
     });
 
+    // If a bundled face finishes loading after first paint, drop the layout
+    // cache (new renderer => new metrics provider) and repaint. One provider
+    // per canvas still holds.
+    const unsubFonts = onFontsLoadingDone(() => {
+      renderer = makePreviewRenderer(store.getState().project);
+      rendererW = store.getState().project.canvas.width;
+      rendererH = store.getState().project.canvas.height;
+      if (!clock.isPlaying) paint(store.getState().ui.playhead);
+    });
+
     return () => {
       unsub();
+      unsubFonts();
       clock.dispose();
     };
     // Re-init when the canvas backing size changes (new project dimensions).
