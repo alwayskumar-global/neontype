@@ -18,9 +18,9 @@ import type { Project } from "@studio/engine";
 
 import { reduce, INITIAL, type ExportFormatId } from "./machine.js";
 import { messageFor } from "./errors.js";
-import { whenFontsReady, loadBundledFontBytes } from "../fonts/fonts.js";
 import type { Store } from "../shell/store.js";
 import { useStoreState } from "../shell/useStore.js";
+import { prepareExportFonts } from "./prepare.js";
 import { downloadBlob } from "../io/download.js";
 
 const CAP_KEY: Record<ExportFormatId, keyof CapabilityReport> = {
@@ -112,25 +112,25 @@ export function ExportDialog({ store, onClose }: { store: Store; onClose: () => 
     // "fail" is only honoured while running, so enter running before the font checks;
     // otherwise a font failure would be dropped and the dialog would sit unchanged.
     dispatch({ type: "start" });
-    // Font readiness before export (Req 6.4).
-    const fonts = await whenFontsReady();
-    if (!fonts.ok) {
-      dispatch({ type: "fail", error: { code: fonts.code, message: fonts.message } });
-      return;
-    }
-    const fontBytes = await loadBundledFontBytes();
-    if (!fontBytes.ok) {
-      dispatch({ type: "fail", error: { code: fontBytes.code, message: fontBytes.message } });
-      return;
-    }
+    // Create the controller BEFORE the font awaits so Cancel works while fonts load.
     const controller = new AbortController();
     abortRef.current = controller;
+    // Font readiness before export (Req 6.4).
+    const prepared = await prepareExportFonts(controller.signal);
+    if (prepared.kind === "cancelled") {
+      dispatch({ type: "cancelled" });
+      return;
+    }
+    if (prepared.kind === "fail") {
+      dispatch({ type: "fail", error: { code: prepared.code, message: prepared.message } });
+      return;
+    }
     const bg = project.background === "transparent" ? "#000000" : undefined;
     const result = await runExport(
       format,
       project,
       { videoBitrate: format === "mp4" ? bitrate : undefined, backgroundFallback: bg },
-      fontBytes.fonts,
+      prepared.fonts,
       (f) => dispatch({ type: "progress", fraction: f }),
       controller.signal,
     );

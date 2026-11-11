@@ -20,3 +20,11 @@ test("worker and main-thread exports with fonts match the preview exactly; witho
   expect(r.documentFacesAfter, "exports leave document.fonts as they found it").toBe(0);
   expect(r.callerBytesIntact, "caller's font buffers are not detached").toBe(true);
 });
+
+test("undecodable font bytes give font-decode-failed on the worker and main-thread paths", async ({ page }) => {
+  await page.goto("http://localhost:5273/");
+  await page.waitForFunction(() => typeof window.runBadFont === "function");
+  const r = await page.evaluate(() => window.runBadFont());
+  expect(r.worker, "worker path").toBe("font-decode-failed");
+  expect(r.main, "main-thread path").toBe("font-decode-failed");
+});

@@ -11,12 +11,13 @@ class FakeFace implements FontFaceLike {
     readonly family: string,
     readonly data: ArrayBuffer,
     readonly weight: string,
-    private readonly behaviour: "ok" | "decode" | "other" | "hang",
+    private readonly behaviour: "ok" | "decode" | "decode-plain" | "other" | "hang",
     private readonly log: string[],
   ) {}
   load(): Promise<unknown> {
     this.log.push(`load:${this.family}`);
-    if (this.behaviour === "decode") return Promise.reject(new SyntaxError("bad font"));
+    if (this.behaviour === "decode") return Promise.reject(new DOMException("Invalid font data in ArrayBuffer.", "SyntaxError"));
+    if (this.behaviour === "decode-plain") return Promise.reject(new SyntaxError("bad font"));
     if (this.behaviour === "other") return Promise.reject(new Error("network"));
     if (this.behaviour === "hang") return new Promise(() => undefined);
     this.status = "loaded";
@@ -24,7 +25,7 @@ class FakeFace implements FontFaceLike {
   }
 }
 
-function makeEnv(opts: { behaviour?: Record<string, "ok" | "decode" | "other" | "hang">; timeoutMs?: number; preset?: FakeFace[] } = {}) {
+function makeEnv(opts: { behaviour?: Record<string, "ok" | "decode" | "decode-plain" | "other" | "hang">; timeoutMs?: number; preset?: FakeFace[] } = {}) {
   const log: string[] = [];
   const set = new Set<FontFaceLike>(opts.preset ?? []);
   const env: FontEnv = {
@@ -96,6 +97,12 @@ describe("prepareFonts", () => {
     expect(r.failure && !r.failure.ok && r.failure.error.code).toBe("font-decode-failed");
     expect(r.added).toEqual([]);
     expect(set.size).toBe(0);
+  });
+
+  it("maps a plain SyntaxError to font-decode-failed too", async () => {
+    const { env } = makeEnv({ behaviour: { A: "decode-plain" } });
+    const r = await prepareFonts([font("A")], env);
+    expect(r.failure && !r.failure.ok && r.failure.error.code).toBe("font-decode-failed");
   });
 
   it("maps any other rejection to font-not-ready", async () => {

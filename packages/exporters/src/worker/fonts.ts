@@ -134,7 +134,9 @@ export async function prepareFonts(
         env.fontSet!.add(face);
         added.push(face);
       } catch (err) {
-        if (err instanceof SyntaxError) {
+        // Browsers reject FontFace.load() on bad bytes with a DOMException named
+        // "SyntaxError", which is NOT `instanceof SyntaxError`; match on the name.
+        if ((err as { name?: unknown } | null)?.name === "SyntaxError") {
           return fail("font-decode-failed", "A supplied font failed to decode.");
         }
         return fail("font-not-ready", "A supplied font did not become ready.");

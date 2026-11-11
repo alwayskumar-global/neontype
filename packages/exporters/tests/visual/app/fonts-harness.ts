@@ -89,9 +89,21 @@ export interface FontParityResult {
   callerBytesIntact: boolean;
 }
 
+/** Bad font bytes must map to font-decode-failed on both paths. */
+async function badFontCodes(): Promise<{ worker?: string; main?: string }> {
+  const bad: FontSource[] = [{ family: "Bad", weight: 400, data: new Uint8Array(8).buffer }];
+  const code = async (path: "worker" | "main"): Promise<string | undefined> => {
+    const args = { driverId: "recording", format: "png-sequence" as const, project: project(), options: { fonts: bad }, limits: DEFAULT_LIMITS };
+    const r = path === "worker" ? await dispatchExport(args) : await runOnMainThread(args);
+    return r.ok ? undefined : r.error.code;
+  };
+  return { worker: await code("worker"), main: await code("main") };
+}
+
 declare global {
   interface Window {
     runFontParity: () => Promise<FontParityResult>;
+    runBadFont: () => Promise<{ worker?: string; main?: string }>;
   }
 }
 
@@ -114,3 +126,5 @@ window.runFontParity = async () => {
     callerBytesIntact: fonts.every((f, i) => f.data.byteLength === sizes[i]),
   };
 };
+
+window.runBadFont = badFontCodes;
