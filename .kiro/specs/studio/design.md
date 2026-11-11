@@ -14,6 +14,13 @@ the preview pipeline, fonts, the timeline, the export state machine, save/load,
 CSP/security, performance measurement, correctness properties, the Playwright
 plan, dependencies, and risks.
 
+It also covers two build-time additions (Requirements 17 and 18): a
+deterministic converter that turns the five `design/*.dc.html` exports into
+committed, CSP-safe React components under `src/generated/`, and a hand-ported
+subset of the design system under `src/ds/`. Neither is wired into the live
+studio UI in this round; a dev-only smoke harness proves they render under the
+strict CSP.
+
 ## Architecture
 
 ### Module layout (`apps/studio/src`)
@@ -67,6 +74,87 @@ apps/studio/src/
 
 Intra-package imports use ESM paths with explicit `.js`/`.jsx`-less TS specifiers
 per repo convention; the model layer is importable in Node for Vitest.
+
+### Module layout additions (Requirements 17 and 18)
+
+```
+apps/studio/
+  scripts/                          build-time Node tooling; plain .mjs, NOT bundled, NOT in src/
+    dc-convert-lib.mjs                PURE: convertDc(source, options) -> { files }; imports only node:crypto
+    dc-convert-lib.d.mts              hand-written types for the line above (see note 1)
+    dc-io.mjs                         Node I/O shell: loadConfig, convertAll, readTree (see note 2)
+    dc-io.d.mts                       hand-written types for dc-io.mjs
+    dc-convert.mjs                    CLI: convertAll() then write files; npm script `dc:convert`
+    dc-convert.config.json            per-file omitIf / replaceText / forbid, and the fixed screen order
+  src/
+    ds/
+      ds.css                          hand-copied tokens (scoped .ds-root) + ui.css + 2 font families
+      index.tsx                       the 12 ported components (+ one private Tooltip helper)
+      dc-runtime.ts                   value types, scope, get(), coercions, dcVars(), mergeRefs()
+      helpers.ts                      pure helpers for tests: stepNumber(), tokenizeCode()
+      icons.ts                        ICONS as typed shape data (no markup strings)
+    generated/<slug>/                 COMMITTED converter output
+      <PascalName>.tsx   <slug>.css   assets/<files copied byte-for-byte>
+    __tests__/dc/                     converter, staleness, audit, dist-scan tests (Vitest, Node)
+  dc-harness/                         dev-only smoke harness; never part of dist/
+    index.html   main.tsx   fixture.ts
+  tests-dc/harness.spec.ts            Playwright spec for the harness
+  vite.csp.ts                         shared STRICT_CSP_META + injectCspOnBuild() (moved, not changed)
+  vite.dc-harness.config.ts           Vite config for the harness build
+  playwright.dc.config.ts             Playwright config for the harness
+  public/fonts/                       + InstrumentSans-*, DMMono-* woff2 and their OFL texts
+```
+
+Slugs and component names, in the fixed conversion order: `studio-editor`
+(`StudioEditor`), `effects-library` (`EffectsLibrary`), `export-flow`
+(`ExportFlow`), `error-states` (`ErrorStates`), `landing-page` (`LandingPage`).
+The slug is the kebab-case of the file name without `.dc.html`; the component
+name is its PascalCase form. The generated `landing-page` folder does not touch
+the existing hand-written `src/landing/`.
+
+Notes on the layout:
+
+1. **`.d.mts`, not `.d.ts`.** With `moduleResolution: "Bundler"`, TypeScript maps
+   `import "./x.mjs"` to `./x.d.mts`; a sibling `x.d.ts` is looked up only for
+   `./x.js`. The hand-written declaration file therefore has to be
+   `dc-convert-lib.d.mts`. It needs no `include` entry to be found through the
+   import; one entry is added so the declaration files themselves are checked.
+2. **Why `dc-io.mjs`.** `apps/studio` has no `@types/node` and `tsconfig.json` sets
+   `types: []`, so a `.test.ts` under `src/` cannot import `node:fs` and still
+   pass `tsc --noEmit`, and adding `@types/node` would add a dependency
+   (Requirement 18.6). All file-system access that tests need (read the five
+   inputs and their assets, read the committed `generated/` tree) therefore lives
+   in `dc-io.mjs` behind hand-written types. Tests import `dc-io.mjs` and
+   `dc-convert-lib.mjs`, never `node:*`. Everything is in memory: no test writes
+   to disk or creates a temp directory.
+3. **Scripts and config files.** `package.json` gains two scripts:
+   `"dc:convert": "node scripts/dc-convert.mjs"` and
+   `"test:dc": "playwright test -c playwright.dc.config.ts"`. The existing
+   `"lint": "eslint src"` already covers `src/ds/` and `src/generated/`; it does
+   not cover `scripts/`, which is exercised by its tests instead. `.gitignore`
+   gains `dist-dc-harness/`.
+4. **`tsconfig.json` `include`, minimal change.** Add `"vite.csp.ts"`,
+   `"vite.dc-harness.config.ts"`, `"playwright.dc.config.ts"`,
+   `"dc-harness/**/*"`, `"tests-dc/**/*"`, and `"scripts/*.d.mts"`. Nothing else
+   changes (`types: []` stays; `src/vite-env.d.ts` already references
+   `vite/client`, which types `*.png` imports, `?raw`, and `import.meta.glob`).
+   `vitest.config.ts` is unchanged: its `src/**/*.test.ts(x)` pattern already
+   matches every new test.
+5. **Shared CSP module, minimal `vite.config.ts` change.** Today `vite.config.ts`
+   holds `STRICT_CSP_META` and `injectCspOnBuild()`. Both move, verbatim
+   (including the comment block), to `vite.csp.ts` and are exported. The only
+   edits to `vite.config.ts` are: drop `type Plugin` from the `vite` import, delete
+   the constant and the function, and add
+   `import { injectCspOnBuild } from "./vite.csp";`. The `plugins`, `build`, and
+   `server` options are untouched. Production `dist/` is byte-identical because the
+   injected string and the `</title>` replacement are the same characters, and
+   because nothing imported by `src/main.tsx` reaches `src/ds/`, `src/generated/`
+   or `dc-harness/` (Rollup bundles by reachability, so unreachable modules add
+   nothing). Verification at implementation time: `vite build --outDir` to two
+   temp directories, before and after the change, then `diff -r`. A unit test
+   (`csp-module.test.ts`) asserts that `STRICT_CSP_META + "; frame-ancestors 'none'"`
+   equals the `Content-Security-Policy` value in `vercel.json`, so the meta, the
+   header, and the harness cannot drift apart.
 
 ## Data Models
 
@@ -680,6 +768,992 @@ union, so a change to `ErrorCode` fails to compile (property/unit guard).
   test on CI's headed Chromium (indicative) and is confirmed manually on a
   mid-range laptop.
 
+### Design-source converter (Requirement 17)
+
+`convertDc(source, options)` is a pure function of its arguments. It reads no
+file, no clock, and no randomness, and keeps no module-level state.
+
+```ts
+// scripts/dc-convert-lib.d.mts (hand-written)
+export interface DcFileConfig {
+  source: string;                                   // "Studio Editor.dc.html"
+  omitIf: readonly OmitRule[];
+  replaceText: readonly ReplaceRule[];
+  forbid: readonly ForbidRule[];
+}
+export interface ConvertOptions {
+  fileName: string;                                 // base name only; slug and PascalName derive from it
+  config: DcFileConfig;                             // already merged with the global forbid list
+  assets: Readonly<Record<string, Uint8Array>>;     // key = path as written in src="…", e.g. "assets/neontype-logo.png"
+}
+export type OutputFiles = Readonly<Record<string, string | Uint8Array>>;  // keys relative to src/generated/
+export function convertDc(source: Uint8Array | string, options: ConvertOptions): { files: OutputFiles };
+export class DcConvertError extends Error {
+  readonly file: string; readonly line: number; readonly code: DcErrorCode;
+}
+```
+
+`dc-io.mjs` supplies the file reads: `convertAll(appDir)` loads the config, reads
+each `design/*.dc.html` in config order, resolves the `src` paths the converter
+asks about, calls `convertDc`, and returns one merged map. The CLI writes that map
+only after all five conversions succeeded and removes files under
+`src/generated/` that are not in the map, so a failed run never leaves a mix of
+old and new output.
+
+#### What the five real files contain that the requirements did not spell out
+
+Reading the inputs showed constructs that Requirements 17 and 18 do not name. Each
+row says how this design handles it. Rows marked "amend" need a requirements
+edit; the requirements file is not changed by this design pass.
+
+| # | Finding in the real files | Handling in this design |
+| --- | --- | --- |
+| 1 | The four non-editor files carry a second `<script src="_ds/…/_ds_bundle.js">` inside `<helmet>`, besides the `support.js` script in `<head>`. | Both are dropped and recorded. Allowed `src` base names: `support.js`, `_ds_bundle.js`. Any other `<script>` is an error. Amend 17.3.10. |
+| 2 | `<input ref="{{ searchRef }}">` and `<div ref="{{ gridRef }}">` bind React refs. | `ref` is a supported attribute: whole-value binding, narrowed by `asRef` (object with `current` only). |
+| 3 | `<x-import … dc-props="{{ fullWidth }}">`, where the data value is `{ style: { width: '100%' } }`. | A spread of data props would reintroduce a `style` prop. `dc-props` is accepted and DROPPED; it is listed in the generated file header as "not applied". The Button keeps its natural width (a visible difference, listed in "Design versus implementation differences"). |
+| 4 | `<x-import … Icon style="color:…;margin-top:1px">` and `Button style="margin-right:auto"` (7 uses), and one `style="{{ w.iconStyle }}"` whose data value is an object. | A static `style` on an `x-import` becomes a scoped class passed as `className` (Button, Icon, IconButton accept `className`; any other component with `style` is an error). The object-valued binding is not a supported style form; Error States gets a `replaceText` rule (see "Config semantics"). |
+| 5 | Event attributes beyond the two named in 17.3.8: `onPointerDown`, `onKeyDown`, `onMouseEnter`, `onMouseLeave`, `onFocus`, `onBlur`. | Allow-list of event attributes: `onClick onChange onInput onKeyDown onPointerDown onMouseEnter onMouseLeave onFocus onBlur`. Any other `on*` is an error. |
+| 6 | Data values are not only JSON: `preview`, `heroStage`, `heroPlayhead`, `embedPreview` are React elements the dropped script built with `h()` and `style` objects; `searchRef`/`gridRef` are `createRef()` objects; handlers take values (`v => …`), not events. | `DcValue` includes `ReactElement`, `RefObject`, and functions typed `(...args: never[]) => unknown`. A generated component renders whatever node the caller supplies; the harness fixture supplies `null`. |
+| 7 | `@keyframes` defined in the helmet (`mt-type`, `mt-caret`, …) are also referenced by name from data-built elements. | After prefixing (Requirement 17.5) those names no longer match. Each generated module exports `<NAME>_KEYFRAMES: Readonly<Record<string, string>>` (original name to prefixed name) so a caller can build the `animation` value. |
+| 8 | Landing Page has four `href="Studio Editor.dc.html"` links. | `replaceText` rule with `expect: 4`; the target is a placeholder fragment because routing is out of scope (Requirement 17.8). Owner confirms the target. |
+| 9 | Export Flow has `data-screen-label="Review bar"`, introduced by the comment "Review state selector (not product UI)". | `omitIf` rule, pending owner confirmation (comments are dropped, so the config is the only record). |
+| 10 | `<dc-import name="Studio Editor" playing="{{ false }}" …>` passes props to the imported screen. | The slot ignores them. They configure the backdrop, which the caller builds with its own `data`. Listed in the header as "not forwarded". |
+| 11 | The `icon` and `name` names used include `check` and `minus`, and the DS components use `chevron-down` internally. `viewport` in the requirement's list is a `<meta name="viewport">`, not an icon. | Port set is 27 icons (see "Design-system port"). Amend 18.3. |
+| 12 | The embed URL in Export Flow (`https://embed.example.com/…`) and `style="…"` text appear only inside the dropped data script. | Nothing to do: dropped text is never scanned for output rules. This is why `forbid` applies to OUTPUT only. |
+
+#### Pipeline
+
+Each stage consumes the previous stage's value and either returns its result or
+throws `DcConvertError` with `file` and `line` (1-based, counted after CRLF to LF
+normalisation). No stage guesses.
+
+| Stage | Input | Output |
+| --- | --- | --- |
+| (a) read + hash | `source` bytes | `sha256` hex of the raw bytes; UTF-8 text with BOM removed and CRLF to LF |
+| (b) tokenize + build tree | text after `replaceText` | `Node` tree with line numbers |
+| (c) structure pass | tree | `{ helmetCss, root, droppedScripts, backdropSlots }` |
+| (d) binding parser | attribute and text strings | `Binding` values (`path`, `literal`, `index`) |
+| (e) style compiler | style attributes, `root`, keyframe names | `ClassRule` registry and per-element class + vars |
+| (f) CSS scoper | `helmetCss` | scoped CSS text and the keyframe-name map |
+| (g) JSX emitter | `root`, registries | `<PascalName>.tsx` text |
+| (h) asset copier | image references | `assets/*` bytes (byte-for-byte) and import names |
+| (i) file writer | all of the above | `{ files }` with a fixed key order; output rules applied |
+
+**(a) Read and hash.** `sha256` over the raw bytes (before normalisation) is
+printed in the header of every generated file, and nothing else is hashed into a
+header. `replaceText` rules run next, on the normalised text (see "Config
+semantics"), so line numbers in later errors refer to the rewritten text; a rule
+that changes the line count is reported with its own line in the error.
+
+**(b) Tokenizer and tree builder (supported grammar).** The tokenizer is strict and
+about 200 lines; it accepts exactly:
+
+- `<!DOCTYPE html>` (case-insensitive) before `<html>`, and nothing else starting
+  with `<!`. `<!-- … -->` comments are dropped; an unterminated comment is an error.
+- Start tags `<name attr="value" …>` and end tags `</name>`. Names match
+  `[A-Za-z][A-Za-z0-9-]*`. Attribute names match `[A-Za-z_:][A-Za-z0-9_:.-]*`.
+  Values are DOUBLE-quoted only; a valueless, single-quoted, or unquoted attribute
+  is an error (none occur in the five files). `{{ … }}` may appear inside a value.
+  Self-closing `/>` is an error (none occur).
+- Void elements, which take no end tag: `meta link img input br hr`. Any other
+  element must be closed in order; a mismatched or missing end tag is an error
+  naming the open tag's line.
+- Raw-text elements `<style>` and `<script>`: content is read verbatim up to the
+  first case-insensitive `</style` or `</script`; an unterminated one is an error.
+  The content of a `<script>` is never parsed or retained.
+- Entities in text and attribute values: `&amp; &lt; &gt; &quot; &#39;` and numeric
+  `&#N;` / `&#xH;`. Any other `&name;` is an error (none occur in the markup).
+- Element allow-list: `html head body x-dc helmet meta title link style script`
+  (structure), `div span p a ul ol li section aside header nav main footer figure
+  figcaption h1 h2 h3 label button input img` (HTML), `svg path circle rect`
+  (SVG), and `sc-if sc-for x-import dc-import` (directives). An element not on
+  the list is an error.
+- Attribute allow-list per rule, in the emitter: `class for tabindex id role title
+  alt src href type name placeholder value checked disabled width height rel`,
+  `aria-*`, `data-*`, SVG `viewBox preserveAspectRatio fill stroke stroke-width
+  stroke-linecap stroke-linejoin stroke-dasharray d x y cx cy r rx`, `ref`,
+  `style`, `style-hover`, `style-focus`, `style-active`, the event attributes of
+  finding 5, and `hint-*` (dropped). Anything else is an error.
+
+**(c) Structure pass.**
+
+1. Find `<x-dc>` inside `<body>`; exactly one, else error.
+2. Inside it, `<helmet>` must be the first element child. Its `<style>` text nodes
+   are concatenated in order as `helmetCss`. `<meta>`, `<title>`, and `<link>` are
+   dropped without inspection. A `<script>` inside `<helmet>` or `<head>` is dropped
+   when its `src` base name is `support.js` or `_ds_bundle.js`, else it is an error.
+3. After `</helmet>` there must be exactly one element child (the screen root);
+   zero or several is an error.
+4. The `<script type="text/x-dc" data-dc-script>` after `</x-dc>` is dropped. Its
+   `type` must be `text/x-dc`; any other inline script is an error. It is never
+   executed, parsed, embedded, or imported. Its `data-props` attribute (design-tool
+   metadata) is discarded with it.
+5. `<dc-import name="…">` positions are recorded; the `name` value is ignored.
+6. The `omitIf` rules run here, on the tree, before any later stage sees the
+   omitted elements.
+
+**(d) Binding parser.** A binding is `{{`, optional spaces, one expression,
+optional spaces, `}}`. An expression is exactly one of: a dotted path
+(`[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*`), a number
+(`-?\d+(\.\d+)?`), `true`, `false`, `null`, or `$index`. Everything else (strings,
+operators, calls, ternaries, `!`, brackets, an unterminated `{{`) is an error
+naming the file, line, and the offending text. Where bindings may appear:
+
+| Position | Allowed form |
+| --- | --- |
+| text node | any mix of static text and bindings |
+| attribute value (not `style*`) | the WHOLE value is one binding; static text mixed with a binding is an error |
+| `style` value | inside declaration values (stage e) |
+| `style-hover/focus/active` | none: a binding there is an error (none occur) |
+| `sc-if value`, `sc-for list` | the whole value, one binding |
+| tag names, attribute names | never |
+
+**(e) Style compiler**, **(f) CSS scoper**, and **(g) JSX emitter** are specified in
+the next three subsections. **(h) Asset copier:** each `<img src="…">` must be a
+relative path with no `..`, no leading `/`, and no `scheme:`; the bytes are looked
+up in `options.assets` (a missing key is an error) and copied unchanged to
+`<slug>/assets/<base name>`. Two different sources with the same base name are an
+error. **(i) File writer:** builds the `files` object in the fixed order
+`<slug>/<slug>.css`, `<slug>/<PascalName>.tsx`, then assets by sorted name, and
+applies the output rules (the built-in invariants and the config `forbid` list).
+
+**Deterministic-output checklist.** The same bytes in, the same bytes out:
+
+- [ ] All registries (classes, imports, assets, keyframes, bindings) are emitted
+      in code-unit sorted order (`a < b`, never `localeCompare`).
+- [ ] Output newlines are LF; every file ends with exactly one `\n`; indentation is
+      two spaces; no tabs.
+- [ ] No date, time, version string, absolute path, host name, or random value in
+      any file; the header holds only the source base name and the input sha256.
+- [ ] Class names come from the hash of the normalised declaration text, never from
+      a counter or traversal order.
+- [ ] Custom property numbers (`--dc-N`) are assigned in order of appearance within
+      one style value, which depends only on that text.
+- [ ] Strings are emitted with `JSON.stringify` plus escaping of U+2028 and U+2029;
+      numbers with `String(n)`.
+- [ ] No global state: counters and caches are created inside `convertDc`.
+- [ ] A hash collision between two different declaration texts in one screen is an
+      error, not a silent merge.
+
+#### Style compilation (stage e)
+
+Every `style` attribute becomes classes in the screen's CSS; nothing is written to
+the DOM `style` attribute at build time. The element then carries
+`className={…}` and, if it has dynamic parts, a `ref`.
+
+**Normalised declaration text.** Split the value on `;` at paren depth 0 and
+outside quotes; drop empty pieces; per declaration, lowercase the property name,
+write `prop:value` with no space around the colon, collapse runs of whitespace in
+the value to one space, and leave the value's case untouched. Join with `;`
+(no trailing `;`). Bindings are replaced by their variable form before hashing,
+so the hash depends on the compiled text.
+
+**Class names and rules.** `hash6` is the first six lowercase hex digits of the
+SHA-256 of the normalised text, where the hashed text is `base` plus, for each of
+`style-hover`, `style-focus`, `style-active` that is present, a newline and
+`hover:`, `focus:`, `active:` followed by its normalised text. Identical hashed
+text shares one class `dc-<slug>-s<hash6>`. Rule shapes, in this order in the
+output file, after the scoped helmet CSS and sorted by class name:
+
+```css
+.dc-<slug> .dc-<slug>-s<hash6> { <base declarations> }
+.dc-<slug> .dc-<slug>-s<hash6>:hover { … }
+.dc-<slug> .dc-<slug>-s<hash6>:focus { … }
+.dc-<slug> .dc-<slug>-s<hash6>:active { … }
+```
+
+**Hover specificity decision.** The real files put `style-hover` on elements that
+also have a static `style` (for example the top-bar buttons). The base rule has
+specificity (0,2,0) and `:hover` adds a pseudo-class, giving (0,3,0), so a hover
+rule beats its own base rule by specificity and not only by order. That is why
+the doubled-class trick (`.cls.cls:hover`) and `!important` are both unnecessary
+and are not used. Order is still fixed (base, hover, focus, active) so that
+`:focus` and `:active`, which tie with each other at (0,3,0), resolve with the
+later state winning, as an author would expect.
+
+**Why the base class carries a root prefix (cascade fidelity).** A real inline
+`style` beats stylesheet rules. A bare `.cls` (0,1,0) would lose to helmet rules
+such as `button,input,select{font:inherit;color:inherit}` once those are prefixed
+the usual way (`.dc-x button`, (0,1,1)), which would silently invert the cascade
+for every button. Two measures together keep the original outcome: the scoper
+prefixes helmet selectors with `:where(.dc-<slug>)` (zero specificity, so each
+helmet selector keeps its original specificity), and style classes use
+`.dc-<slug> .cls` (0,2,0). A style class then beats every helmet selector whose
+original specificity is below (0,2,0). The scoper computes the original
+specificity of each helmet selector and FAILS the build for one at or above
+(0,2,0), rather than let it override a style class that the original would have
+overridden. All helmet selectors in the five files are (0,1,1) or lower.
+
+**Worked examples from the real files.**
+
+1. Static (Studio Editor, the divider `<span>` in the top bar):
+
+   ```html
+   <span style="width:1px;height:20px;background:#2D343F"></span>
+   ```
+   ```css
+   .dc-studio-editor .dc-studio-editor-s3206a2 { width: 1px; height: 20px; background: #2D343F; }
+   ```
+   ```tsx
+   <span className="dc-studio-editor-s3206a2" />
+   ```
+   The hash6 for this text is `3206a2`, so the class is
+   `dc-studio-editor-s3206a2`. Every other element with the same text reuses it.
+
+2. Dynamic, whole value (Studio Editor, an element with `style="opacity:{{ c.op }}"`). The compiled
+   text is `opacity:var(--dc-0)`, whose hash6 is `8bd9ad`:
+
+   ```css
+   .dc-studio-editor .dc-studio-editor-s8bd9ad { opacity: var(--dc-0); }
+   ```
+   ```tsx
+   <div className="dc-studio-editor-s8bd9ad" ref={dcVars({ "--dc-0": get(s1, "c.op") })}>…</div>
+   ```
+
+3. Mixed static and dynamic, with a unit glued to a binding (Studio Editor, an
+   excerpt of the line-2 text style):
+
+   ```html
+   style="transform:translateY(calc(-50% + {{ l2dy }}cqw)) scale({{ l2s }});opacity:{{ l2op }}"
+   ```
+   ```css
+   .dc-studio-editor .dc-studio-editor-s3e3061 {
+     transform: translateY(calc(-50% + calc(var(--dc-0) * 1cqw))) scale(var(--dc-1));
+     opacity: var(--dc-2);
+   }
+   ```
+   ```tsx
+   ref={dcVars({ "--dc-0": get(scope, "l2dy"), "--dc-1": get(scope, "l2s"), "--dc-2": get(scope, "l2op") })}
+   ```
+   Static declarations stay literal in the class. Each binding gets the next
+   number. Rules for what replaces the `{{ … }}`:
+
+   | Binding position in the value | Emitted CSS | Why |
+   | --- | --- | --- |
+   | followed immediately by a unit, `[A-Za-z%]+` (`{{ l2dy }}cqw`, `{{ d.fh }}px`) | `calc(var(--dc-N) * 1<unit>)` | `var(--x)cqw` is invalid CSS; multiplying a unitless number by `1cqw` is valid. The bound value MUST be unitless. |
+   | the whole value (`opacity:{{ c.op }}`) | `var(--dc-N)` | the value already carries any unit |
+   | an argument inside a function (`scale({{ l2s }})`) | `var(--dc-N)` | substituted as tokens |
+   | static text on both sides but no unit (`1px solid {{ c }}`) | `var(--dc-N)` in place | substituted as tokens |
+
+   A string such as `'33.3%'` (the `phLeft` binding in `left:{{ phLeft }}`) is a
+   whole value, so it needs no unit handling. A computed `transform` string
+   (`transform:{{ r.tf }}`) and a duration string (`animation-delay:{{ s.d }}`)
+   are likewise whole values.
+
+4. Hover, focus, and active (Studio Editor, the project-name input, which also has
+   a static `style`). The hashed text is the base, then `hover:` and `focus:`
+   lines, giving hash6 `eff4b5`:
+
+   ```css
+   .dc-studio-editor .dc-studio-editor-seff4b5 { width: 220px; height: 28px; padding: 0 8px; … }
+   .dc-studio-editor .dc-studio-editor-seff4b5:hover { border-color: #5E6776; background: #161A20; }
+   .dc-studio-editor .dc-studio-editor-seff4b5:focus { border-color: #2DD3F0; background: #1C2129; outline: none; }
+   ```
+   An element with `style-hover` but no `style` gets a class with only the pseudo
+   rules.
+
+5. Keyframe references inside a style value are rewritten to the prefixed name when
+   the name is defined in the same file's helmet (Effects Library:
+   `animation:mt-caret 1s steps(1,end) infinite`). Names defined elsewhere
+   (`fx-rise` in `ui.css`) stay as written.
+
+**Runtime helper.** `dcVars(vars)` in `ds/dc-runtime.ts` returns a ref callback:
+
+```ts
+export function dcVars(
+  vars: Readonly<Record<string, DcValue>>,
+): (el: HTMLElement | SVGElement | null) => void;
+```
+
+For each entry: a finite number is written as `String(value)`; a string is written
+as given; anything else (`undefined`, `null`, `NaN`, `Infinity`, a boolean, an
+object) removes that property with `el.style.removeProperty`. Valid entries go
+through `setCssVars` from `ui/cssvars.ts`, so the CSSOM-only mechanism and its
+`--` name check are shared with the rest of the app, and CSP allows it. Each
+render may create a new callback. That is idempotent: React 19 calls the old
+callback with `null` and then the new one with the element; the callback returns
+`undefined` (no cleanup function), so React makes that `null` call, which the
+helper ignores. Properties already set persist across renders, and a binding that
+later becomes `undefined` is removed. Setting happens in the commit phase before
+paint. A string value is written verbatim; a value that tries to load a resource
+(`url(…)`) is blocked by the CSP, not by the helper.
+
+**Why not a React `style` object.** Requirement 11.2 forbids any JSX `style`
+attribute or prop, and `eslint.config.js` enforces it with
+`JSXAttribute[name.name='style']`. The originally requested mapping (dynamic
+`style` to a React style object) would violate both. React writes style objects
+through the CSSOM, which the CSP allows, so the rejection is about keeping one
+auditable mechanism, not about a CSP failure. This deviates from the original
+request and is flagged as Deviation 2, pending owner confirmation.
+
+#### CSS scoping (stage f)
+
+The root class is `.dc-<slug>`; the root element is `<div className="ds-root
+dc-<slug>">`. Supported grammar: qualified rules, `@keyframes`, and `@media` /
+`@container` with a body of supported rules (recursively). `@supports`, `@import`,
+`@font-face`, `@layer`, `@page`, `@property`, and nested rules (`&`) are errors
+naming the line. Comments are dropped. Declarations are kept verbatim except for
+whitespace and keyframe-name rewriting.
+
+| Source selector | Output selector | Notes |
+| --- | --- | --- |
+| `html,body{margin:0;height:100%}` | `.dc-studio-editor{margin:0;height:100%}` | `html`, `body`, `:root` each map to the root; a list that collapses to one selector is deduplicated, in order |
+| `*{box-sizing:border-box}` | `:where(.dc-studio-editor), :where(.dc-studio-editor) *{…}` | the root and everything under it; zero specificity, as `*` |
+| `button,input,select{font:inherit}` | `:where(.dc-studio-editor) button, :where(.dc-studio-editor) input, :where(.dc-studio-editor) select{…}` | comma lists are split at paren depth 0 and prefixed one by one |
+| `button:focus-visible,input:focus-visible{…}` | `:where(.dc-studio-editor) button:focus-visible, …` | attribute, class, and pseudo selectors pass through unchanged after the prefix |
+| `a{color:#FF85E0}a:hover{color:#FFADEA}` | `:where(.dc-studio-editor) a{…}` and `:where(.dc-studio-editor) a:hover{…}` | |
+| `[data-fx],[data-fx] *{animation:none!important}` inside `@media (prefers-reduced-motion: reduce)` | same selectors prefixed, same `!important`, inside the same `@media` | the block is kept; `!important` still beats a style class, as it beat an inline style |
+| `@keyframes mt-type{…}` | `@keyframes dc-effects-library-mt-type{…}` | every `animation` / `animation-name` reference in helmet rules and style classes is rewritten at identifier boundaries, outside `var()` and strings |
+| `body > div`, `html body`, `body.dark` | error | `html`, `body`, and `:root` are accepted only as a whole selector in a list; any other use is an error naming the line (none occur) |
+| `:root{--x:1}` | `.dc-x{--x:1}` | custom properties land on the root |
+
+`container-type` and `cqw` units are preserved: they appear in style values, which
+are copied into classes unchanged, so the element that declares `container-type`
+is the query container exactly as in the source. The root is never made a
+container by the converter.
+
+**Specificity consequences.** (1) Because the prefix is `:where()`, a helmet
+selector keeps its source specificity and the relative order of helmet rules is
+unchanged. (2) Rules that target the root itself (`html`, `body`, `:root`) become
+`.dc-<slug>` (0,1,0), up from (0,0,1); only two root rules competing with each
+other could notice, and both are converted the same way. (3) Style classes are
+(0,2,0) and (0,3,0) with a pseudo-class, as above. (4) The design-system `ui-*`
+classes in `ds.css` are NOT re-scoped; a style class and a `ui-*` rule of equal
+specificity resolve by order. Every generated file therefore imports
+`../../ds/index.js` (which imports `ds.css`) before its own `./<slug>.css`, so the
+screen's CSS comes later in the bundle. (5) `:where()` needs Chromium 88 or later;
+the product targets current Chromium, and the goldens are Chromium-only.
+
+**Scoper check (unit test).** A small test helper parses the emitted CSS
+independently of the scoper (a tokenizer of about 30 lines) and asserts: braces
+are balanced; every top-level selector starts with `.dc-<slug>` or
+`:where(.dc-<slug>)`; every `@keyframes` name starts with `dc-<slug>-`; every
+`@media` / `@container` body satisfies the same rules; and no selector contains a
+bare `html`, `body`, or `:root`. It runs on the five real outputs and on the
+Property 12 generator's output.
+
+#### JSX emission (stage g)
+
+**Component contract.**
+
+```tsx
+// src/generated/studio-editor/StudioEditor.tsx (shape; GENERATED, do not edit)
+// Source: Studio Editor.dc.html
+// sha256: <64 hex of the input bytes>
+// Not forwarded: dc-import props (playing, keyframe-editor, warning)  [only when present]
+import type { JSX } from "react";
+import { Fragment } from "react";                       // only when an sc-for needs it
+import { Button, Icon } from "../../ds/index.js";       // only the components used, sorted
+import { asBool, asHandler, asNode, asString, childScope, dcVars, get, noop,
+         rootScope, truthy, asList, type DcProps } from "../../ds/dc-runtime.js";  // only those used
+import neontypeLogo from "./assets/neontype-logo.png";  // only when an <img> exists
+import "./studio-editor.css";                           // always last
+
+export const STUDIO_EDITOR_BINDINGS: readonly string[] = ["easeOpts", "loop", "noLoop", "paused", "playing", "projectName", …];  // sorted
+export const STUDIO_EDITOR_KEYFRAMES: Readonly<Record<string, string>> = {};
+
+export function StudioEditor({ data, backdrop }: DcProps): JSX.Element {
+  const scope = rootScope(data);
+  return (
+    <div className="ds-root dc-studio-editor">
+      …
+    </div>
+  );
+}
+```
+
+`DcProps = { data: DcData; backdrop?: ReactNode }`. The component is a pure render
+function of `data` and `backdrop`: no DOM read, no clock, no randomness, no state
+and no hooks. `@types/react` 19 has no global `JSX` namespace, hence
+`import type { JSX } from "react"`. `.ds-root` on the root supplies the scoped
+design-system tokens that the screen's `var(--color-…)` references need.
+`<NAME>_BINDINGS` lists every binding path whose first segment is not a loop
+variable or `$index` (the root paths), sorted and de-duplicated; the harness
+fixture is checked against it.
+
+**Scope.** `Scope = { readonly vars: DcData; readonly parent: Scope | null }`.
+`rootScope(data)` has no parent; `sc-for` creates `childScope(scope, { [as]: item,
+$index: i })`. `get(scope, "a.b.c")` resolves the first segment by walking from the
+innermost scope outward, then walks the remaining segments through own enumerable
+properties of objects and integer indices of arrays. It returns `undefined` for any
+missing step, never throws, and never reads inherited properties
+(`get(scope, "constructor")` and `"__proto__"` are `undefined`).
+
+**Rules.**
+
+| Source | Emitted |
+| --- | --- |
+| `<sc-if value="{{ p }}">…</sc-if>` | `{truthy(get(scope, "p")) ? (…) : null}`. `truthy` is JavaScript truthiness: the strings `'0'` and `'false'` are truthy, exactly as in JS; `0`, `""`, `null`, `undefined`, `NaN`, `false` are falsy. Several children are wrapped in `<Fragment>`. |
+| `<sc-for list="{{ l }}" as="x">…</sc-for>` | `{asList(get(scope, "l")).map((item, i) => { const s1 = childScope(scope, { x: item, $index: i }); return (<Fragment key={i}>…</Fragment>); })}`. `asList` returns `[]` for a non-array. The key is the index. `s1`, `s2`, … name nesting depth; an inner `as` shadows an outer one. `as` must match `[A-Za-z_][A-Za-z0-9_]*` and not be `$index`. |
+| text `{{ p }}` | `{asNode(get(scope, "p"))}`: string, number, a React element (or an array of them) render; `null`, `undefined`, booleans, and plain objects render nothing |
+| static text | `{"…"}` (JSON string) when it contains any of `{ } < > &` or leading/trailing space that matters; otherwise bare JSX text. Whitespace-only text containing a newline is dropped; a whitespace-only text without a newline becomes `{" "}`. Other runs of whitespace collapse to one space (HTML semantics). |
+| `class` | `className` |
+| `for`, `tabindex` | `htmlFor`, `tabIndex` |
+| `stroke-width`, `stroke-linecap`, `stroke-linejoin`, `stroke-dasharray` | `strokeWidth`, `strokeLinecap`, `strokeLinejoin`, `strokeDasharray`; `viewBox` and `preserveAspectRatio` are already React names |
+| `aria-*`, `data-*`, other allowed names | unchanged |
+| attribute `"literal"` | the string literal |
+| attribute `{{ true }}`, `{{ 14 }}`, `{{ null }}` | `{true}`, `{14}`, `{null}` (typed literals) |
+| attribute `{{ p }}` on a string attribute | `{asString(get(…))}` or `{asText(get(…))}` (undefined when missing) |
+| attribute `{{ p }}` on `disabled`, `checked`, `readOnly`, `hidden` | `{asBool(get(…))}` |
+| event attribute `{{ p }}` | `{asHandler(get(…))}`: a function value, else `undefined`. Never a string. |
+| `value` with an `onChange` | controlled: `value={asString(get(…))} onChange={asHandler(get(…)) ?? noop}` |
+| `value` without an `onChange` | `readOnly` is added |
+| `ref="{{ p }}"` | `ref={asRef(get(…))}`, merged with `dcVars` through `mergeRefs` when the element also has dynamic style |
+| `hint-*` | dropped |
+
+**Before and after (from the real files).**
+
+1. `sc-if` pair (Studio Editor top bar; the `<svg>` children are shortened here):
+
+   ```html
+   <sc-if value="{{ playing }}" hint-placeholder-val="{{ false }}">
+     <button aria-label="Pause" title="Pause (Space)" onClick="{{ togglePlay }}" style="display:grid;…;box-shadow:0 0 14px -2px rgba(45,211,240,.40)"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" …><rect x="5.5" …></rect></svg></button>
+   </sc-if>
+   <sc-if value="{{ paused }}" hint-placeholder-val="{{ true }}">
+     <button aria-label="Play" title="Play (Space)" onClick="{{ togglePlay }}" style="…" style-hover="background:#242A33;border-color:#7A8494">…</button>
+   </sc-if>
+   ```
+   ```tsx
+   {truthy(get(scope, "playing")) ? (
+     <button aria-label="Pause" title="Pause (Space)" onClick={asHandler(get(scope, "togglePlay"))} className="dc-studio-editor-s<h1>">
+       <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" …>
+         <rect x="5.5" y="4.5" width="3" height="11" rx="1" />
+       </svg>
+     </button>
+   ) : null}
+   {truthy(get(scope, "paused")) ? ( <button aria-label="Play" … className="dc-studio-editor-s<h2>">…</button> ) : null}
+   ```
+
+2. `sc-for` with an `x-import` (Effects Library, filter chips; the second binding is
+   in the loop scope):
+
+   ```html
+   <sc-for list="{{ catChips }}" as="ch" hint-placeholder-count="4">
+     <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Chip" pressed="{{ ch.on }}" on-toggle="{{ ch.toggle }}" hint-size="72px,22px">{{ ch.label }}</x-import>
+   </sc-for>
+   ```
+   ```tsx
+   {asList(get(scope, "catChips")).map((item, i) => {
+     const s1 = childScope(scope, { ch: item, $index: i });
+     return (
+       <Fragment key={i}>
+         <Chip pressed={asBool(get(s1, "ch.on"))} onToggle={asHandler(get(s1, "ch.toggle"))}>{asNode(get(s1, "ch.label"))}</Chip>
+       </Fragment>
+     );
+   })}
+   ```
+
+3. `x-import` Button with `on-click` (Effects Library):
+
+   ```html
+   <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" size="lg" icon="check" on-click="{{ applySel }}" dc-props="{{ fullWidth }}" hint-size="100%,36px">Apply to selected layer</x-import>
+   ```
+   ```tsx
+   <Button variant="primary" size="lg" icon="check" onClick={asHandler(get(scope, "applySel"))}>Apply to selected layer</Button>
+   ```
+   `x-import` rules: the namespace must be `MotionTextStudioDesignSystem_f5b901`
+   and the name one of the 12 (else error); attribute names are camelCased
+   (`on-click` to `onClick`, `show-state` to `showState`, `icon-right` to
+   `iconRight`); `component-from-global-scope`, `hint-*`, and `dc-props` are
+   dropped; children are preserved. Each prop is coerced by KIND from a table in
+   the converter (`string`, `requiredString`, `number`, `boolean`, `handler`,
+   `options`, `action`, `className`), so the emitted call type-checks against the
+   port's prop types. A prop name not in the table for that component is an error;
+   the table is checked against all five files by a test.
+
+4. `<input value onChange>` (Studio Editor, project name):
+
+   ```html
+   <input aria-label="Project name" value="{{ projectName }}" onChange="{{ onName }}" style="width:220px;…" style-hover="…" style-focus="…">
+   ```
+   ```tsx
+   <input aria-label="Project name" value={asString(get(scope, "projectName"))} onChange={asHandler(get(scope, "onName")) ?? noop} className="dc-studio-editor-seff4b5" />
+   ```
+
+5. `<svg>` with `stroke-width` (the "Saved" check mark):
+
+   ```html
+   <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8"></path></svg>
+   ```
+   ```tsx
+   <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8" /></svg>
+   ```
+
+6. `<img src="assets/neontype-logo.png">`:
+
+   ```html
+   <img src="assets/neontype-logo.png" alt="NeonType" style="height:22px;width:auto;display:block;flex:none">
+   ```
+   ```tsx
+   import neontypeLogo from "./assets/neontype-logo.png";
+   …
+   <img src={neontypeLogo} alt="NeonType" className="dc-studio-editor-s<h4>" />
+   ```
+   The identifier is the camelCased base name. The file is copied byte-for-byte
+   to `generated/studio-editor/assets/neontype-logo.png`, and the staleness test
+   compares the bytes. Vite emits it as a file because `assetsInlineLimit` is 0,
+   so the strict `img-src 'self'` is satisfied with no `data:` URL.
+
+7. `<dc-import name="Studio Editor">` (Effects Library and Export Flow):
+
+   ```html
+   <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none">
+     <dc-import name="Studio Editor" playing="{{ false }}" keyframe-editor="{{ false }}" warning="{{ false }}" hint-size="100%,100%"></dc-import>
+   </div>
+   ```
+   ```tsx
+   <div aria-hidden="true" className="dc-effects-library-s<h5>">{backdrop}</div>
+   ```
+   A caller builds `<EffectsLibrary data={…} backdrop={<StudioEditor data={…} />} />`.
+   A file with two `dc-import` elements renders `{backdrop}` in both places (none
+   of the five has two).
+
+#### Config semantics (`dc-convert.config.json`)
+
+```jsonc
+{
+  "version": 1,
+  "designDir": "../../design",           // relative to apps/studio; read as INPUT only
+  "outDir": "src/generated",
+  "forbid": [ … ],                       // global; applied to every file's OUTPUT (default list below)
+  "files": [ /* fixed conversion order; one entry per screen */ ]
+}
+```
+
+| Rule | Shape | Matches | Applied | Failure |
+| --- | --- | --- | --- | --- |
+| `omitIf` | `{ "tag"?: string, "attr"?: { name: value }, "text"?: string }` | an element whose tag equals `tag` (if given), whose attributes include every `attr` pair with exactly that value (a `{{ }}` value matches as its source text), and whose concatenated static text contains `text` (if given). All given keys must match. | stage (c), on the tree, before any other stage | a rule that matches nothing is an error (stale rule) |
+| `replaceText` | `{ "from": string, "to": string, "expect": number }` | every non-overlapping occurrence of `from` as an exact, case-sensitive substring | on the INPUT text, after normalisation, before the tokenizer; rules run in file order | the occurrence count must equal `expect`, else error |
+| `forbid` | `{ "text": string }` (exact substring) or `{ "regex": string }` (a JS RegExp source, flag `u`, case-sensitive) | any occurrence in a generated `.tsx` or `.css` file | on the OUTPUT only, after stage (i); binary assets are not scanned; dropped input (data scripts, comments, `hint-*`) is never scanned | a match FAILS THE BUILD: `DcConvertError` naming the output file, the line in it, and the rule |
+
+Default (global) `forbid` list: `{ "regex": "\\bFlash\\b" }`, `{ "text": "http://" }`,
+`{ "text": "https://" }`, `{ "text": "design/" }`, `{ "text": "support.js" }`. The
+converter also enforces these built-in output invariants that are not
+configurable: no `style=`, no `dangerouslySetInnerHTML`, no `<script`, no `<style`.
+Per-file `forbid` entries are added to the global list.
+
+Example for the five files. The empty arrays are intentional where no real need
+was found; the three non-empty rules are real findings 4, 8, and 9 and are pending
+owner confirmation:
+
+```json
+{
+  "version": 1,
+  "designDir": "../../design",
+  "outDir": "src/generated",
+  "forbid": [
+    { "regex": "\\bFlash\\b" },
+    { "text": "http://" },
+    { "text": "https://" },
+    { "text": "design/" },
+    { "text": "support.js" }
+  ],
+  "files": [
+    { "source": "Studio Editor.dc.html",  "omitIf": [], "replaceText": [], "forbid": [] },
+    { "source": "Effects Library.dc.html", "omitIf": [], "replaceText": [], "forbid": [] },
+    { "source": "Export Flow.dc.html",
+      "omitIf": [ { "attr": { "data-screen-label": "Review bar" } } ],
+      "replaceText": [], "forbid": [] },
+    { "source": "Error States.dc.html",
+      "omitIf": [],
+      "replaceText": [
+        { "from": "style=\"{{ w.iconStyle }}\"",
+          "to": "style=\"color:{{ w.iconStyle.color }};flex:none;margin-top:1px\"",
+          "expect": 1 }
+      ],
+      "forbid": [] },
+    { "source": "Landing Page.dc.html",
+      "omitIf": [],
+      "replaceText": [
+        { "from": "href=\"Studio Editor.dc.html\"", "to": "href=\"#open-studio\"", "expect": 4 }
+      ],
+      "forbid": [] }
+  ]
+}
+```
+
+The Error States rule relies on a data contract: the caller's `iconStyle` object
+keeps its `color`, and the constant parts (`flex:none`, `margin-top:1px`) are the
+values all three real `iconStyle` objects share. The Export Flow rule removes the
+review bar and with it the controls for `step`, `destination`, and `unsupported`
+that only that bar uses; the data still drives the screen states. The Landing Page
+target `#open-studio` is a placeholder. These choices are listed in "Design versus
+implementation differences".
+
+#### Design versus implementation differences
+
+Per the workspace design rule, differences are listed here, not silently resolved.
+
+1. `dc-props="{{ fullWidth }}"` is not applied; the Apply button keeps its natural
+   width (finding 3).
+2. The review bar of Export Flow is omitted (finding 9).
+3. Landing Page links point to `#open-studio` (finding 8).
+4. Whitespace-only text with a newline between inline elements is dropped, so two
+   inline siblings that relied on the source indentation for a gap render without
+   it. The five files lay their siblings out with `flex`/`grid`, where that
+   whitespace is ignored; the Playwright harness checks the Studio Editor only.
+5. `html,body` rules apply to the screen's root `<div>`, not to the page. The
+   page-level background, `height:100%`, and `overflow:hidden` therefore apply to
+   the screen's box; the host (the harness, later a route) must give it a sized
+   container.
+6. Helmet keyframes are prefixed (finding 7), and `<link>`, `<title>`, and `<meta>`
+   are dropped (fonts come from `ds.css` and `src/fonts/fonts.css`).
+
+### Design-system port (Requirement 18)
+
+The export in `design/_ds/` is a REFERENCE. It is read as text at port time
+(`_ds_bundle.js` is never loaded or executed) and hand-copied; nothing in `src/`
+imports from it.
+
+#### `ds.css` assembly and transformation recipe
+
+Assembly order, following the export's own `styles.css`, minus the Tamil face:
+
+1. Header comment (below).
+2. Fonts: the `@font-face` rules for Instrument Sans (2) and DM Mono (4) from
+   `tokens/fonts.css`. The Noto Sans Tamil rule is omitted.
+3. Tokens, in the order `colors.css`, `typography.css`, `spacing.css`,
+   `elevation.css`, `motion.css`.
+4. `components/ui.css`, verbatim.
+5. A short "Port additions" block (below).
+
+Transformation recipe (exact, so a later re-port repeats it):
+
+| # | Source text | Replacement | Count |
+| --- | --- | --- | --- |
+| 1 | line-start `:root{` in `colors.css`, `typography.css`, `spacing.css`, `elevation.css` | `.ds-root{` | 4 |
+| 2 | both `:root{` in `motion.css`: the base block AND the one inside `@media (prefers-reduced-motion: reduce)` | `.ds-root{` | 2 |
+| 3 | `url("../fonts/NAME.woff2")` | `url("/fonts/NAME.woff2")` | 6 |
+| 4 | the `@font-face` rule with `font-family:"Noto Sans Tamil"` | removed | 1 |
+| 5 | `local("…"),` at the start of `src:` | kept as is (local font lookup, no network) | n/a |
+| 6 | every other character of the token files and `ui.css` | unchanged, including `/* @kind … */` comments | n/a |
+
+After the port, `ds.css` contains no `:root`, exactly six `url(` occurrences (all in
+`@font-face`, all starting `/fonts/`), the `@media (prefers-reduced-motion:
+reduce)` blocks of `motion.css` and `ui.css`, and the `@media (forced-colors:
+active)` block.
+
+**Port additions** (the only text not copied from the export): the studio cannot
+use a React `style` prop, and `NumberScrub` and `Select` take a `width`. One rule
+is added so those widths can arrive as a custom property:
+
+```css
+.ds-root .ds-w { width: var(--ds-w); }
+```
+
+**Header comment** (exact text, with `<…>` filled in at port time):
+
+```css
+/* ds.css: hand-copied from the motion-text studio design-system export.
+   Export id:   f5b901ae-a7fb-489e-9b53-af9bc496124b
+   Namespace:   MotionTextStudioDesignSystem_f5b901
+   Copied from: tokens/colors.css <sha256-12>, tokens/typography.css <sha256-12>,
+                tokens/spacing.css <sha256-12>, tokens/elevation.css <sha256-12>,
+                tokens/motion.css <sha256-12>, tokens/fonts.css <sha256-12>,
+                components/ui.css <sha256-12>
+   Changes from the export (complete list):
+     1. Token blocks are scoped under .ds-root instead of :root.
+     2. @font-face urls point at /fonts/…; the Noto Sans Tamil face is omitted
+        (src/fonts/fonts.css declares it).
+     3. One added rule at the end: .ds-root .ds-w.
+   Fonts: Instrument Sans and DM Mono, SIL OFL 1.1, files in public/fonts with
+   their licence texts. No network request. Never import from design/. */
+```
+
+The twelve-hex values are the first 12 hex digits of the SHA-256 of each source
+file at port time (the bundle's own `sourceHashes` cover only the `.jsx`
+components, not the CSS). The `Export id` and namespace lines are required by
+Requirement 18.1. The header sits inside a CSS comment, which the production
+minifier strips; `ds.css` is not part of the production bundle in this round
+anyway.
+
+#### Fonts
+
+Copy these six files from `design/_ds/…/fonts/` to `apps/studio/public/fonts/` with
+their names unchanged (none collides with the four Noto files already there):
+
+```
+InstrumentSans-400-700-latin.woff2        InstrumentSans-400-700-latin-ext.woff2
+DMMono-400-latin.woff2                    DMMono-400-latin-ext.woff2
+DMMono-500-latin.woff2                    DMMono-500-latin-ext.woff2
+```
+
+`NotoSansTamil-400-700-tamil.woff2` is NOT copied. Licence texts:
+`public/fonts/OFL-Instrument-Sans.txt` and `public/fonts/OFL-DM-Mono.txt`,
+following the naming of the existing `OFL-Noto-Sans.txt`.
+
+**Where the licence text and copyright lines come from.** The export contains no
+licence file (`readme.md` only states "SIL OFL 1.1"). At implementation time the
+implementer reads each upstream project's `OFL.txt` (and `FONTLOG.txt` when
+present) from the upstream repository, copies the text unchanged, and compares it
+with the copyright string in each font file's name table. If the upstream text
+cannot be fetched or does not match the files, the implementer STOPS and asks the
+owner. No copyright line is written from memory or invented, and neither this
+design nor the spec records one, because none has been verified. Adding an
+`@fontsource/*` package to obtain the files is NOT allowed: it would add a
+dependency (Requirement 18.6).
+
+**`docs/dependencies.md` rows** (one per family; the Reason column carries the
+source and purpose, since the table has no Source column):
+
+| Package | Version | License | Reason |
+| --- | --- | --- | --- |
+| Instrument Sans (woff2, latin + latin-ext) | n/a (static files) | OFL-1.1 | Design-system UI face for the ported `ds/` components and the generated screens. Copied from the design export; licence text from the upstream project; self-hosted in `apps/studio/public/fonts`. |
+| DM Mono (woff2 400/500, latin + latin-ext) | n/a (static files) | OFL-1.1 | Design-system face for numbers, timecode, and code. Same source and handling as above. |
+
+**Tamil.** The studio's `src/fonts/fonts.css` already declares `Noto Sans Tamil`
+(self-hosted, OFL), and its `:root` sets `--font-tamil`. Inside `.ds-root`, the
+export's `--font-tamil: "Noto Sans Tamil","Instrument Sans",sans-serif` wins by
+scoping, and its first family is the studio's declared face. Anything that renders
+`ds/` or a generated screen must load `src/fonts/fonts.css` as well (the harness
+does). No Tamil file is copied.
+
+#### Token collision analysis
+
+`src/tokens.css` declares 48 custom properties; the export's token files declare
+245 (the fonts file excluded). 44 names are in both. Measured by parsing both sides
+with comments stripped:
+
+| Outcome | Count | Names |
+| --- | --- | --- |
+| Identical text | 34 | `--color-neutral-0 … -1000` (14), `--color-bg-app`, `--color-bg-panel`, `--color-bg-raised`, `--color-bg-control`, `--color-bg-control-hover`, `--color-bg-stage`, `--color-border-default`, `--color-border-strong`, `--font-weight-regular`, `--font-weight-bold`, `--text-display-size`, `--text-title-size`, `--space-1 … -8` (6), `--radius-sm`, `--border-width-focus` |
+| Different text, same resolved value | 4 | `--color-accent` (`#F23DC8` vs `var(--color-magenta-500)`), `--color-accent-hover` (`#FF5CD6` vs `var(--color-magenta-400)`), `--color-accent-2` (`#2DD3F0` vs `var(--color-cyan-400)`), `--color-bg-overlay` (`rgba(4, 5, 8, 0.72)` vs `rgba(4,5,8,.72)`) |
+| Different value | 6 | `--font-ui` (`"Noto Sans", …` vs `"Instrument Sans","Noto Sans Tamil", …`), `--font-tamil` (`"Noto Sans Tamil", "Noto Sans"` vs `"Noto Sans Tamil","Instrument Sans"`), `--text-body-size` (14px vs 13px), `--text-caption-size` (12px vs 11px), `--radius-md` (8px vs 6px), `--radius-lg` (12px vs 8px) |
+
+Requirement 18.1 says 12 names differ. Re-measuring gives 10 that differ in text
+and 6 that differ in value, so the requirement text should be corrected (amend
+18.1). The 4 studio-only names (`--color-text`, `--color-text-muted`,
+`--color-focus`, `--shadow-panel`) are unaffected.
+
+**Why `.ds-root` scoping makes `ds.css` safe to import globally.** (1) Every token
+the export defines now sits on `.ds-root`, so the studio's `:root` values stay in
+force everywhere outside a `.ds-root` subtree and the 6 value differences cannot
+leak. (2) Custom properties inherit, so inside a `.ds-root` subtree the DS value
+wins over the studio's `:root` value; only generated screens and `ds/` components
+live there. (3) `ui.css` selectors are all prefixed `.ui`, `.ui-`, `.fx`, or
+`.t-`; a search of `src/**/*.css` finds no studio rule using those prefixes and no
+`@keyframes`, so the unscoped `ui-*` and `fx-*` names (including `@keyframes
+fx-*`, `ui-indeterminate`, `ui-ease-run`) do not collide. (4) `@font-face`
+families are global, but `Instrument Sans` and `DM Mono` are used nowhere else in
+`src/`. (5) The one `@container (max-width: 1279px)` rule in `ui.css` is tied to
+`.ui-shell-host`, a class the studio does not use. A unit test
+(`ds-collision.test.ts`) reads `ds.css` and every other `src/**/*.css` as raw text
+and fails if a studio stylesheet declares a class starting `.ui`, `.fx`, `.ds-`,
+or `.t-`, or any `@keyframes` name that `ds.css` also declares.
+
+#### DS components (`ds/index.tsx`)
+
+The port is plain TSX against React 19.3 with `jsx: react-jsx`. The bundle's
+global `React`, `React.createElement` calls, `_extends` helper, and `Object.assign`
+registry do not carry over. Hooks (`useState`, `useRef`, `useEffect`) are imported
+from `react`. Rest-prop spreading is limited to a typed set of native attributes
+per component, and `style` is never an accepted prop. Class composition uses a
+local `cx(...parts)` that joins truthy strings.
+
+**Controlled and uncontrolled.** The bundle's rule is `value ?? inner`. The port
+keeps it: a component with `value` (or `checked`) defined is controlled by its
+parent, otherwise it keeps its own state seeded from `defaultValue`. Switching
+between the two at runtime is not supported. In generated screens the data always
+supplies the value.
+
+Props below omit native attributes unless noted. The accessible name source is
+named in the ARIA column.
+
+| Component | Props (TypeScript) | Root element and classes | ARIA and keyboard | State |
+| --- | --- | --- | --- | --- |
+| `Button` | `{ variant?: "primary" \| "secondary" \| "ghost" \| "danger"; size?: "sm" \| "md" \| "lg"; icon?: string; iconRight?: string; state?: string; className?: string; children?: ReactNode } & ButtonNativeProps`, where `ButtonNativeProps` is `Omit<ComponentPropsWithoutRef<"button">, "className" \| "style" \| "children">` | `<button type="button" class="ui-btn ui-btn--{variant}">`, plus `ui-btn--{size}` when not `md`, `is-{state}`, and `className`; an `Icon` before and after the children | Name: content, or a passed-through `aria-label`. Enter and Space are native. Focus ring from `ui.css` `:focus-visible`. | stateless |
+| `Icon` | `{ name: string; size?: number; label?: string; className?: string }` | `<svg class="ui-icon {className}" width height viewBox="0 0 20 20" focusable="false">` with the shapes as children | `label` gives `role="img"` and `aria-label`; without it `aria-hidden="true"`. An unknown `name` renders an empty `<svg>`. | stateless |
+| `IconButton` | `{ icon: string; label: string; shortcut?: string; variant?: ButtonVariant; size?: "sm" \| "md" \| "lg"; pressed?: boolean; state?: string; tooltip?: boolean; tooltipPlacement?: "above" \| "below"; className?: string } & ButtonNativeProps` | tooltip on (default): `<span class="ui-has-tip [ui-has-tip--below]"><button type="button" class="ui-btn ui-btn--icon ui-btn--{variant}…" aria-label={label}>…</button><span class="ui-tip" role="tooltip">{label}<kbd>{shortcut}</kbd></span></span>`; tooltip off: only the `<button>` | Name: `label` (required). `aria-pressed` only when `pressed` is defined. The tooltip shows by CSS on hover and focus; `<kbd>` renders only with `shortcut`. | stateless |
+| `Chip` | `{ children: ReactNode; pressed?: boolean; onToggle?: (next: boolean) => void; icon?: string; removable?: boolean; onRemove?: () => void; isStatic?: boolean; error?: boolean; disabled?: boolean; state?: string }` | interactive: `<button type="button" class="ui-chip [is-error] [is-{state}]">` with a `ui-chip__check` icon when `pressed` is defined; static: `<span class="ui-chip ui-chip--static">` with an optional `<button class="ui-chip__remove" aria-label="Remove {text}">` | `aria-pressed` when `pressed` is defined; Enter and Space native; calls `onToggle(!pressed)`. | controlled by `pressed` |
+| `CodeBlock` | `{ code?: string; language?: string; label?: string; highlight?: boolean }` | `<div class="ui-code">` with `<div class="ui-code__head"><span class="ui-caption">{label ?? language}</span><button type="button" class="ui-btn ui-btn--ghost ui-btn--sm ui-code__copy [is-copied]" aria-live="polite">`, then `<pre tabindex="0" aria-label="{label ?? language} code"><code>` | `pre` is focusable so it can scroll by keyboard. The copy button reads Copy or Copied. | `copied` (`useState`); a timer resets it after 1600 ms and is cleared on unmount |
+| `NumberScrub` | `{ label?: string; ariaLabel?: string; value?: number; defaultValue?: number; onChange?: (next: number) => void; step?: number; min?: number; max?: number; precision?: number; unit?: string; disabled?: boolean; error?: boolean; state?: string; width?: string; id?: string }`, typed so that `label` or `ariaLabel` is present | `<div class="ui-field ui-num [is-scrubbing] [is-error] [is-disabled] [ds-w]">` containing `<span class="ui-num__label" aria-hidden="true">`, `<input type="text" inputmode="decimal" role="spinbutton">`, `<span class="ui-num__unit" aria-hidden="true">` | Name: `ariaLabel ?? label`. `aria-valuenow`; the port adds `aria-valuemin`/`aria-valuemax` when finite. ArrowUp/ArrowDown change by `step` (Shift x10, Alt x0.1); Enter commits and blurs; Escape discards the draft and blurs; dragging the label scrubs (pointer listeners on `window`, removed on pointer up and on unmount). The value is clamped to `min..max` and rounded to `precision`. | controlled by `value`, else inner; plus `draft` and `scrubbing` |
+| `ProgressBar` | `{ value?: number; indeterminate?: boolean; label?: string; detail?: string; status?: "default" \| "paused" \| "error" \| "success" }` | `<div class="ui-progress [ui-progress--indeterminate] [is-{status}]">`, a meta row, `<div class="ui-progress__track" role="progressbar"><div class="ui-progress__fill">` | Name: `label` or "Progress". `aria-valuemin=0`, `aria-valuemax=100`, `aria-valuenow` (omitted when indeterminate), `aria-valuetext` "Working" or "Paused at N%". The fill's `--value` is set by `setCssVars` in a ref. | stateless |
+| `SegmentedControl` | `{ options: readonly { value: string; label: string; icon?: string; iconOnly?: boolean; disabled?: boolean; state?: string }[]; value?: string; defaultValue?: string; onChange?: (next: string) => void; label: string; block?: boolean }` | `<div role="radiogroup" aria-label={label} class="ui-seg [ui-seg--block]">` of `<button type="button" role="radio" class="ui-seg__opt">` | `aria-checked`; roving `tabindex` (selected 0, others -1; when no option matches `value`, the first enabled option gets 0, which fixes a gap in the bundle). Arrow keys move and select, skip disabled options, and wrap; focus follows. Icon-only options get `aria-label`. | controlled by `value`, else inner |
+| `Select` | `{ options: readonly (string \| { value: string; label: string; disabled?: boolean })[]; value?: string; defaultValue?: string; onChange?: (next: string) => void; label: string; disabled?: boolean; error?: boolean; state?: string; id?: string; width?: string }` | `<div class="ui-field ui-select [is-error] [is-disabled] [ds-w]"><select aria-label={label}>…</select><svg class="ui-icon">` (chevron-down) | Native `<select>`: keyboard behaviour is the browser's. `aria-invalid` when `error`. Exactly one of `value` / `defaultValue` reaches the element (the bundle passes both). | controlled by `value`, else native |
+| `Slider` | `{ label: string; value?: number; defaultValue?: number; min?: number; max?: number; step?: number; onChange?: (next: number) => void; showValue?: boolean; format?: (n: number) => unknown; disabled?: boolean; state?: string; id?: string }` | `<div class="ui-slider [is-disabled]"><input type="range" aria-label={label}><output class="ui-slider__value" aria-hidden="true">` | Native range keyboard: Arrow keys by `step`, PageUp/PageDown by a larger step, Home/End to the ends. `aria-valuetext` is `String(format(v))`. The fill percent `--p` is set by `setCssVars` in a ref, guarded against `max === min`. | controlled by `value`, else inner (default 50) |
+| `Toast` | `{ variant?: "success" \| "error" \| "warning" \| "info"; title: string; children?: ReactNode; action?: { label: string; onClick?: () => void }; onClose?: () => void }` | `<div class="ui-toast ui-toast--{variant}" role="status">` (`"alert"` for `error`), an `Icon` with `ui-toast__icon` and `label={variant}`, `ui-toast__body` / `__title` / `__text` / `__actions`, a small secondary `Button` for `action`, and a dismiss button | `role` makes it a live region. Dismiss button `aria-label="Dismiss notification"`. No auto-dismiss (matches the bundle). | stateless |
+| `Toggle` | `{ checked?: boolean; defaultChecked?: boolean; onChange?: (next: boolean) => void; label: string; showState?: boolean; disabled?: boolean; state?: string }` | `<button type="button" role="switch" class="ui-toggle [is-{state}]">` with `ui-toggle__track` / `__thumb` spans, an optional `ui-toggle__state` span (aria-hidden, On/Off), then the label text | `aria-checked`; Name: label text; Enter and Space native. | controlled by `checked`, else inner |
+
+Notes on the table:
+
+- **Private `Tooltip`.** The bundle's `IconButton` renders a `Tooltip`, which is not
+  one of the 12. It is ported as a non-exported helper inside `index.tsx`, so the
+  exported surface is exactly the 12 (Requirement 18.3).
+- **No `dangerouslySetInnerHTML`.** The bundle's `Icon` and `CodeBlock` use it.
+  `Icon` renders shape data (below). `CodeBlock` renders tokens: a pure function
+  `tokenizeCode(code): readonly { kind: "text" | "com" | "tag" | "attr" | "str"; text: string }[]`
+  scans left to right for `<!-- … -->` (kind `com`, atomic), `</?name` (a text
+  token for `<` or `</`, then a `tag` token), and ` name="value"` (a text token for
+  the space, an `attr` token, a text `=`, and a `str` token including the quotes).
+  Each token becomes `<span className="t-com|t-tag|t-attr|t-str">` or plain text,
+  so React escapes everything. One difference from the bundle: the bundle
+  re-highlights tags inside a comment; the port leaves a comment atomic.
+- **No React `style` prop.** The bundle's `ProgressBar` (`--value`), `Slider`
+  (`--p`), and `NumberScrub` / `Select` (`width`) pass style objects. The port sets
+  `--value`, `--p`, and `--ds-w` with `setCssVars` from a ref callback, and the
+  `ds-w` class (Port additions) reads `--ds-w`.
+- **Accessible names.** Where the mockups always pass a label and the bundle made
+  it optional, the port makes it required (`IconButton.label`, `Select.label`,
+  `Slider.label`, `SegmentedControl.label`, `Toggle.label`). Generated code
+  supplies it with `asString` (an empty string when the data is missing, which the
+  harness fixture avoids).
+- **Reduced motion.** Handled by `ui.css` (its `@media (prefers-reduced-motion:
+  reduce)` block stops the indeterminate progress animation, the ease-demo dots,
+  and the toggle and keyframe transitions) and by the motion tokens' `-reduced`
+  twins. The port adds no JavaScript animation.
+- **Pure helpers for tests.** `stepNumber(value, direction, step, mods, min, max,
+  precision)` and `tokenizeCode(code)` live in `ds/helpers.ts` (not in the barrel),
+  so the `NumberScrub` keyboard step rule and the lossless-tokenizer check run in
+  Node without a DOM. `ds/helpers.ts` joins the module layout above.
+
+#### Icons (`ds/icons.ts`)
+
+The bundle stores `ICONS` as SVG inner-markup strings. Rendering those needs
+`dangerouslySetInnerHTML`, which Requirement 11.2 forbids, and parsing strings at
+runtime would add a parser to the client. Instead the port stores shapes as typed
+data, derived BY HAND from the bundle's strings:
+
+```ts
+export type IconShape =
+  | { readonly tag: "path"; readonly d: string }
+  | { readonly tag: "rect"; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly rx?: number }
+  | { readonly tag: "circle"; readonly cx: number; readonly cy: number; readonly r: number };
+export type IconName = "check" | "chevron-down" | …;       // the 27 names below
+export const ICONS: Readonly<Record<IconName, readonly IconShape[]>> = { play: [{ tag: "path", d: "M6.5 4.6v10.8…" }], … };
+export const ICON_NAMES: readonly IconName[];
+```
+
+`Icon` maps each shape with a three-case `switch` to `<path d>`, `<rect …>`, or
+`<circle …>`. Only these tags and attributes can be rendered, so there is no
+arbitrary-attribute path. The port carries ONLY the icons the mockups reach:
+
+- static `name=` / `icon=` / `icon-right=`: `check chevron-left chevron-right
+  close code copy download effect error export eye image info lock play plus redo
+  search success text trash warning`;
+- data-script literals: `clock code error grid image layers play warning`, and
+  `minus` (from the step list in Export Flow);
+- used inside ported components: `check` and `copy` (CodeBlock), `chevron-down`
+  (Select), `success error warning info close` (Toast), `check warning close`
+  (Chip).
+
+The union is the 27 names `check chevron-down chevron-left chevron-right clock
+close code copy download effect error export eye grid image info layers lock minus
+play plus redo search success text trash warning`. (`viewport`, listed in
+Requirement 18.3, is a `<meta name>`, not an icon; `check`, `minus`, and
+`chevron-down` are missing from that list. Amend 18.3.) Icon coverage tests:
+(1) every name in a constant `REFERENCED_ICONS` list exists in `ICONS`;
+(2) the set of `ICON_NAMES` equals `REFERENCED_ICONS` (nothing extra is ported);
+(3) every static `name="…"` / `icon="…"` literal found in the generated `.tsx`
+text (via `import.meta.glob(…, { query: "?raw" })`) is a key of `ICONS`;
+(4) every shape has finite numbers and a non-empty `d`. The data-script names
+come from a constant in the test, because tests do not read `design/`.
+
+#### Design-system runtime (`ds/dc-runtime.ts`)
+
+```ts
+import type { ReactElement, ReactNode, RefObject } from "react";
+export type DcFn = (...args: never[]) => unknown;           // assignable from any handler
+export type DcValue =
+  | string | number | boolean | null | undefined
+  | ReactElement | DcFn | RefObject<HTMLElement | null>
+  | readonly DcValue[]
+  | { readonly [key: string]: DcValue };
+export type DcData = { readonly [key: string]: DcValue };
+export type DcProps = { data: DcData; backdrop?: ReactNode };
+export type Scope = { readonly vars: DcData; readonly parent: Scope | null };
+
+export function rootScope(data: DcData): Scope;
+export function childScope(parent: Scope, vars: DcData): Scope;
+export function get(scope: Scope, path: string): DcValue;   // undefined for any missing step
+export function truthy(value: DcValue): boolean;            // JavaScript truthiness
+export function asList(value: DcValue): readonly DcValue[]; // [] unless an array
+export function asNode(value: DcValue): ReactNode;
+export function asText(value: DcValue): string | undefined; // a string, or String(finite number)
+export function asString(value: DcValue): string;           // asText(v) ?? ""
+export function asNumber(value: DcValue): number | undefined;
+export function asBool(value: DcValue): boolean | undefined;
+export function asHandler(value: DcValue): DcFn | undefined;
+export function asRef(value: DcValue): ((el: HTMLElement | null) => void) | undefined;  // RefObject only
+export function asOptions(value: DcValue): readonly { value: string; label: string; disabled?: boolean }[];
+export function asAction(value: DcValue): { label: string; onClick?: DcFn } | undefined;
+export function dcVars(vars: Readonly<Record<string, DcValue>>): (el: HTMLElement | SVGElement | null) => void;
+export function mergeRefs<T>(...refs: readonly (((el: T | null) => void) | undefined)[]): (el: T | null) => void;
+export const noop: () => void;
+```
+
+There is no `any`, no `eval`, and no type assertion. Narrowing uses `typeof`,
+`Array.isArray`, `Object.hasOwn`, and `isValidElement`; `asRef` writes
+`ref.current = el` on a `RefObject<HTMLElement | null>`, which type-checks without
+a cast. `DcFn`'s `never[]` parameter list means a data function declared
+`(e: ChangeEvent<HTMLInputElement>) => void` or `(v: string) => void` is
+assignable to it, and `DcFn` is assignable to every event-handler and DS callback
+prop, so generated code needs no cast. `Slider.format` is typed to return
+`unknown` for the same reason: the port calls it and stringifies the result.
+
+#### Smoke harness (`dc-harness/`)
+
+This is a dev-only artifact. It is not a production route, is not imported by
+`src/main.tsx`, is not built by `vite build` (the production config's `index.html`
+never references it), and is not part of `dist/`. Its output goes to
+`apps/studio/dist-dc-harness/`, which is git-ignored.
+
+- **`dc-harness/index.html`:** `<!DOCTYPE html>`, `<meta charset>`, a `<title>`
+  (the CSP plugin anchors on `</title>`), `<div id="root">`, and one
+  `<script type="module" src="./main.tsx">`. No inline script, no `<style>`, no
+  `style=` attribute, no `<link>` to a CDN.
+- **`dc-harness/main.tsx`:** imports `react`, `react-dom/client`,
+  `../src/fonts/fonts.css` (for Noto Sans Tamil),
+  `../src/generated/studio-editor/StudioEditor.js`, and `./fixture.js`, and mounts
+  `<StudioEditor data={fixture} />` under `StrictMode`. `ds.css` arrives through
+  the component's own `ds/index.js` import. It imports no engine code, no Zod, and
+  nothing from `shell/`, so there is no Zod eval probe and the spec can demand
+  zero violations.
+- **`vite.dc-harness.config.ts`:**
+
+  ```ts
+  import { defineConfig } from "vite";
+  import react from "@vitejs/plugin-react";
+  import { injectCspOnBuild } from "./vite.csp";
+  export default defineConfig({
+    root: "dc-harness",
+    publicDir: "../public",                      // so /fonts/… resolves
+    plugins: [react(), injectCspOnBuild()],      // the SAME CSP plugin as production
+    build: {
+      outDir: "../dist-dc-harness", emptyOutDir: true,
+      modulePreload: { polyfill: false }, assetsInlineLimit: 0,
+    },
+    preview: { port: 5275, strictPort: true },
+  });
+  ```
+- **`playwright.dc.config.ts`:** `testDir: "tests-dc"`, a `webServer` whose command
+  is `vite build --config vite.dc-harness.config.ts && vite preview --config
+  vite.dc-harness.config.ts --port 5275 --strictPort`, `port: 5275`,
+  `reuseExistingServer: true`, `timeout: 120000`, and one `chromium` project with
+  `baseURL: "http://localhost:5275"` and a 1440x900 viewport (the Studio Editor's
+  minimum is 1280x760). Existing ports are 5273 (dev) and 5274 (CSP preview). This
+  config builds first, unlike the CSP one, because its output is shared with
+  nothing else.
+- **`dc-harness/fixture.ts`:** a static `DcData` with no randomness, no clock, and
+  no engine import. Every path in `STUDIO_EDITOR_BINDINGS` has a defined value:
+  strings and numbers for text and style bindings, booleans for the `sc-if` paths
+  (`paused: true`, `playing: false`, `loop: true`, `noLoop: false`, …), non-empty
+  arrays for the `sc-for` lists, and no-op functions (`() => undefined`) for
+  handlers. A unit test (`fixture.test.ts`) fails if any path in
+  `STUDIO_EDITOR_BINDINGS` resolves to `undefined` against the fixture.
+- **`tests-dc/harness.spec.ts`** asserts, in Chromium against the built harness:
+  1. landmarks: `getByLabel("Project name")` is visible and holds the fixture
+     value; `getByRole("banner")` (the top bar `<header>`) is visible;
+     `getByRole("button", { name: "Play" })` is visible and `Pause` is absent (the
+     `sc-if` pair);
+  2. the stylesheet applied: the grid container's `getComputedStyle().display` is
+     `grid`, and at least one element carries a `--dc-0` custom property in its
+     `style` attribute (set through CSSOM by `dcVars`);
+  3. the logo `<img>` has `naturalWidth > 0` (the asset import works under
+     `img-src 'self'`);
+  4. a `securitypolicyviolation` listener installed with `addInitScript` recorded
+     ZERO events, no console message matches `/content security policy/i`, and no
+     request left the origin or failed.
+
 ## Correctness Properties
 
 Each property runs >= 100 fast-check iterations and is tagged
@@ -801,6 +1875,66 @@ unchanged-value actions derived from the project itself. Runs in Node in
 
 **Validates: Requirements 16.7, 16.15**
 
+### Property 11: Converter determinism
+
+For any input accepted by the converter, namely each of the five real
+`design/*.dc.html` files with its config rules and any synthetic document drawn
+from the supported grammar, `convertDc(x, options)` called twice returns `files`
+with the same keys in the same order and byte-identical contents; the result does
+not change when another document is converted in between (no hidden state); and
+the `sha256` printed in every generated file header equals the SHA-256 of the input
+bytes.
+
+Generation (`src/__tests__/dc/arb-dc.ts`, fast-check): `arbDcDocument` builds a
+random VALID tree over the supported grammar and serialises it with a small
+`renderDc(tree)` function that writes the same surrounding structure as the real
+files (`<!DOCTYPE>`, `<head>` with a `support.js` script, `<x-dc>`, `<helmet>`,
+one root element, and a trailing `text/x-dc` data script). The tree uses depth at
+most 4 and at most 60 nodes, and draws from: the HTML and SVG element allow-list;
+class names `[a-z]{1,6}`; static `style` text from 1 to 4 declarations
+(`prop: value` pairs from a fixed vocabulary, some with a unit, some with `calc()`);
+`style` values that contain 1 to 3 bindings in each of the three positions (whole
+value, unit-suffixed, function argument); `style-hover` / `-focus` / `-active`;
+event attributes bound to paths; `sc-if` and `sc-for` nested up to depth 3 with
+fresh `as` names; `x-import` of each of the 12 components with props from the kind
+table; `dc-import`; `<img>` with a source from a fixed asset map of tiny byte
+arrays; text nodes mixing static runs (ASCII, Tamil, and the five entities) with
+bindings; and a helmet stylesheet built from selector lists (tag, class, attribute,
+`:hover`, `*`, `html,body`), declaration lists, `@keyframes` with animation
+references, and `@media (prefers-reduced-motion: reduce)` blocks. The head scripts,
+the data script, `<title>`, `<meta>`, and `<link>` carry arbitrary decoy text
+(including `{{`, `style="`, `https://`, `design/`, and `<div>`), which the
+converter must drop. Iterations: `numRuns: 200` per test, a fresh random seed each
+run, with fast-check's printed seed and counterexample kept in the failure output.
+The five real files are separate example cases in the same test file.
+
+**Validates: Requirements 17.2**
+
+### Property 12: Generated output is CSP-clean
+
+For any generated input (including inputs that deliberately place forbidden text in
+a kept position), `convertDc` either throws `DcConvertError` with a file name and a
+line of at least 1, or returns files in which every `.tsx` and `.css` contains none
+of: `style=`, `dangerouslySetInnerHTML`, `<script`, `<style`, `http://`,
+`https://`, `design/`, and `support.js`; no `.tsx` contains an import specifier with
+`design/` or a JSX attribute named `style`; every `.css` passes the scoper check
+(balanced braces; every selector under `.dc-<slug>` or `:where(.dc-<slug>)`;
+`@keyframes` names prefixed `dc-<slug>-`); and none of the decoy text placed in
+dropped regions appears anywhere in the output.
+
+The two-sided form matters: a document whose kept text contains `https://` (for
+example a bound-free text node or a static attribute) must be rejected, not
+returned with the URL in it. The generator is the one from Property 11 plus two
+mutations, each applied to a random valid document with probability 0.3: insert a
+forbidden string into a static text node or static attribute, and insert one
+unsupported construct (an unknown tag, an unknown directive, an operator inside
+`{{ }}`, an `x-import` of another namespace). Iterations: `numRuns: 200`, fresh
+seed. The five real files are separate example cases, and the test asserts that
+all five are accepted. The test performs its own scan on the output; it does not
+reuse the converter's built-in invariant check.
+
+**Validates: Requirements 17.1, 17.3.10, 17.5, 17.6**
+
 ## Error Handling
 
 All failures surface as typed values, never thrown exceptions crossing the UI:
@@ -810,6 +1944,22 @@ specific message; exports return an `ExportResult` whose `ErrorCode` is mapped
 by `export/errors.ts` (the exhaustive table above). The font gate maps load
 failures to `font-not-ready` / `font-decode-failed`. No code path uses
 `innerHTML` with user text.
+
+**Converter and design-system errors.** The converter is a build-time tool, so it
+fails loudly instead of returning a value. Every failure is a `DcConvertError`
+with `file` (the input base name, or the output path for a `forbid` match),
+`line` (1-based), a closed `code` (`unknown-tag`, `unknown-attribute`,
+`unknown-directive`, `bad-binding`, `bad-style`, `unsupported-css`,
+`unknown-namespace`, `unknown-component`, `unknown-prop`, `missing-asset`,
+`bad-asset-path`, `forbidden-output`, `stale-config-rule`, `hash-collision`,
+`structure`), and a message that names the offending text. The CLI prints
+`file:line: code: message` for the first error and exits 1. `convertAll` finishes
+every conversion in memory before the CLI writes anything, so a failure leaves
+`src/generated/` untouched. At runtime the generated components never throw for
+bad data: `get` returns `undefined` for a missing path, `asList` turns a
+non-array into `[]`, `asHandler` ignores a non-function, `dcVars` removes a
+property whose value is not a finite number or a string, and an unknown icon name
+renders an empty `<svg>`.
 
 ## Testing Strategy
 
@@ -873,6 +2023,55 @@ CSP production suite 3.
 The existing Landing and export specs must stay green (Requirement 16.9).
 All target < 10 s except `perf.spec` (a 10 s measurement window by design).
 
+### Tests for the converter, design-system port, and harness (Requirements 17 and 18)
+
+PBT applies to the converter (a pure function over strings with a large input
+space) and to two runtime helpers (`get`, `dcVars`). It does not apply to the
+rendered markup of the DS components, the CSS, or the CSP behaviour of the harness;
+those use example-based Vitest tests (`renderToStaticMarkup`, raw-text assertions)
+and one Playwright spec. The property library is the existing `fast-check`; no
+property is written from scratch. Tests use no `node:*` import (see "Module layout
+additions", note 2): file access goes through `scripts/dc-io.mjs`, source text
+through `import.meta.glob(…, { query: "?raw" })`, and the production build through
+the `vite` API with `write: false`.
+
+| Criterion | Test file | Kind | What it checks |
+| --- | --- | --- | --- |
+| 17.1 no dependency added; Node built-ins only | `src/__tests__/dc/deps.test.ts` | unit | `package.json` `dependencies` and `devDependencies` equal the current exact sets (imported as JSON); `dc-convert-lib.mjs` source (via `?raw`) imports only `node:crypto` |
+| 17.1 unknown construct fails with file and line | `src/__tests__/dc/convert-failloud.test.ts` | unit (examples) | one synthetic input per `code`: unknown tag, unknown directive, operator inside `{{ }}`, unknown `x-import` namespace, unknown component, unknown prop, valueless attribute, unterminated comment, unbalanced tags, missing asset; each throws `DcConvertError` with the expected `file`, `line`, `code` |
+| 17.2 determinism and header hash | `src/__tests__/dc/convert-determinism.test.ts` | property (Property 11) + examples | five real files converted twice; synthetic documents converted twice and interleaved |
+| 17.3.1 to 17.3.3 style mapping | `src/__tests__/dc/convert-styles.test.ts` | unit (examples) | the five worked examples of "Style compilation": hashes `3206a2`, `8bd9ad`, `3e3061`, `eff4b5`; the unit-suffixed binding becomes `calc(var(--dc-N) * 1cqw)`; hover/focus/active rules follow the base rule; identical text shares a class; a binding inside `style-hover` is an error; a style on an `x-import` of a component without `className` is an error |
+| 17.3.4 to 17.3.9 mapping | `src/__tests__/dc/convert-jsx.test.ts` | unit (examples) | the seven before/after pairs of "JSX emission", compared as exact strings; attribute renames; typed literals; `{{ $index }}`; `dc-import` slot; `hint-*` and `dc-props` dropped; `sc-if`/`sc-for` rendered with `renderToStaticMarkup` over several data shapes (`'0'` and `'false'` strings are truthy, `0` and `""` are not, a non-array list renders nothing) |
+| 17.3.10 scripts dropped | `src/__tests__/dc/convert-clean.test.ts` | property (Property 12) | decoy text in head scripts, data script, `<title>`, `<meta>`, `<link>` never reaches the output |
+| 17.4 config rules | `src/__tests__/dc/convert-failloud.test.ts` | unit (examples) | `omitIf` removes the matching element and a rule that matches nothing is an error; `replaceText` replaces exactly `expect` occurrences and any other count is an error; a `forbid` match in kept text fails with the output file and line; text only in dropped regions does not fail |
+| 17.5 CSS scoping | `src/__tests__/dc/convert-styles.test.ts` and `convert-clean.test.ts` | unit (examples) + property | the scoper table row by row; keyframe-name rewriting in helmet rules and style classes; `@supports`, `@import`, nested rules and a helmet selector of specificity (0,2,0) or more are errors; the independent scoper check runs on the five outputs and on generated outputs |
+| 17.6 no `style=`, no `dangerouslySetInnerHTML`, no `<script`, no remote URL, no `design/` import; assets copied byte-for-byte | `convert-clean.test.ts` (Property 12) and `audit.test.ts` | property + unit | Property 12 on generated inputs; `audit.test.ts` scans the committed `generated/` and `ds/` raw text (see 17.9.3); asset bytes compared in `staleness.test.ts` |
+| 17.7 file set, typed props, pure render | `src/__tests__/dc/staleness.test.ts` and project `tsc` | unit + static | each screen yields exactly `<PascalName>.tsx`, `<slug>.css`, and the assets; `tsc --noEmit` type-checks `generated/*.tsx` against `DcProps` (no `any`, no `ts-ignore`: asserted by a raw-text search in `audit.test.ts`) |
+| 17.8 all five generated; no wiring | `staleness.test.ts` + review | unit + manual | five folders exist; no file under `src/shell/` or `src/main.tsx` imports `generated/` or `ds/` (raw-text search) |
+| 17.9.1 determinism | `convert-determinism.test.ts` | unit | as 17.2 |
+| 17.9.2 staleness | `src/__tests__/dc/staleness.test.ts` | unit | `convertAll()` in memory equals `readTree("src/generated")`: same paths, same text, same asset bytes. On a mismatch the message says to run `pnpm --filter @studio/app dc:convert` |
+| 17.9.3 static audit | `src/__tests__/dc/audit.test.ts` | unit | over `import.meta.glob("../../generated/**/*.{tsx,css}")` and `"../../ds/**/*.{ts,tsx,css}"` as raw text, excluding `*.test.*`: no `style="`, no `dangerouslySetInnerHTML`, no `<script`, no import specifier containing `design/`, no JSX attribute `style`, no `any`, no `ts-ignore` |
+| 17.9.4 fail-loud | `convert-failloud.test.ts` | unit | as 17.1 and 17.4 |
+| 17.9.5 `tsc` | project `tsc --noEmit` (`pnpm test` root script) | static | `generated/` and `ds/` are inside `src/**/*` |
+| 17.9.6 ESLint | `pnpm lint` (existing script, covers `src/`) and `audit.test.ts` | static + unit | the lint run is the gate; the test also runs ESLint's `Linter` (as `purity.test.ts` does) with the `no-restricted-syntax` selectors from `eslint.config.js` over each `generated/` and `ds/` `.tsx` raw text and expects zero messages |
+| 17.10 harness renders, zero violations | `tests-dc/harness.spec.ts` | Playwright | landmarks, stylesheet applied, `--dc-0` set, logo loaded, zero `securitypolicyviolation`, no CSP console error, no off-origin request |
+| 17.10 harness fixture covers the screen | `src/__tests__/dc/fixture.test.ts` | unit | every path in `STUDIO_EDITOR_BINDINGS` resolves against the fixture |
+| 17.10 same CSP for both configs | `src/__tests__/dc/csp-module.test.ts` | unit | `STRICT_CSP_META + "; frame-ancestors 'none'"` equals the `vercel.json` header; the plugin inserts exactly one meta after `</title>`; both configs import the plugin from `vite.csp.ts` (raw-text search) |
+| 17.10 `dist/` has no design reference | `src/__tests__/dc/dist-scan.test.ts` | unit (slow, 60 s timeout) | `build({ configFile, root: ".", logLevel: "silent", build: { write: false } })` with the production config; for every emitted file, the PATH and (for text assets and chunks) the TEXT must not match `(?<![A-Za-z0-9_])design/`, `_ds/`, `_ds_bundle`, `_ds_manifest`, `support.js`, `.dc.html`, or `MotionTextStudioDesignSystem`. The patterns are slightly narrower than the bare words in the requirement (a bare `_ds` appears inside minified identifiers); the allow-list is empty, and a hit is investigated, not allowed. `public/` is not part of the in-memory output and holds only fonts |
+| 18.1 `ds.css` shape | `src/ds/ds-css.test.ts` | unit | raw text: header names the export id and namespace; no `:root`; token blocks start `.ds-root{`; exactly six `url(` and all start `/fonts/`; contains both `prefers-reduced-motion` blocks; contains `.ds-root .ds-w`; no `Noto Sans Tamil` `@font-face` |
+| 18.1 token collision | `src/ds/ds-collision.test.ts` | unit | no studio stylesheet declares `.ui*`, `.fx*`, `.ds-*`, `.t-*`, or a `@keyframes` name that `ds.css` declares; the 44 shared names are all declared under `.ds-root` in `ds.css` |
+| 18.2 fonts present, licence files, no network | `src/ds/fonts-manifest.test.ts` | unit | `import.meta.glob("../../public/fonts/*", { query: "?url" })` lists the six new woff2 files and two `OFL-*.txt` files and no Tamil file from the DS; every `ds.css` font url resolves to a listed file; `docs/dependencies.md` (raw) has a row for each family. Licence-text correctness is manual |
+| 18.3 twelve components, `ui-*` roots | `src/ds/ds.test.tsx` | unit | `renderToStaticMarkup` per component and prop set: root `ui-*` class (see the table), exact exported names are the 12 |
+| 18.3 icon coverage | `src/ds/icons.test.ts` | unit | the four checks of "Icons" |
+| 18.4 runtime helpers | `src/ds/dc-runtime.test.ts` | unit + property | `get` over arbitrary nested objects and arrays returns the value at the path or `undefined`, never throws, never reads inherited keys (`__proto__`, `constructor`); `truthy` equals `Boolean`; `dcVars` writes finite numbers and strings and removes the rest, using a fake element (`{ style: { setProperty, removeProperty } }`); a source scan finds no `any`, no `eval`, no `new Function` |
+| 18.5 ARIA and keyboard basics | `src/ds/ds.test.tsx` and `src/ds/helpers.test.ts` | unit + property | accessible names; `role`, `aria-pressed`, `aria-checked`, `aria-valuenow` on the markup; `stepNumber` clamps, rounds to `precision`, and applies Shift x10 and Alt x0.1 (a property over arbitrary value/step/min/max); `tokenizeCode(code).map(t => t.text).join("") === code` for arbitrary strings |
+| 18.5 `ds/` audit | `audit.test.ts` | unit | as 17.9.3 |
+| 18.6 no new dependency | `deps.test.ts` | unit | as 17.1 |
+
+The production Playwright suites are unchanged. The existing `csp.spec` still runs
+against `vite preview` of the production build; its allowance for the single Zod
+probe is not extended to the harness spec.
+
 ## Candidate dependencies beyond the approved list
 
 None required. The design uses only `react`, `react-dom`, `@vitejs/plugin-react`,
@@ -887,6 +2086,12 @@ NOT proposed (and the chosen alternative):
 
 If any of these is later judged necessary, it will be proposed for approval
 before installation (Requirement 14.4).
+
+Requirements 17 and 18 add NO dependency. Two things that look like they need one
+do not: the converter uses its own tokenizer and `node:crypto` (no HTML or CSS
+parser package), and the Node-side tests avoid `@types/node` by keeping file access
+in `scripts/dc-io.mjs` behind hand-written `.d.mts` types. The two font families
+are static files with `docs/dependencies.md` rows, not packages.
 
 The approved packages' versions in the requirements table are indicative; the
 actual exact versions are resolved from the npm registry at install time and
@@ -951,3 +2156,72 @@ recorded in `docs/dependencies.md` (see risk 1).
    to its `include` (studio-only; no exporters change, no shim copy) so importing
    the exporters barrel typechecks. The shipping shell stays exporters-free until
    Group 3.
+
+### Risks for Requirements 17 and 18
+
+14. **Hand-written HTML tokenizer correctness.** A strict tokenizer is small but
+    easy to get subtly wrong (raw-text ends, entity handling, attribute quoting).
+    Mitigation: it rejects anything outside the documented grammar with a line
+    number instead of guessing; tests convert all five real files, run the
+    Property 11 and 12 generators over the supported grammar, and add one synthetic
+    failure case per error code. A real file that needs a construct outside the
+    grammar fails the build, so the grammar grows deliberately.
+15. **CSS scoper limits.** The scoper handles qualified rules, `@keyframes`,
+    `@media`, and `@container` only. Nesting (`&`), `@supports`, `@layer`, and
+    `@import` are errors if a future export uses them. Selector specificity is
+    computed by a small function; a helmet selector at (0,2,0) or above is an error
+    because it would override style classes that an inline `style` used to beat.
+    `:where()` requires current Chromium; the product and the goldens are
+    Chromium-only.
+16. **Cascade fidelity versus inline styles.** Moving `style` into classes cannot
+    reproduce every inline-style corner. Known gaps: an inline style beat every
+    normal author rule whatever its specificity, while a style class beats only
+    rules below (0,2,0), which the scoper enforces for helmet rules; and an inline
+    style beat DS `ui-*` rules outright, while a class ties with an equal-specificity
+    `ui-*` rule and wins only by order (the generated file imports `ds/index.js`
+    first).
+    The Playwright harness checks one screen; the other four are covered by
+    type-check, audit, and determinism only. Visual review of those four is manual.
+17. **Generated churn when the design is re-exported.** Re-running `dc:convert`
+    after a new export rewrites `generated/`. The staleness test makes that
+    explicit: it fails until the regenerated files are committed, and the diff shows
+    what the design change did. Class hashes depend on declaration text, so an edit
+    to one style changes only that class name.
+18. **Design-system bundle drift.** `ds.css`, `index.tsx`, and `icons.ts` are
+    hand-copied. The port header records the export id and a SHA-256 prefix of each
+    copied source file. Tests do not read `design/` (it is not guaranteed to exist
+    in every checkout of the app), so no test compares the port with the export.
+    Drift is found by re-running the port procedure by hand (the recipe in
+    "Design-system port" and a diff against the export), which is the stated
+    maintenance step whenever a new export is dropped into `design/`.
+19. **Font licence verification.** The export has no licence file, and this design
+    states no copyright line. If the upstream OFL text cannot be verified when the
+    fonts are copied, the implementer stops and asks the owner. Until then the six
+    font files must not be committed. Neither `@fontsource` nor any other package
+    may be used to shortcut this.
+20. **DS token scoping versus `tokens.css`.** Scoping under `.ds-root` keeps the
+    studio's `:root` tokens intact, but any future studio code that renders inside
+    a `.ds-root` subtree will see the DS values (for example `--radius-md` 6px
+    instead of 8px). The collision test records the 6 value differences; the rule is
+    that nothing hand-written lives inside a `.ds-root`.
+21. **Harness maintenance.** The harness proves one screen under the CSP. It adds a
+    Vite config, a Playwright config, a port (5275), and a fixture that must track
+    `STUDIO_EDITOR_BINDINGS`. The fixture test fails when a new binding appears
+    without data. The harness is not a product route and is deleted, not extended,
+    when a real route renders the generated screens.
+22. **Data-built elements and keyframe names.** Data values such as `preview` and
+    `heroStage` are React elements built by the caller. If they animate with a
+    helmet keyframe they must use the prefixed name from `<NAME>_KEYFRAMES`; the
+    original names no longer exist. The harness fixture passes `null` for these, so
+    no test exercises the lookup beyond a unit test of the exported map.
+23. **Test-time cost and location.** `dist-scan.test.ts` runs a full production
+    build in memory (about 10 to 20 s); it has a 60 s timeout and may be moved to
+    the Playwright project if it slows `vitest run` too much. Tests under `src/`
+    are required because `vitest.config.ts` only includes `src/**`.
+24. **Deviations 1 and 2 remain pending owner confirmation** (literal values in
+    generated CSS and `ds.css`; dynamic style as custom-property classes instead of
+    a React style object). This design also proposes, for owner confirmation, the
+    config rules for Export Flow's review bar, the Landing Page link target, and
+    the Error States icon-style rewrite; the requirement amendments listed in the
+    findings table (17.3.10, 18.1, 18.3); and `.d.mts` in place of `.d.ts` for the
+    hand-written types.
