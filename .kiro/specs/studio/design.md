@@ -113,6 +113,7 @@ class Store {
   cancelGesture(): void;                      // restore base, no history change
   undo(): boolean;                            // cancel an open gesture, else pop history
   canUndo(): boolean;
+  historyLength(): number;                    // as built: number of undo steps
   setProject(project: Project): void;         // open / New / demo: replace project, history = []
 }
 ```
@@ -151,6 +152,25 @@ and returns early when `event.target` is an `HTMLInputElement`, `HTMLTextAreaEle
 `HTMLSelectElement`, or has `isContentEditable`, so the browser's native text
 undo keeps working in fields. Otherwise it calls `preventDefault()` and
 `store.undo()`. Redo (Ctrl+Shift+Z / Ctrl+Y) is out of scope and is not bound.
+
+**As built.**
+
+- `shell/undo-key.ts` holds the pure Ctrl/Cmd+Z rules (`isUndoKey`,
+  `isTextEntryTarget`, `shouldUndo`); `StudioView` registers the window `keydown`
+  listener and uses them. They are unit-tested in `undo-key.test.ts`.
+- The export-dialog case is `exportOpen` (the dialog is open), which is the
+  state in which an export can run. The handler does nothing while it is true.
+- `Store` exposes `canUndo()` and `historyLength()`. `dispatchGuarded` commits an
+  open gesture first.
+- `preview/hit-font.test.ts` asserts that the hit provider's font string equals
+  the painter's.
+- Playwright specs use the `ControlOrMeta` modifier, not `process.platform`,
+  because the studio has no `@types/node`.
+- **Known limitation (out of scope this round).** `set-anchor` and
+  `set-layer-timing` return the same reference when values are equal, but other
+  actions (for example `set-text` with an unchanged value) still return a new
+  reference because `ProjectSchema.safeParse` clones. Such a no-op edit can add
+  an undo step.
 
 **Gesture cancel, export, and no-ops (Requirement 16.10 to 16.16).**
 
@@ -335,8 +355,19 @@ of one paint, then cached); (2) if fonts load late, the hit provider must be
 discarded like the renderer is: `PreviewCanvas` rebuilds provider and cache on
 `document.fonts` `loadingdone` (the existing `onFontsLoadingDone` callback) so
 boxes never stay on fallback-font metrics; (3) the studio compares nothing
-against the painter at runtime, so a Playwright drift guard (hit bounds vs. the
-drawn `#ffcc00` pixel bounding box, within 2 canvas px per edge) stays.
+against the painter at runtime, so a Playwright drift guard stays. As built
+(`tests/canvas-drag.spec.ts`, "the selection outline agrees with the drawn
+text"), it reads the selection outline element (positioned from `layerBounds`)
+and compares it with the drawn `#ffcc00` title ink bounding box, in client px,
+with `s` = display scale and `fontSize` in client px: the outline CONTAINS the
+ink within 2 canvas px per edge (`eps = 2 * s`); the left/right gaps (ink inside
+outline) are at most `0.2 * fontSize`; the top/bottom gaps are at most
+`0.6 * fontSize`. The guard cannot be 2 canvas px per edge on both sides: a pixel
+ink box is never equal to the layout (advance + ascent/descent) box, since the
+ink is inset by glyph side bearings horizontally (about 0.1 em) and by the gap
+between cap height and the ascent/descent box vertically. The horizontal bound
+also has to survive fallback-font metrics, which would shift the width by roughly
+10 percent; tightening to 2 px per edge is not possible for ink-vs-layout boxes.
 
 ### Canvas interaction model (`preview/PreviewCanvas.tsx`)
 
@@ -402,9 +433,12 @@ export function setCssVars(
   has the values. The parameter type is a minimal structural type so tests can
   pass a fake element (jsdom is unavailable).
 - `layout.css` consumes the variables, for example
-  `.tl-bar { left: calc(var(--from) * 1px); width: calc(var(--len) * 1px); }`,
-  `.tl-playhead { left: calc(var(--at) * 1px); }`,
+  `.tl-bar { left: calc(var(--from) * 1%); width: calc(var(--len) * 1%); }`,
+  `.tl-playhead { left: calc(var(--at) * 1%); }`,
   `.selection-outline { left: calc(var(--x) * 1px); top: calc(var(--y) * 1px); width: calc(var(--w) * 1px); height: calc(var(--h) * 1px); }`.
+  Timeline variables (`--from`, `--len`, `--at`) hold percentages of the axis;
+  selection-outline variables (`--x`, `--y`, `--w`, `--h`) remain CSS px
+  (unitless numbers multiplied by `1px`).
 
 **Why this satisfies the strict CSP.** With `style-src 'self'` (no
 `'unsafe-inline'`), CSP blocks inline `<style>` elements, `style="..."`
@@ -487,8 +521,11 @@ no drift.
   are the range the part can take (in seconds, from `dragTiming` bounds),
   `aria-valuenow` is the part's time in seconds (start, end, or start for the
   bar), and `aria-valuetext` is `"1.20 seconds"`.
-- **Layout**: bars use `--from` (start px) and `--len` (length px); the playhead
-  uses `--at`. All set with `setCssVars` in `useLayoutEffect`.
+- **Layout**: positions are PERCENT of the axis, not px. Bars use `--from` (start
+  percent) and `--len` (length percent); the playhead uses `--at` (percent).
+  All set with `setCssVars` in `useLayoutEffect`; `layout.css` multiplies by `1%`.
+  This removes the need to measure the track width for layout. Pointer math
+  still reads the track rect at event time.
 - **Pointer drag**: `pointerdown` on a part calls `setPointerCapture`,
   `store.beginGesture()`, selects the layer, and records `startPx` and the
   layer's timing. `pointermove` computes `deltaFrames`, calls `dragTiming`, and
@@ -782,7 +819,7 @@ failures to `font-not-ready` / `font-decode-failed`. No code path uses
 | `layers.spec` | add/edit/delete/reorder, draw-order follows order, font/size/colour/align/position edits | ~3 s |
 | `effects.spec` | picker lists the 12 presets, apply seeds defaults, param edit updates live, remove | ~2 s |
 | `timeline.spec` | bar maps start/width, ruler scrub snaps to frames, drag move/trim, end-handle drag lands on a frame (`aria-valuenow * fps` is whole), Arrow/Shift+Arrow nudges, slider ARIA attributes | ~4 s |
-| `canvas-drag.spec` | click selects layer, empty click keeps selection; drag title: anchor X/Y fields change and the pixel bbox of colour `#ffcc00` follows by the same delta; Shift axis lock; pointer released outside canvas still commits; outline overlay matches the bbox | ~5 s |
+| `canvas-drag.spec` | click selects layer, empty click keeps selection; drag title: anchor X/Y fields change and the pixel bbox of colour `#ffcc00` follows by the same delta; Shift axis lock; pointer released outside canvas still commits; drift guard "the selection outline agrees with the drawn text": outline contains the `#ffcc00` ink within `2 * s` client px per edge, left/right gaps <= `0.2 * fontSize`, top/bottom gaps <= `0.6 * fontSize` (not 2 px per edge, see Canvas hit testing trade-offs) | ~5 s |
 | `canvas-nudge.spec` | focused canvas: ArrowRight +1 px, Shift+ArrowDown +10 px, other keys ignored; each press is one undo step | ~3 s |
 | `undo.spec` | Ctrl/Cmd+Z restores a canvas drag, a nudge, a timeline end-handle drag, and a panel edit, each in one step; Ctrl/Cmd+Z inside a number input does not undo the project; Ctrl/Cmd+Z mid-drag cancels the gesture with no extra step; Escape mid-drag cancels with no step; Ctrl/Cmd+Z while an export is running does nothing; Open/New clears undo | ~5 s |
 | `fonts.spec` | first frame waits for fonts; Tamil glyphs render; not-ready maps to error | ~2 s |
@@ -793,6 +830,11 @@ failures to `font-not-ready` / `font-decode-failed`. No code path uses
 | `csp.spec` | zero `securitypolicyviolation` events and no CSP console errors across a representative session that now includes a canvas drag, a nudge, and a timeline drag; only the single named Zod eval probe is allowed (Req 11.2, 11.3) | ~4 s |
 | `a11y.spec` | keyboard operability, labels present, visible focus, dialog focus-trap + Escape | ~3 s |
 | `perf.spec` | 1280×720 / 5-layer playback frame-interval mean + p95 (reports numbers) | ~12 s |
+
+As built: studio unit tests 82 (`store.test`, `timeline.test`, `hit.test`,
+`cssvars.test`, `undo-key.test`, `hit-font.test`, and the purity JSX guard);
+Playwright dev suite 32 (`canvas-drag` 10, `timeline` 5, plus existing specs);
+CSP production suite 3.
 
 The existing Landing and export specs must stay green (Requirement 16.9).
 All target < 10 s except `perf.spec` (a 10 s measurement window by design).

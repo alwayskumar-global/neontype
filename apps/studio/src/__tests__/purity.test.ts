@@ -68,3 +68,24 @@ describe("studio purity guard", () => {
     expect(messages).toHaveLength(0);
   });
 });
+
+describe("JSX style guard (Requirement 11.2)", () => {
+  const cfg: LinterNS.Config = {
+    files: ["src/**/*.tsx"],
+    languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        { selector: "JSXAttribute[name.name='style']", message: "no style" },
+        { selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']", message: "no raw html" },
+      ],
+    },
+  };
+  it("flags a style prop and dangerouslySetInnerHTML, and allows className", () => {
+    const linter = new Linter();
+    const bad = linter.verify("const a = <div style={{ left: 1 }} />;\nconst b = <p dangerouslySetInnerHTML={{ __html: 'x' }} />;", cfg, { filename: "src/x.tsx" });
+    expect(bad.filter((m) => m.ruleId === "no-restricted-syntax")).toHaveLength(2);
+    const ok = linter.verify("const a = <div className=\"x\" />;", cfg, { filename: "src/x.tsx" });
+    expect(ok).toHaveLength(0);
+  });
+});

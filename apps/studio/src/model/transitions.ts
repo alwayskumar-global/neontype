@@ -75,10 +75,18 @@ export function applyAction(project: Project, action: Action): Project {
       return commit(project, mapLayer(project, action.id, (l) => ({ ...l, fill: action.fill })));
     case "set-align":
       return commit(project, mapLayer(project, action.id, (l) => ({ ...l, align: action.align })));
-    case "set-anchor":
+    case "set-anchor": {
+      // Same reference when nothing changes, so "unchanged" is detectable with !== and
+      // a no-op gesture or key press adds no undo step (Requirement 16.15).
+      const cur = project.layers.find((l) => l.id === action.id);
+      if (cur && cur.anchor.x === action.x && cur.anchor.y === action.y) return project;
       return commit(project, mapLayer(project, action.id, (l) => ({ ...l, anchor: { x: action.x, y: action.y } })));
-    case "set-layer-timing":
+    }
+    case "set-layer-timing": {
+      const cur = project.layers.find((l) => l.id === action.id);
+      if (cur && cur.startSeconds === action.startSeconds && cur.endSeconds === action.endSeconds) return project;
       return commit(project, mapLayer(project, action.id, (l) => ({ ...l, startSeconds: action.startSeconds, endSeconds: action.endSeconds })));
+    }
 
     case "add-effect":
       return commit(project, mapLayer(project, action.layerId, (l) => ({

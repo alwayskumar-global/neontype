@@ -2,11 +2,13 @@
  * Studio editor view (the 3-column shell). Extracted from App so App can switch
  * between the landing page and the studio. CSP-clean (no inline styles/scripts).
  */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Store } from "./store.js";
 import { PreviewCanvas } from "../preview/PreviewCanvas.js";
 import { Transport } from "../preview/Transport.js";
+import { Timeline } from "../timeline/Timeline.js";
+import { shouldUndo } from "./undo-key.js";
 import { SettingsPanel } from "../panels/SettingsPanel.js";
 import { LayersPanel } from "../panels/LayersPanel.js";
 import { EffectsPanel } from "../panels/EffectsPanel.js";
@@ -22,6 +24,21 @@ export function StudioView({ store, onBack }: { store: Store; onBack: () => void
   const [exportOpen, setExportOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const exportOpenRef = useRef(false);
+  exportOpenRef.current = exportOpen;
+
+  // Ctrl/Cmd+Z: undo one step (cancels an open gesture first). Ignored in text
+  // fields (native text undo) and while the export dialog is open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      const target = e.target as { tagName?: string; isContentEditable?: boolean } | null;
+      if (!shouldUndo({ key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey, target }, exportOpenRef.current)) return;
+      e.preventDefault();
+      store.undo();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [store]);
 
   return (
     <div className="app-shell">
@@ -56,6 +73,7 @@ export function StudioView({ store, onBack }: { store: Store; onBack: () => void
       <main className="app-center">
         <PreviewCanvas store={store} canvasRef={canvasRef} />
         <Transport store={store} canvasRef={canvasRef} />
+        <Timeline store={store} canvasRef={canvasRef} />
       </main>
       <aside className="app-right">
         <EffectsPanel store={store} />

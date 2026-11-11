@@ -95,3 +95,62 @@ test("a worker-path export with bundled fonts completes under the strict CSP", a
   expect(disallowed, `unexpected CSP violations: ${JSON.stringify(disallowed)}`).toEqual([]);
   expect(consoleCsp, `non-eval CSP console errors: ${consoleCsp.join("; ")}`).toEqual([]);
 });
+
+test("canvas drag, nudge, timeline drag and undo add no CSP violations", async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as unknown as { __csp: unknown[] }).__csp = [];
+    document.addEventListener("securitypolicyviolation", (e) => {
+      (window as unknown as { __csp: { directive: string; blocked: string }[] }).__csp.push({
+        directive: e.effectiveDirective || e.violatedDirective,
+        blocked: e.blockedURI,
+      });
+    });
+  });
+  const consoleCsp: string[] = [];
+  page.on("console", (m) => {
+    const t = m.text();
+    if (/content security policy/i.test(t) && !/eval/i.test(t)) consoleCsp.push(t);
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open the studio" }).first().click();
+  await expect(page.locator("canvas.preview-canvas")).toBeVisible();
+  await page.getByLabel("Scrub").fill("3");
+  await page.waitForTimeout(100);
+
+  const rect = (await page.locator("canvas.preview-canvas").boundingBox())!;
+  const cx = rect.x + rect.width / 2;
+  const cy = rect.y + (rect.height * 270) / 720; // inside the demo title
+
+  // Canvas drag + nudge + undo (positions the selection outline through CSS variables).
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + 60, cy + 30, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.locator(".selection-outline")).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ControlOrMeta+z");
+  await page.keyboard.press("ControlOrMeta+z");
+
+  // Timeline: the handle and bar positions are CSS custom properties too.
+  const handle = page.getByRole("slider", { name: "Motion Text, end", exact: true });
+  const hb = (await handle.boundingBox())!;
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(hb.x - 80, hb.y + hb.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await page.waitForTimeout(200);
+
+  const violations = await page.evaluate(
+    () => (window as unknown as { __csp: { directive: string; blocked: string }[] }).__csp,
+  );
+  const disallowed = violations.filter(
+    (v) => !(v.directive.startsWith(ALLOWED.directive) && v.blocked === ALLOWED.blocked),
+  );
+  expect(disallowed, `unexpected CSP violations: ${JSON.stringify(disallowed)}`).toEqual([]);
+  expect(
+    violations.filter((v) => v.directive.startsWith(ALLOWED.directive) && v.blocked === ALLOWED.blocked).length,
+    "at most the one Zod eval probe",
+  ).toBeLessThanOrEqual(1);
+  expect(consoleCsp, `non-eval CSP console errors: ${consoleCsp.join("; ")}`).toEqual([]);
+});

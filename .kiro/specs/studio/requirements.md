@@ -214,10 +214,19 @@ layers and control their type and placement, so that I can compose my title.
     string the painter sets on `ctx.font`, `${fontWeight} ${fontSize}px
     ${fontFamily}` (the string the engine `drawFrame` sets), and SHALL be
     rebuilt WHEN `document.fonts` fires `loadingdone`. *(unit)*
-20. THE hit bounds SHALL match the drawn glyphs: a Playwright drift guard SHALL
-    compare the hit bounds of the title layer with the pixel bounding box of
-    the drawn `#ffcc00` text within a tolerance of 2 canvas px per edge.
-    *(Playwright)*
+20. THE hit bounds SHALL agree with the drawn glyphs: a Playwright drift guard
+    SHALL read the selection outline element (positioned from `layerBounds`)
+    and compare it, in client px, with the pixel bounding box (ink) of the drawn
+    `#ffcc00` title text, where `s` is the display scale and `fontSize` is in
+    client px: (a) the outline CONTAINS the ink within 2 canvas px per edge
+    (`eps = 2 * s`); (b) the left and right gaps (ink inside outline) are at
+    most `0.2 * fontSize`; (c) the top and bottom gaps are at most
+    `0.6 * fontSize`. A tolerance of 2 canvas px per edge on both sides is not
+    possible, because the ink box is inset from the layout (advance and
+    ascent/descent) box by glyph side bearings horizontally (about 0.1 em) and
+    by the gap between cap height and the ascent/descent box vertically. The
+    horizontal bound is loose enough to survive fallback-font metrics, which
+    shift the width by roughly 10 percent. *(Playwright)*
 
 ### Requirement 4: Effect picker per layer
 

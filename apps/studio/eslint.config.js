@@ -28,6 +28,19 @@ export default tseslint.config(
     },
   },
   {
+    // CSP guard (Requirement 11.2): no style attribute / prop and no raw HTML sink in JSX.
+    // Dynamic geometry goes through ui/cssvars.ts (CSSOM custom properties). Core rule only;
+    // no eslint-plugin-react (no new dependency).
+    files: ["src/**/*.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        { selector: "JSXAttribute[name.name='style']", message: "No style attribute; use CSS classes or ui/cssvars.ts setCssVars (CSP)." },
+        { selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']", message: "No raw HTML sink; render user text as React text nodes." },
+      ],
+    },
+  },
+  {
     // The playback module is the ONLY place allowed to read the animation clock.
     files: ["src/playback/**/*.ts", "src/playback/**/*.tsx"],
     rules: {
