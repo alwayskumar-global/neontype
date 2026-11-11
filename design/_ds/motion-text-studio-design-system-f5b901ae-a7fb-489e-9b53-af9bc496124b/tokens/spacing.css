@@ -1,0 +1,45 @@
+/* Spacing (4px scale), sizes, radii, borders */
+:root{
+--space-0:0px;
+--space-1:4px;
+--space-2:8px;
+--space-3:12px;
+--space-4:16px;
+--space-5:20px;
+--space-6:24px;
+--space-8:32px;
+--space-10:40px;
+--space-12:48px;
+--space-16:64px;
+/* Control + layout sizes */
+--size-control-sm:24px;
+--size-control-md:28px;
+--size-control-lg:36px;
+--size-icon:20px;
+--size-icon-sm:16px;
+--size-row:32px;
+--size-topbar:48px;
+--size-panel-left:264px;
+--size-panel-left-min:220px;
+--size-panel-left-max:360px;
+--size-panel-right:304px;
+--size-panel-right-min:280px;
+--size-panel-right-max:400px;
+--size-timeline:248px;
+--size-timeline-min:160px;
+--size-track-header:220px;
+--size-app-min-width:1280px;
+/* Radii */
+--radius-none:0px;
+--radius-xs:2px;
+--radius-sm:4px;
+--radius-md:6px;
+--radius-lg:8px;
+--radius-xl:12px;
+--radius-pill:999px;
+/* Borders */
+--border-width-hairline:1px;
+--border-width-strong:2px;
+--border-width-focus:2px;
+--focus-ring-offset:2px;
+}
