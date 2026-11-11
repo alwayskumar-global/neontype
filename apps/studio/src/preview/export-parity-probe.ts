@@ -10,6 +10,7 @@
 import type { Project } from "@studio/engine";
 import { exportPngSequence } from "@studio/exporters";
 import { makePreviewRenderer, drawPreviewFrame } from "./draw.js";
+import { loadBundledFontBytes } from "../fonts/fonts.js";
 
 const LOCAL_SIG = 0x04034b50;
 const CD_SIG = 0x02014b50;
@@ -101,7 +102,10 @@ export async function runExportParity(project: Project, tSeconds: number): Promi
   const frameIndex = Math.min(frameCount - 1, Math.max(0, Math.round(tSeconds * fps)));
   const frameTime = frameIndex / fps;
 
-  const result = await exportPngSequence(project, {});
+  // Same fonts the dialog passes, so the Worker path measures with the real faces.
+  const fontBytes = await loadBundledFontBytes();
+  if (!fontBytes.ok) return 1;
+  const result = await exportPngSequence(project, { fonts: fontBytes.fonts });
   if (!result.ok) return 1;
 
   const zip = new Uint8Array(await result.file.arrayBuffer());

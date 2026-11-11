@@ -12,12 +12,13 @@ import {
   exportGif,
   type CapabilityReport,
   type ExportResult,
+  type FontSource,
 } from "@studio/exporters";
 import type { Project } from "@studio/engine";
 
 import { reduce, INITIAL, type ExportFormatId } from "./machine.js";
 import { messageFor } from "./errors.js";
-import { whenFontsReady } from "../fonts/fonts.js";
+import { whenFontsReady, loadBundledFontBytes } from "../fonts/fonts.js";
 import type { Store } from "../shell/store.js";
 import { useStoreState } from "../shell/useStore.js";
 
@@ -31,10 +32,12 @@ function runExport(
   format: ExportFormatId,
   project: Project,
   opts: { videoBitrate?: number; backgroundFallback?: string },
+  fonts: FontSource[],
   onProgress: (f: number) => void,
   signal: AbortSignal,
 ): Promise<ExportResult> {
-  const base = { onProgress: (p: { fraction: number }) => onProgress(p.fraction), signal };
+  // Fonts go to the exporter as bytes so the Worker path measures with the real faces.
+  const base = { onProgress: (p: { fraction: number }) => onProgress(p.fraction), signal, fonts };
   if (format === "mp4") return exportMp4(project, { ...base, videoBitrate: opts.videoBitrate, backgroundFallback: opts.backgroundFallback });
   if (format === "png-sequence") return exportPngSequence(project, base);
   return exportGif(project, base);
@@ -81,13 +84,20 @@ export function ExportDialog({ store, onClose }: { store: Store; onClose: () => 
 
   const start = async (format: ExportFormatId): Promise<void> => {
     dispatch({ type: "select-format", format });
+    // "fail" is only honoured while running, so enter running before the font checks;
+    // otherwise a font failure would be dropped and the dialog would sit unchanged.
+    dispatch({ type: "start" });
     // Font readiness before export (Req 6.4).
     const fonts = await whenFontsReady();
     if (!fonts.ok) {
       dispatch({ type: "fail", error: { code: fonts.code, message: fonts.message } });
       return;
     }
-    dispatch({ type: "start" });
+    const fontBytes = await loadBundledFontBytes();
+    if (!fontBytes.ok) {
+      dispatch({ type: "fail", error: { code: fontBytes.code, message: fontBytes.message } });
+      return;
+    }
     const controller = new AbortController();
     abortRef.current = controller;
     const bg = project.background === "transparent" ? "#000000" : undefined;
@@ -95,6 +105,7 @@ export function ExportDialog({ store, onClose }: { store: Store; onClose: () => 
       format,
       project,
       { videoBitrate: format === "mp4" ? bitrate : undefined, backgroundFallback: bg },
+      fontBytes.fonts,
       (f) => dispatch({ type: "progress", fraction: f }),
       controller.signal,
     );
