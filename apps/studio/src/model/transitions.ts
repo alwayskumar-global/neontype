@@ -12,12 +12,27 @@
 import { ProjectSchema, type Project, type TextLayer } from "@studio/engine";
 
 import type { Action } from "./actions.js";
+import { deepEqualJson } from "./json-equal.js";
 import { makeDefaultLayer, nextLayerId, defaultEffectInstance } from "./project.js";
 
-/** Returns `candidate` if it is schema-valid, else the original `project`. */
-function commit(project: Project, candidate: Project): Project {
+/**
+ * Validates `candidate` and decides which reference to return:
+ *  - invalid                      -> the original `project` (unchanged);
+ *  - result equals `project`      -> the original `project` (a no-op keeps the SAME
+ *                                    reference, so history adds no step);
+ *  - otherwise                    -> `candidate` itself, so untouched subtrees stay
+ *                                    shared with `project` (structural sharing,
+ *                                    Requirement 16.7), UNLESS parsing changed it
+ *                                    (e.g. a filled default), in which case the
+ *                                    parsed copy is returned so defaults are never
+ *                                    silently dropped.
+ * Exported for tests only.
+ */
+export function commit(project: Project, candidate: Project): Project {
   const result = ProjectSchema.safeParse(candidate);
-  return result.success ? result.data : project;
+  if (!result.success) return project;
+  const next = deepEqualJson(result.data, candidate) ? candidate : result.data;
+  return deepEqualJson(next, project) ? project : next;
 }
 
 /** Replaces the layer with `id` via `fn`; no-op if the id is absent. */

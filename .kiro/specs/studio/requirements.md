@@ -581,7 +581,8 @@ that I can recover from a mistaken edit or drag.
    THEN the store SHALL move the selection to the first layer, or to none when no
    layers remain. *(unit)*
 7. THE history SHALL hold structurally shared immutable `Project` values (no deep
-   copies) and SHALL add no dependency. *(unit)*
+   copies) and SHALL add no dependency. WHEN an action is accepted THE reducer
+   SHALL keep untouched layers and the canvas by reference. *(unit)*
 8. FOR ALL sequences of accepted actions, undoing every step SHALL return a
    project deep-equal to the original (undo-restores property). *(property)*
 9. THE following SHALL hold in Playwright: dragging the title on the canvas
@@ -603,9 +604,9 @@ that I can recover from a mistaken edit or drag.
 14. WHEN the history is empty THE undo SHALL be a no-op: no error and the same
     Project reference. *(unit)*
 15. IF an action or gesture leaves the project unchanged (same reference, for
-    example a no-op set-anchor or set-layer-timing), THEN THE store SHALL add no
-    undo step. THE set-anchor and set-layer-timing transitions SHALL return the
-    same Project reference WHEN nothing changed. *(unit)*
+    example set-text with an unchanged value), THEN THE store SHALL add no undo
+    step. EVERY action's transition SHALL return the same Project reference WHEN
+    its result equals the input. *(unit, property)*
 16. THE store SHALL NOT coalesce typing into one undo step; coalescing is out of
     scope. *(unit)*
 
@@ -704,6 +705,10 @@ They are recorded here as decisions.
   - Property 9, undo restores (Req 16.1, 16.2, 16.8): for any sequence of
     accepted actions, undoing them all returns the original project (deep-equal);
     one gesture is one step.
+  - Property 10, no-op detection is exact (Req 16.7, 16.15): for any valid
+    project and any action, `applyAction(p, a) === p` if and only if the result
+    deep-equals `p`; the result is schema-valid and every layer keeps numeric
+    `letterSpacing` and `lineHeight`.
   - Existing Property 3 (Drag bounds) is updated to refer to the frame-grid
     version, Property 8 (Req 5.2, 5.10).
 - **Playwright** (bundled Chromium, localhost): preview playback/scrub, settings,

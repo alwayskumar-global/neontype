@@ -181,6 +181,7 @@ reported). They are planning estimates, not budgets.
     - Add the fast-check test tagged `// Feature: studio, Property 9: Undo restores` using the existing `arb-project` and action arbitraries interleaved with gesture groups, >= 100 iterations. On any counterexample, STOP and show it before changing a bound, the store, or the property.
     - **Covers:** Requirement 16.1, 16.2, 16.3, 16.5, 16.6, 16.7, 16.8, 16.10, 16.11, 16.12, 16.14, 16.15, 16.16; Design "Undo history and gestures", Property 9
     - **Completion:** `pnpm --filter @studio/app exec vitest run src/shell/store.test.ts` passes, including Property 9 (>= 100 iterations, run 3x with no counterexample).
+    - **Note:** Done: reducer no-op detection and structural sharing for every action (`model/transitions.ts`, `model/json-equal.ts`, `model/sharing.test.ts`); Property 10.
 
   - [x] 4.2 Pure frame-grid timeline math
     - Create `apps/studio/src/model/timeline.ts` (pure; no DOM, no clock) exporting `toFrames` (round-half-away-from-zero), `toSeconds` (rounded to 1e-6), `snapToFrame`, `pxToSeconds` (uses `timemap.xToTime`, snaps, clamps to `[0, toSeconds(N)]` with `N = floor(durationSeconds * fps + 1e-9)`), `dragTiming(kind, start, deltaFrames, fps, durationSeconds)` for `move | start | end`, and `nudgeTiming`. Implement the exact rules in the design "Timeline interaction model": snap on entry, `move` preserves frame length, `start`/`end` keep at least 1 frame, `N < 1` returns the input unchanged, `N = 1` yields `{0, 1/fps}`, non-finite delta is 0. The old `timeline/drag.ts` is not created.
@@ -329,6 +330,7 @@ reported). They are planning estimates, not budgets.
 - Property 7: Drag stays in canvas and on the grid (Task 4.3)
 - Property 8: Timing drag stays on the frame grid (Task 4.2)
 - Property 9: Undo restores (Task 4.1)
+- Property 10: No-op detection is exact (Task 4.1)
 
 
 ## Task Dependency Graph

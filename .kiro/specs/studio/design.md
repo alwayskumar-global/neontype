@@ -94,13 +94,13 @@ per repo convention; the model layer is importable in Node for Vitest.
 (oldest first, newest last, capped at `HISTORY_LIMIT = 100`). History holds
 `Project` values only; selection, playhead and loop stay in `UiState`.
 
-**Structural sharing.** `Project` values are immutable and every transition
-returns a new object that shares unchanged subtrees with the old one. The
-history therefore stores references, never `structuredClone`/JSON copies. A
-transition that changes nothing MUST return the same reference
-(`applyAction` already does this for rejected actions; `set-anchor` and
-`set-layer-timing` are verified to return the input when the values are
-equal), which is how "unchanged" is detected with `!==`.
+**Structural sharing.** `Project` values are immutable and every accepted
+transition returns a new object that keeps untouched subtrees by reference: the
+history stores references, never `structuredClone`/JSON copies, and `mapLayer`
+keeps untouched layers by reference (the canvas too, for a layers-only edit). A
+transition whose result equals its input MUST return the same reference, for
+EVERY action (see "No-op detection in `commit`" below), which is how
+"unchanged" is detected with `!==`.
 
 **Store API additions**
 
@@ -166,11 +166,25 @@ undo keeps working in fields. Otherwise it calls `preventDefault()` and
   the painter's.
 - Playwright specs use the `ControlOrMeta` modifier, not `process.platform`,
   because the studio has no `@types/node`.
-- **Known limitation (out of scope this round).** `set-anchor` and
-  `set-layer-timing` return the same reference when values are equal, but other
-  actions (for example `set-text` with an unchanged value) still return a new
-  reference because `ProjectSchema.safeParse` clones. Such a no-op edit can add
-  an undo step.
+- **No-op detection in `commit` (as built, `model/transitions.ts`,
+  `model/json-equal.ts`, `model/sharing.test.ts`).** The reducer detects no-ops
+  for every action and shares structure. `commit(project, candidate)`
+  `safeParse`s the candidate; an invalid candidate returns the original
+  project. Otherwise `next = deepEqualJson(parsed, candidate) ? candidate :
+  parsed`: the candidate itself is kept so untouched subtrees stay shared by
+  reference, and the parsed copy is returned only when parsing changed it (for
+  example a filled schema default such as `letterSpacing` 0 or `lineHeight`
+  1.2), so defaults are never silently dropped. Then `deepEqualJson(next,
+  project) ? project : next`, so any action whose result equals the input
+  returns the SAME `Project` reference. `set-anchor` and `set-layer-timing`
+  keep explicit early returns because they are cheaper on the drag hot path.
+  `deepEqualJson` is a pure, dependency-free structural equality for plain JSON
+  values (key order ignored).
+- **Precondition.** `ProjectSchema.parse(p)` deep-equals `p` for every
+  `Project` the studio can hold: the only schema defaults are the `TextLayer`
+  `letterSpacing` and `lineHeight`, and every layer already carries them. A unit
+  test covers `demo` and `newProject`; a fallback test shows a candidate
+  missing `lineHeight` is committed with `lineHeight` 1.2.
 
 **Gesture cancel, export, and no-ops (Requirement 16.10 to 16.16).**
 
@@ -186,9 +200,10 @@ undo keeps working in fields. Otherwise it calls `preventDefault()` and
   `durationSeconds`.
 - While an export is running (export machine state `running`) the `keydown`
   handler returns early and does nothing; the export dialog owns focus.
-- `set-anchor` and `set-layer-timing` return the input `Project` reference when
-  the new values equal the old ones (unit-tested), so `!==` detects "unchanged"
-  and no step is added.
+- Every action (not only `set-anchor` and `set-layer-timing`) returns the input
+  `Project` reference when its result equals the input (unit-tested, for example
+  `set-text` with an unchanged value), so `!==` detects "unchanged" and no step
+  is added.
 - Typing in fields is NOT coalesced: each accepted edit is one step (decision;
   coalescing is out of scope).
 
@@ -770,6 +785,22 @@ action arbitrary, interleaved with gesture groups `fc.array(action)`. Runs on a
 
 **Validates: Requirements 16.1, 16.2, 16.3, 16.8**
 
+### Property 10: No-op detection is exact
+
+For any `ProjectSchema`-valid project `p` and any action `a` (including
+unchanged-value actions and rejected actions), `applyAction(p, a) === p` if and
+only if the result deep-equals `p`, and the result is always `ProjectSchema`-valid.
+
+Companion note: every layer of every result keeps numeric `letterSpacing` and
+`lineHeight` (schema defaults are never dropped). It is checked inside the same
+test.
+
+Arbitraries: the existing `arb-project` and action arbitraries, plus
+unchanged-value actions derived from the project itself. Runs in Node in
+`model/sharing.test.ts`. Deep equality is `deepEqualJson`.
+
+**Validates: Requirements 16.7, 16.15**
+
 ## Error Handling
 
 All failures surface as typed values, never thrown exceptions crossing the UI:
@@ -800,13 +831,16 @@ failures to `font-not-ready` / `font-decode-failed`. No code path uses
   push drops the oldest), gesture commit/cancel, `setProject` clears history,
   selection fix-up after undo, structural sharing (`history[i].canvas ===
   next.canvas` for an edit that touches only layers). Property 9.
+- `model/sharing.test.ts` (14 tests): no-op detection and structural sharing for
+  every action, `deepEqualJson`, the `demo`/`newProject` parse precondition, the
+  missing-`lineHeight` fallback, and Property 10.
 - Purity test extended to `model/hit.ts` and `model/timeline.ts`; the ESLint
   `no-restricted-syntax` rule fails lint on JSX `style=` attributes and
   `dangerouslySetInnerHTML`.
 - Store and model undo cases: Ctrl/Cmd+Z path (`undo`) during a gesture restores
   the base with no step; `cancelGesture` adds no step; `undo` clamps the
   playhead; `undo` on empty history returns the same `Project` reference;
-  `set-anchor` and `set-layer-timing` return the same reference when unchanged.
+  every action returns the same reference when its result equals the input.
 - Hit tests: the hit provider's font string equals the painter's
   `${fontWeight} ${fontSize}px ${fontFamily}`.
 
