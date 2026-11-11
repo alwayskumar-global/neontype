@@ -1,15 +1,21 @@
 /**
  * Worker entry (Req 9.8). DOM-free: it uses only `OffscreenCanvas` via the
- * driver, never `document`/`window`. It receives a `start` message, runs the
- * resolved driver's `runExport` loop, and posts `progress` then `result`. An
- * `abort` message flips a local flag the loop checks at each frame boundary
- * (Req 9.5). ANY thrown error is caught and posted as a typed `error` message
- * (mapped to `encoder-failure` on the host), never left as an unhandled worker
- * error (Req 10.9).
+ * driver, never `document`/`window`. It receives a `start` message, registers any
+ * supplied fonts (Req 15), runs the resolved driver's `runExport` loop, and posts
+ * `progress` then `result`. An `abort` message flips a local flag the loop checks
+ * at each frame boundary (Req 9.5). ANY thrown error is caught and posted as a
+ * typed `error` message (mapped to `encoder-failure` on the host), never left as
+ * an unhandled worker error (Req 10.9).
+ *
+ * Fonts: when fonts are requested but this worker has no `FontFace`/`self.fonts`,
+ * it posts `{ type: "fonts-unsupported" }` and stops; the host terminates it and
+ * reruns the same driver on the main thread. Faces registered here are never
+ * released, because the host terminates the worker when the export settles.
  */
 
 import type { MainToWorker, WorkerToMain } from "./protocol.js";
 import { resolveDriver } from "./driver.js";
+import { prepareFonts, fontsSupported } from "./fonts.js";
 
 /**
  * The minimal dedicated-worker global surface this entry uses. Declared locally
@@ -46,11 +52,21 @@ ctx.addEventListener("message", (event: MessageEvent<MainToWorker>) => {
     return;
   }
 
-  void driver(
-    { format: msg.format, project: msg.project, options: msg.options, limits: msg.limits },
-    (p) => post({ type: "progress", fraction: p.fraction, frame: p.frame, frameCount: p.frameCount }),
-    () => aborted,
-  )
+  // Only when fonts are requested: no FontFace / self.fonts -> main-thread fallback.
+  if ((msg.options.fonts?.length ?? 0) > 0 && !fontsSupported()) {
+    post({ type: "fonts-unsupported" });
+    return;
+  }
+
+  void prepareFonts(msg.options.fonts)
+    .then(({ failure }) =>
+      failure ??
+      driver(
+        { format: msg.format, project: msg.project, options: msg.options, limits: msg.limits },
+        (p) => post({ type: "progress", fraction: p.fraction, frame: p.frame, frameCount: p.frameCount }),
+        () => aborted,
+      ),
+    )
     .then((result) => {
       post({ type: "result", result });
     })

@@ -6,7 +6,7 @@
  * the error model, and the public types. No internal module is re-exported.
  */
 
-export { DEFAULT_LIMITS } from "./types.js";
+export { DEFAULT_LIMITS, MAX_FONT_BYTES } from "./types.js";
 export type {
   ExportFormat,
   ExportResult,
@@ -20,6 +20,7 @@ export type {
   GifOptions,
   WebpOptions,
   AudioInput,
+  FontSource,
   CapabilityResult,
   CapabilityReport,
 } from "./types.js";

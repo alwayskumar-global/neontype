@@ -670,4 +670,4 @@ declare global {
   }
 }
 
-window.runGifExport = runGifExportHarness;
+window.runGifExport = runGifExportHarness;import "./fonts-harness.js";

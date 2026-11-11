@@ -83,6 +83,11 @@ export class FrameRenderer {
    * not implement `measureText`.
    */
   private readonly metricsProvider: TextMetricsProvider;
+  /**
+   * One layout memo per export, shared by every frame (Req 1.5). Layout is pure
+   * in (text, font, align, ...), so frames reuse geometry instead of re-measuring.
+   */
+  private readonly layoutCache: NonNullable<Parameters<typeof renderFrame>[2]>["layoutCache"] = new Map();
 
   constructor(plan: ScalePlan, layerFactory: LayerFactory = makeOffscreenLayerFactory()) {
     this.plan = plan;
@@ -112,6 +117,7 @@ export class FrameRenderer {
     renderFrame(project, t, {
       ctx: wrapped as unknown as CanvasRenderingContext2D,
       metricsProvider: this.metricsProvider,
+      layoutCache: this.layoutCache,
     });
     wrapped.flush();
 

@@ -67,8 +67,24 @@ export const DEFAULT_LIMITS: ExportLimits = {
 /** Untrusted imported audio bytes (Req 11). */
 export type AudioInput = { bytes: Uint8Array };
 
+/**
+ * One font handed to the exporter as raw bytes (Req 15). The exporter never
+ * fetches; the caller supplies the bytes. They cross to a Worker by structured
+ * clone and are never transferred, so the caller can reuse them for every export.
+ */
+export interface FontSource {
+  family: string;
+  weight: number | string;
+  data: ArrayBuffer;
+}
+
+/** Per-font byte cap (50 MB) (Req 11.1, 15). */
+export const MAX_FONT_BYTES = 50 * 1024 * 1024;
+
 /** Options common to every format. */
 export interface BaseExportOptions {
+  /** Fonts registered (Worker: self.fonts; main thread: document.fonts) before frame 0 (Req 15). */
+  fonts?: FontSource[];
   /** Output size; defaults to the project canvas size (Req 14). */
   output?: { width: number; height: number };
   /** Resource-limit overrides; unset fields fall back to `DEFAULT_LIMITS`. */

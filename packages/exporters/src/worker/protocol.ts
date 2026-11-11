@@ -6,7 +6,7 @@
  * The produced `Blob`/`ArrayBuffer` is transferred (zero-copy) in `result`.
  */
 
-import type { ExportFormat, ExportResult, Project, ExportLimits } from "../types.js";
+import type { ExportFormat, ExportResult, Project, ExportLimits, FontSource } from "../types.js";
 
 /**
  * Decoded PCM handed to the worker for muxing (Req 2.6-2.10). The audio is
@@ -31,6 +31,8 @@ export interface WorkerOptions {
   addSilentTrack?: boolean;
   /** Pre-decoded audio PCM for the AAC track; absent when there is no audio. */
   audioPcm?: WorkerPcm;
+  /** Fonts to register before frame 0; structured-cloned, never transferred (Req 15). */
+  fonts?: FontSource[];
 }
 
 /** Main thread → worker. */
@@ -50,4 +52,6 @@ export type MainToWorker =
 export type WorkerToMain =
   | { type: "progress"; fraction: number; frame: number; frameCount: number }
   | { type: "result"; result: ExportResult }
-  | { type: "error"; code: string; message: string };
+  | { type: "error"; code: string; message: string }
+  /** The worker has no FontFace/self.fonts; the host reruns on the main thread (Req 15). */
+  | { type: "fonts-unsupported" };

@@ -119,3 +119,17 @@ and `webp` as `unsupported`.
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the package layout, per-format
 independence, purity rules, and commit conventions.
+
+## Fonts
+
+Pass the fonts your project uses as bytes: `exportMp4(project, { fonts })` (also `exportPngSequence`, `exportGif`).
+Each entry is `{ family: string; weight: number | string; data: ArrayBuffer }`.
+
+- The exporter never fetches. Fetch the files yourself (once) and pass the bytes.
+- A Worker has its own font set and does not see the page's fonts, so without `fonts` a Worker export
+  measures and draws a fallback font and will not match your preview. With `fonts`, both the Worker and
+  main-thread paths register the faces before frame 0 and produce the same pixels as the preview.
+- Bytes are structured-cloned into the Worker, never transferred, so you can reuse the same buffers for every export.
+- On the main thread the exporter removes the faces it added when the export ends; it never removes a face it did not add.
+- Errors: bad option shape `invalid-options` (`fieldPaths: ["fonts[i]"]`); a corrupt or over-50 MB font
+  `font-decode-failed`; a load that takes over 30 s, or no `FontFace` available, `font-not-ready`.

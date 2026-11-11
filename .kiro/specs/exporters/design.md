@@ -26,13 +26,12 @@ The flow for every format is identical: validate, pick execution path, step fram
 All files under `packages/exporters/src/`. kebab-case filenames; each `formats/*` file is independently cuttable (Req 5.5, 6.5, 7.6).
 
 - `index.ts` — public API barrel; exports only the entry functions, `detectCapabilities`, `DEFAULT_LIMITS`, and public types. No internal re-exports.
-- `frame-stepper.ts` — the only source of frame timing; computes `frameCount` and `t = i / fps`, drives the engine, and receives the single metrics-provider instance and the per-export `layoutCache` from the driver (Req 1.5). Font readiness is established by the driver via `fonts/register.ts` before the stepper starts (Req 1.6, 15).
-- `validate-options.ts` — option validation shared by every entry function; gains the `fonts[i]` shape check and the 52,428,800-byte cap (Req 15.1, 15.2, 15.7).
-- `fonts/register.ts` — `registerFonts` / `releaseFonts`, the single shared font-registration routine (Req 15.5, 15.6, 15.11, 15.14). Does no fetching.
+- `frame-stepper.ts` — the only source of frame timing; computes `frameCount` and `t = i / fps`, drives the engine, and receives the single metrics-provider instance from the driver. `FrameRenderer` owns one `layoutCache` `Map` per export and passes it as `opts.layoutCache` to `renderFrame` on every frame (Req 1.5). Font readiness is established before the driver runs, by `prepareFonts` in `worker/fonts.ts`, called from `worker-entry.ts` (Worker path) or `runWithFonts` in `worker/dispatch.ts` (main-thread path). The stepper and driver do not register fonts (Req 1.6, 15).
+- `api.ts` — hosts `resolveFonts(fonts)`, the `fonts` option validation called by `exportMp4`, `exportPngSequence` and `exportGif` before dispatch: shape check, 52,428,800-byte cap (`MAX_FONT_BYTES`, exported from `types.ts`), empty array treated as omitted (Req 15.1, 15.2, 15.7). `validate-options.ts` is not changed for fonts.
 - `scale.ts` — uniform output scaling + aspect validation (Req 14).
 - `capabilities.ts` — `detectCapabilities` and per-codec probes (Req 3).
 - `errors.ts` — `ExportError`, `ErrorCode`, `ExportNote`, and result constructors.
-- `worker/` — `driver.ts` (the driver entry: registers fonts, creates the metrics provider and `layoutCache`, runs the stepper and format code; shared by the worker and the main-thread path) + `worker-entry.ts` (worker-side harness that calls the driver) + `protocol.ts` (message types) + `host.ts` / `dispatch.ts` (main-thread wrapper that bridges `onProgress`/`AbortSignal`, picks the worker or main-thread path, and handles the `fonts-unsupported` fallback; `runOnMainThread` calls the same driver).
+- `worker/` — `driver.ts` (the driver entry: creates the metrics provider, runs the stepper and format code; shared by the worker and the main-thread path; it does not know which path it is on and does not register or release fonts) + `fonts.ts` (`prepareFonts` / `releaseFonts` and the `FontEnv` seam, the single shared font-registration routine; does no fetching; Req 15.5, 15.6, 15.11, 15.14) + `worker-entry.ts` (worker-side harness: calls `prepareFonts` before the driver, never releases because the host terminates the worker) + `protocol.ts` (message types) + `host.ts` / `dispatch.ts` (main-thread wrapper that bridges `onProgress`/`AbortSignal`, picks the worker or main-thread path, and handles the `fonts-unsupported` fallback; `runOnMainThread`, exported for tests only and not from the barrel, calls `prepareFonts`, the driver and `releaseFonts` through a small `runWithFonts` helper).
 - `formats/mp4.ts` — `exportMp4`: H.264 `VideoEncoder` → mp4-muxer, optional AAC.
 - `formats/png-seq.ts` — `exportPngSequence`: PNG-per-frame → client-zip stored entries.
 - `formats/webm-alpha.ts` — `exportWebmAlpha`: VP9 `alpha:"keep"` → webm-muxer.
@@ -102,7 +101,7 @@ export interface ExportProgress {
 export type FontSource = {
   family: string; // non-empty
   weight: number | string;
-  data: ArrayBuffer; // <= 52,428,800 bytes
+  data: ArrayBuffer; // 1..MAX_FONT_BYTES (52,428,800) bytes
 };
 
 export interface BaseExportOptions {
@@ -172,7 +171,14 @@ export function exportWebp(project: Project, options?: WebpOptions): Promise<Exp
 
 Every entry function returns an `ExportResult` and never throws or rejects with a bare value (Req 10.1). Each validates the `Project` via the engine `ProjectSchema` and its options before rendering frame 0 (Req 10.5), and treats the input `Project` as deep-read-only (Req 10.6).
 
-`fonts` validation lives in `validate-options.ts`. If `fonts` is present and is not an array, or entry `i` has an empty or non-string `family`, a `weight` that is neither string nor number, or a `data` that is not an `ArrayBuffer`, the result is `invalid-options` with `fieldPaths: ["fonts[i]"]` (the first offending index; see the note below for a non-array `fonts`). The 52,428,800-byte cap (`FONT_MAX_BYTES`) is also checked here for `data.byteLength`; an oversize font is `font-decode-failed`, not `invalid-options` (Req 11.1, 15.7), and is rejected before any decoding. Validation does not read or copy font bytes, and never detaches the caller's buffers.
+`fonts` validation lives in `resolveFonts(fonts)` in `src/api.ts`, called by `exportMp4`, `exportPngSequence` and `exportGif` before dispatch (`MP4_OPTION_DISPOSITION.fonts = "worker"`). The rules are:
+
+- `fonts` not an array: `invalid-options` with `fieldPaths: ["fonts"]`.
+- Empty array: treated as `undefined`, so behavior is unchanged (Req 15.12).
+- Entry `i` where `family` is not 1-100 characters, `weight` does not match `/^(?:[1-9]00|1000|normal|bold)$/` (a number is tested as its string form), or `data` is not an `ArrayBuffer` with `byteLength > 0`: `invalid-options` with `fieldPaths: ["fonts[i]"]` for the first offending index.
+- `data.byteLength` over `MAX_FONT_BYTES` (52,428,800, exported from `types.ts`): `font-decode-failed` with `fieldPaths: ["fonts[i]"]`, not `invalid-options` (Req 11.1, 15.7), rejected before any decoding.
+
+The size cap is checked in `resolveFonts` only; `prepareFonts` does not re-check it. `resolveFonts` does not read or copy font bytes and never detaches the caller's buffers.
 
 Note on the non-array case: Req 15.2 specifies `fieldPaths` of `["fonts[i]"]` for an offending entry. For a non-array `fonts` there is no index, so the path is `["fonts"]`; the requirement does not define this case's path, so this is a design choice flagged for confirmation.
 
@@ -189,23 +195,39 @@ The package adds no persisted schema — the engine's `Project`/`FrameState` are
 - `EncodedChunk` adapters — per-format wrappers over `EncodedVideoChunk` / `EncodedAudioChunk` / PNG `Blob` / GIF frame bytes, consumed by the matching muxer/container writer.
 - Worker protocol messages — see Worker message protocol below.
 
-The metrics provider and `layoutCache` live on `StepContext` so that layout is identical across all frames of one export (Req 1.5). `FrameRenderer` receives the per-export `layoutCache` and passes it as `opts.layoutCache` to every `renderFrame` call; the cache is shared across frames and discarded with the export. The studio preview owns its own, separate cache. Fonts are registered by the driver before `StepContext` is built (see Font sources), so the first measurement already sees the supplied faces (Req 1.6, 15.5).
+The metrics provider and `layoutCache` live on `StepContext` so that layout is identical across all frames of one export (Req 1.5). `FrameRenderer` receives the per-export `layoutCache` and passes it as `opts.layoutCache` to every `renderFrame` call; the cache is shared across frames and discarded with the export. The studio preview owns its own, separate cache. Fonts are registered before the driver runs, by `prepareFonts` (see Font sources), so `StepContext` is built after registration and the first measurement already sees the supplied faces (Req 1.6, 15.5).
 
 ```ts
-// fonts/register.ts (internal)
-export type RegisterFontsResult =
-  | { ok: true; added: FontFace[] }
-  | { ok: false; error: ExportError }; // font-decode-failed | font-not-ready
+// worker/fonts.ts (internal)
+export const FONT_LOAD_TIMEOUT_MS = 30_000;
 
-export function registerFonts(
+export interface FontFaceLike {
+  status: string;
+  family: string;
+  weight: string;
+  load(): Promise<unknown>;
+}
+export interface FontSetLike {
+  add(face: FontFaceLike): unknown;
+  delete(face: FontFaceLike): unknown;
+  forEach(cb: (face: FontFaceLike) => void): void;
+}
+export interface FontEnv {
+  fontSet: FontSetLike | undefined;
+  makeFace: ((family: string, data: ArrayBuffer, weight: string) => FontFaceLike) | undefined;
+  timeoutMs: number;
+}
+
+export function defaultFontEnv(): FontEnv; // globalThis.fonts ?? document.fonts; new FontFace(family, data, { weight })
+export function fontsSupported(env: FontEnv): boolean;
+export function prepareFonts(
   fonts: FontSource[],
-  fontSet: FontFaceSet,
-  FontFaceCtor: typeof FontFace | undefined,
-  timeoutMs = 30000,
-): Promise<RegisterFontsResult>;
-
-export function releaseFonts(fontSet: FontFaceSet, added: FontFace[]): void;
+  env: FontEnv,
+): Promise<{ failure: ExportResult | null; added: FontFaceLike[] }>; // never throws
+export function releaseFonts(added: FontFaceLike[], env: FontEnv): void;
 ```
+
+These replace the earlier `registerFonts` / `fonts/register.ts` names. Every `env` parameter defaults to `defaultFontEnv()`; the interfaces are the minimal subsets of `FontFace` / `FontFaceSet` that the module uses, so tests inject fakes.
 
 ## Worker message protocol
 
@@ -223,18 +245,18 @@ type WorkerToMain =
   | { type: "progress"; fraction: number; frame: number; frameCount: number }
   | { type: "result"; result: ExportResult } // file transferred as Blob/ArrayBuffer
   | { type: "error"; error: ExportError }
-  | { type: "fonts-unsupported" }; // FontFace or self.fonts absent in the worker (Req 15.15)
+  | { type: "fonts-unsupported" }; // fonts non-empty and fontsSupported() is false in the worker (Req 15.15)
 ```
 
 The host wrapper translates `signal`'s `abort` event into an `{ type: "abort" }` `postMessage`, and each `{ type: "progress" }` message into an `onProgress(...)` call. The produced `Blob`/`ArrayBuffer` is transferred back (zero-copy) in the `result` message. When `OffscreenCanvas` or `Worker` is unavailable, `worker/host.ts` runs the same `frame-stepper` + format code inline on the main thread (Req 9.8). Both paths share the driver, stepper and encoders, so frames are byte-identical (Req 9.8, Req 1.4).
 
-`fonts` is carried in the `start` message by structured clone and is never placed in the transfer list (Req 15.10), so the caller's `ArrayBuffer`s stay attached and byte-equal, and the main-thread fallback can reuse the same buffers.
+`fonts` is carried in the `start` message by structured clone. Font buffers are never in the transfer list (Req 15.10), so the caller's `ArrayBuffer`s stay attached and byte-equal, and the main-thread fallback can reuse the same buffers.
 
-**Audio buffers.** The `audioPcm` channel buffers are transferred today (zero-copy). When `fonts` is non-empty they are instead cloned (not in the transfer list), so the main-thread fallback still has the audio after a `fonts-unsupported` round trip (Req 15.16). When `fonts` is empty or omitted the transfer list is unchanged (Req 15.17). Design decision: the worker posts `fonts-unsupported` only when `fonts` is non-empty. With `fonts` empty or omitted it never probes for `FontFace`, which keeps behavior identical to before Requirement 15 (Req 15.12) and keeps the zero-copy audio transfer safe, because no fallback can follow. Req 15.15 does not say whether the check is conditional on a non-empty list, so this is flagged for confirmation.
+**Audio buffers.** The `audioPcm` channel buffers are transferred (zero-copy) only when `fonts` is empty or omitted (Req 15.17). When `fonts` is non-empty they are cloned instead, so the main-thread fallback still has the audio after a `fonts-unsupported` round trip (Req 15.16). Design decision: the worker posts `fonts-unsupported` only when `fonts` is non-empty and `fontsSupported()` is false. With `fonts` empty or omitted it never probes for `FontFace`, which keeps behavior identical to before Requirement 15 (Req 15.12) and keeps the zero-copy audio transfer safe, because no fallback can follow. Req 15.15 does not say whether the check is conditional on a non-empty list, so this is flagged for confirmation.
 
-**Fallback sequence (`dispatch.ts`).** On `{ type: "fonts-unsupported" }` the host terminates the worker, then runs the same driver through `runOnMainThread` with the same `project`, `options` and `fonts` list, reusing the caller's `onProgress` and `signal` (Req 15.15). Any `abort` already requested is honored by the main-thread run.
+**Fallback sequence (`dispatch.ts`).** On `{ type: "fonts-unsupported" }` the host settles the export, removes its abort listener, terminates the worker, and resolves with `runOnMainThread(args)`, which runs the same `project`, `options` and `fonts` list and reuses the caller's `onProgress` and `signal` (Req 15.15). Any `abort` already requested is honored by the main-thread run. `runOnMainThread` is exported from `dispatch.ts` for tests only and is not part of the barrel.
 
-**Ordering race.** `fonts-unsupported` is posted by the driver before the metrics provider, the `layoutCache` and frame 0 exist. The driver registers fonts first, so a `progress` or `result` message can never precede `fonts-unsupported`; the host therefore never has to discard output from a worker it is about to terminate.
+**Ordering race.** `worker-entry.ts` calls `fontsSupported()` and posts `fonts-unsupported` before it calls `prepareFonts` or the driver, so the metrics provider, the `layoutCache` and frame 0 do not exist yet. A `progress` or `result` message can therefore never precede `fonts-unsupported`; the host never has to discard output from a worker it is about to terminate.
 
 ## Font sources
 
@@ -242,21 +264,26 @@ A Worker has its own `self.fonts` and does not see the document's fonts, so a Wo
 
 **Who fetches.** The studio fetches its four same-origin woff2 files once (Noto Sans Latin 400/700 and Noto Sans Tamil 400/700 from `apps/studio/public/fonts`) and passes the resulting bytes as `FontSource[]`. The exporter never fetches font data on any thread, so it issues no network request (Req 11.4, 15.3). The Worker receives only bytes.
 
-**Where it runs.** Registration is the first step of the driver entry in `worker/driver.ts`, which is shared by `worker-entry.ts` and `runOnMainThread`. The order is: register fonts, then create the single metrics provider and the single `layoutCache`, then render frame 0. No measurement happens before registration completes (Req 1.6, 15.5).
+**Where it runs.** Registration happens before the driver, and the driver itself neither registers nor releases fonts, because it does not know which path it is on. Release must live where the path is known:
 
-**`registerFonts(fonts, fontSet, FontFaceCtor, timeoutMs = 30000)`.** One routine used by both paths (Req 15.6). The driver passes `self.fonts` and `FontFace` in a Worker, and `document.fonts` and `FontFace` on the main thread. For each font in array order:
+- **Worker path:** `worker/worker-entry.ts` checks `fontsSupported()` (posting `fonts-unsupported` when `fonts` is non-empty and it is false), then calls `prepareFonts` before the driver. It never releases, because the host terminates the worker.
+- **Main-thread path:** `runOnMainThread` in `worker/dispatch.ts` uses a small `runWithFonts` helper: `prepareFonts`, then `try { driver } finally { releaseFonts(added) }`. Release therefore runs on success, failure and cancel (Req 15.11).
 
-1. If `fontSet` already holds a loaded face with the same family and weight, skip it. It is not added and is not in `added`, so it is never removed later (Req 15.11).
-2. If `data.byteLength` exceeds 52,428,800, fail with `font-decode-failed` without constructing a face.
-3. Construct `new FontFaceCtor(family, data, { weight })`. A constructor error counts as a decode failure. `FontFace` copies the bytes, so the caller's buffer is not detached.
-4. `await face.load()`. A rejection is `font-decode-failed`.
-5. `fontSet.add(face)`, then verify with `fontSet.check` for that family and weight; a failed check is `font-decode-failed`. Push the face onto `added`.
+In both paths the order is: prepare fonts, then create the single metrics provider and the single `layoutCache`, then render frame 0. No measurement happens before registration completes (Req 1.6, 15.5).
 
-The whole sequence shares one deadline of `timeoutMs`; if it passes, the result is `font-not-ready`. If `FontFaceCtor` is undefined (main thread, non-empty `fonts`), the result is `font-not-ready` (Req 15.4). Returns `{ ok: true, added }` or `{ ok: false, error }`.
+**`prepareFonts(fonts, env)`.** One routine used by both paths (Req 15.6). `defaultFontEnv()` supplies `globalThis.fonts ?? document.fonts` as the font set and `new FontFace(family, data, { weight })` as `makeFace`, with `timeoutMs = FONT_LOAD_TIMEOUT_MS` (30,000). It never throws. For each font in array order:
 
-On a partial failure, `registerFonts` calls `fontSet.delete` on every face in `added` before returning the error, so the font set is unchanged (Req 15.14). A face whose `load()` is still pending at timeout was never added, so it needs no removal.
+1. If the font set already holds a face with the same family and weight whose `status` is `"loaded"`, skip it. It is not added, is not in `added`, and is therefore never released (Req 15.11).
+2. Otherwise build the face with `makeFace`, `await face.load()`, then `fontSet.add(face)` and push it onto `added`.
 
-**`releaseFonts(fontSet, added)`** deletes exactly the faces in `added` and nothing else. The main-thread path calls it in a `finally` block on success, failure and cancel (Req 15.11). The Worker path does not call it, since the Worker is terminated (Req 15.11).
+The whole sequence races one 30 s timeout. A load that completes after the race is lost never adds its face (an `abandoned` flag is checked after `load()`). Failures map as follows:
+
+- A `SyntaxError` from construction or `load()` is `font-decode-failed`.
+- Any other rejection, the timeout, or an unsupported runtime (no font set or no `FontFace`) is `font-not-ready` (Req 15.4).
+
+On any failure `prepareFonts` calls `releaseFonts` on the faces added so far and returns `{ failure, added: [] }`, so the font set is unchanged when the failure is returned (Req 15.14). On success it returns `{ failure: null, added }`. With `fonts` empty or omitted it returns `{ failure: null, added: [] }` immediately. The byte-size cap is not re-checked here; `resolveFonts` owns it.
+
+**`releaseFonts(added, env)`** deletes exactly the faces in `added` and nothing else, ignoring individual delete errors. Only the main-thread path calls it (Req 15.11).
 
 **No global mutation.** The only global state touched is adding and removing the exporter's own `FontFace` objects. The exporter never deletes or replaces `Worker`, `OffscreenCanvas` or any other global (Req 15.13).
 
@@ -264,15 +291,18 @@ On a partial failure, `registerFonts` calls `fontSet.delete` on every face in `a
 flowchart TD
   start["start message / main-thread call"] --> has{"fonts non-empty?"}
   has -- "no" --> run["create provider + layoutCache, render frames"]
-  has -- "yes" --> sup{"FontFace and fonts available?"}
-  sup -- "worker: no" --> post["post fonts-unsupported"]
-  post --> term["host terminates worker"]
-  term --> main["runOnMainThread: same driver, same fonts"]
-  sup -- "main thread: no" --> nr["font-not-ready"]
-  sup -- "yes" --> reg["registerFonts"]
-  reg -- "ok" --> run
-  reg -- "failure" --> err["font-decode-failed / font-not-ready"]
-  run --> rel["main thread: releaseFonts in finally"]
+  has -- "yes, worker" --> sup{"fontsSupported()?"}
+  sup -- "no" --> post["worker-entry posts fonts-unsupported"]
+  post --> term["dispatch terminates worker"]
+  term --> main["runOnMainThread: runWithFonts with same fonts"]
+  sup -- "yes" --> prep["worker-entry: prepareFonts"]
+  has -- "yes, main thread" --> mprep["runWithFonts: prepareFonts"]
+  main --> mprep
+  prep -- "ok" --> run
+  mprep -- "ok" --> run
+  prep -- "failure" --> err["font-decode-failed / font-not-ready"]
+  mprep -- "failure" --> err
+  run --> rel["main thread only: releaseFonts in finally"]
 ```
 
 ### Error mapping for fonts
@@ -281,14 +311,15 @@ No new `ErrorCode` is added (Req 15.9). Every font failure returns before frame 
 
 | Condition | Code | Requirement |
 | --- | --- | --- |
-| `fonts` not an array, or entry `i` has empty/non-string `family`, bad `weight`, or non-`ArrayBuffer` `data` | `invalid-options`, `fieldPaths: ["fonts[i]"]` | 15.2, 13.13 |
-| `data.byteLength` > 52,428,800 | `font-decode-failed` | 11.1, 11.3, 15.7 |
-| `FontFace` constructor error, `load()` rejection, or failed `fontSet.check` | `font-decode-failed` | 11.3, 15.7 |
+| `fonts` not an array, or entry `i` with bad `family`, bad `weight`, or empty/non-`ArrayBuffer` `data` | `invalid-options`, `fieldPaths: ["fonts"]` or `["fonts[i]"]` | 15.2, 13.13 |
+| `data.byteLength` > `MAX_FONT_BYTES` (checked in `resolveFonts`) | `font-decode-failed`, `fieldPaths: ["fonts[i]"]` | 11.1, 11.3, 15.7 |
+| `SyntaxError` from `FontFace` construction or `load()` | `font-decode-failed` | 11.3, 15.7 |
+| Any other `load()` rejection | `font-not-ready` | 15.8 |
 | Registration not complete within 30 s | `font-not-ready` | 1.7, 11.8, 15.8 |
-| No `FontFace` on the main thread with non-empty `fonts` | `font-not-ready` | 15.4 |
-| No `FontFace` or `self.fonts` in a Worker | not an error: `fonts-unsupported`, then main-thread fallback | 15.15 |
+| No font set or no `FontFace` on the main thread with non-empty `fonts` | `font-not-ready` | 15.4 |
+| No font set or no `FontFace` in a Worker (non-empty `fonts`) | not an error: `fonts-unsupported`, then main-thread fallback | 15.15 |
 
-Requirement 11.8 reconciliation: 11.8 defers to Requirement 15 for font loading, and its two outcomes (`font-not-ready` for the 30 s timeout, `font-decode-failed` for a bad or over-cap file) are the same rows as above. Req 11.1 says an over-cap file is rejected before decoding; the cap check in `validate-options.ts` and again in `registerFonts` (step 2) both run before any `FontFace` is constructed. The check is repeated in `registerFonts` because it is also the entry used by the main-thread path and by unit tests that call it directly.
+Requirement 11.8 reconciliation: 11.8 defers to Requirement 15 for font loading, and its two outcomes (`font-not-ready` for the 30 s timeout, `font-decode-failed` for a bad or over-cap file) are the same rows as above. Req 11.1 says an over-cap file is rejected before decoding; the cap is checked in `resolveFonts`, which runs before dispatch and therefore before any `FontFace` is constructed. `prepareFonts` does not repeat the check.
 
 ## Cancel / progress / backpressure flow
 
@@ -410,7 +441,9 @@ Unless noted, each property runs in Node with `FakeMetricsProvider` over generat
 
 ### Property 13: Font registration is symmetric and exact
 
-*For any* initial font set (any mix of loaded and unloaded faces), any `fonts` list (including entries whose family and weight match a loaded pre-existing face), and any injected failure point or none, `registerFonts` adds to the set exactly the faces it returns in `added`, never adds a face already loaded for the same family and weight, and `releaseFonts(fontSet, added)` then restores the set to exactly its initial contents with every pre-existing face still present. *For any* run where registration fails partway, the font set equals its initial contents when the error is returned, and the error code is `font-decode-failed` or `font-not-ready` as mapped.
+*For any* initial font set (any mix of loaded and unloaded faces), any `fonts` list (including entries whose family and weight match a loaded pre-existing face), and any injected failure point or none, `prepareFonts` adds to the set exactly the faces it returns in `added`, never adds a face already loaded for the same family and weight, and `releaseFonts(added, env)` then restores the set to exactly its initial contents with every pre-existing face still present. *For any* run where `prepareFonts` fails partway, the font set equals its initial contents when the failure is returned, `added` is `[]`, and the error code is `font-decode-failed` (`SyntaxError`) or `font-not-ready` (other rejection, timeout, unsupported runtime) as mapped.
+
+As built, this property is covered by a table of Node unit tests in `worker/fonts.test.ts` over fake `FontSetLike` / `FontFaceLike` objects (success, dedupe of a loaded face, rollback at a middle and last font, `SyntaxError`, other rejection, timeout with a late load that must not add, unsupported runtime, release), not by a fast-check property. It is therefore not a generated-input property test and does not run 100 iterations.
 
 **Validates: Requirements 15.5, 15.11, 15.14, 13.14**
 
@@ -426,21 +459,24 @@ Every public function returns an `ExportResult`; no path throws or rejects with 
 
 ## Testing Strategy
 
-PBT applies here: the stepper, scaler, option validators, naming, CRC-32, GIF delay, trim/pad, and the exporter-local blur are pure functions with universal input/output properties. Properties 1–13 are each implemented by a SINGLE property-based test using `fast-check`, configured to a minimum of 100 iterations, tagged `Feature: exporters, Property {n}: {property text}`, and run in Node against `FakeMetricsProvider` (Property 9 runs over raw pixel buffers, also in Node; Property 13 runs against a fake `FontFaceSet` and fake `FontFace` constructor). Property 14 is the exception: it is verified by the Chromium Playwright test below, not by a Node property test. We do not re-implement a PBT framework.
+PBT applies here: the stepper, scaler, option validators, naming, CRC-32, GIF delay, trim/pad, and the exporter-local blur are pure functions with universal input/output properties. Properties 1–12 are each implemented by a SINGLE property-based test using `fast-check`, configured to a minimum of 100 iterations, tagged `Feature: exporters, Property {n}: {property text}`, and run in Node against `FakeMetricsProvider` (Property 9 runs over raw pixel buffers, also in Node). Properties 13 and 14 are the exceptions. Property 13 is covered by a table of Node unit tests over fake font-set objects (see the property), not by fast-check. Property 14 is verified by the Chromium Playwright test below, not by a Node test. We do not re-implement a PBT framework.
 
 Unit tests (co-located `*.test.ts`) cover concrete examples and edge cases that are not universal properties: single-metrics-provider identity (Req 1.5), `empty-frame-range` at the boundary (Req 1.3), invalid `backgroundFallback` (Req 2.12), transparent→fallback note (Req 2.11), per-background PNG alpha/opacity (Req 4.3/4.4), partial-ZIP abort on injected failure (Req 4.6), capability classification with mocked `isConfigSupported` returning each status / rejecting / hanging and with the `VideoEncoder` global absent (Req 3, Req 13.4), cancel mid-export + backpressure bound + memory-budget overflow with a mocked encoder (Req 9.4/9.5/9.7), and limit-violation boundaries (Req 9.6). A unit test covers `FilterStrippingContext` scope handling: nested `save()`/`restore()` correctly nests and composites inner blurred scopes; scopes with no blur (filter `'none'` or blur 0) pass through UNCHANGED (byte-identical call forwarding, no offscreen layer created); and an unbalanced/early-exit call sequence from the engine must not leak an un-composited or un-restored offscreen layer — every created layer is composited-or-discarded on `restore()`, and a dangling scope at end-of-frame is flushed safely (Req 8.1, 8.3).
 
-Font-source unit tests (Node, co-located) use a fake `FontFaceSet` (a `Set`-backed object with `add`, `delete`, `has`, `check`, iteration) and a fake `FontFace` class whose `load()` can resolve, reject, or never settle (with fake timers for the 30 s case). They cover: malformed `fonts` entries return `invalid-options` with `fieldPaths: ["fonts[i]"]` for the offending index (Req 13.13); an undecodable or over-cap font returns `font-decode-failed`; a never-settling `load()` returns `font-not-ready` with no frame rendered; a missing `FontFace` constructor returns `font-not-ready`; a caller-supplied `ArrayBuffer` stays non-detached and byte-equal after a worker-path export followed by a main-thread export reusing the same buffers (the buffer-intact test, using a fake Worker that structured-clones the `start` message); after success, failure and cancel the set holds none of the added faces and every pre-existing face (Req 13.14); an already-loaded same family and weight face is not added again; and a partial failure removes the faces added so far before the error is returned.
+Font-source unit tests (Node, co-located) live in two files.
 
-A dispatch fallback test (Node) uses a fake `Worker` that, on `start`, posts exactly `{ type: "fonts-unsupported" }`. It asserts that `dispatch.ts` terminates that worker, runs the driver on the main thread with the same `fonts` list, and that PCM audio is present in the output (the `start` message cloned the `audioPcm` buffers because `fonts` was non-empty). A second case asserts that with `fonts` empty or omitted the `audioPcm` buffers appear in the transfer list as before (Req 13.15).
+`worker/fonts.test.ts` covers `prepareFonts` and `resolveFonts`. It injects a fake `FontEnv` (a `FontSetLike` with `add`, `delete`, `forEach`, and a `makeFace` whose faces' `load()` can resolve, reject with `SyntaxError`, reject otherwise, or never settle, with fake timers for the 30 s case). It covers: `resolveFonts` returns `invalid-options` with `fieldPaths: ["fonts"]` or `["fonts[i]"]` for the offending input (Req 13.13), treats an empty array as `undefined`, and returns `font-decode-failed` for a font over `MAX_FONT_BYTES`; `SyntaxError` maps to `font-decode-failed`; another rejection, a timeout and an unsupported runtime map to `font-not-ready`; a late load after a lost timeout never adds a face; a family and weight already `"loaded"` is skipped, never added and never released; a partial failure releases the faces added so far and returns `added: []`; and `releaseFonts` leaves every pre-existing face present (Req 13.14). This table is the Property 13 coverage.
+
+`worker/dispatch.test.ts` uses a fake `Worker`. It covers: when the worker posts exactly `{ type: "fonts-unsupported" }`, `dispatch.ts` removes its abort listener, terminates the worker and resolves with `runOnMainThread` using the same `fonts`; PCM audio survives the fallback (the `start` message cloned the `audioPcm` buffers because `fonts` was non-empty); with `fonts` empty or omitted the `audioPcm` buffers appear in the transfer list as before, and font buffers are never in the transfer list (Req 13.15); and a font failure on the main-thread path renders no frame.
 
 Integration and visual tests live in `tests/` (Chromium via Playwright), served over the localhost harness so the bundled Chromium runs in a secure context (Spike 4): the frame-fidelity golden compares a rendered/scaled exported frame to the engine golden PNG at `maxDiffPixelRatio: 0.001` (Req 13.1) — the primary visual gate, requiring no encoder; the blur golden compares exporter-local blur to a `ctx.filter` reference at `maxDiffPixelRatio: 0.01` (Req 8.5). Muxer/format logic and the hand-written MP4 box reader also run against mocked `VideoEncoder`/`AudioEncoder` emitting canned chunks as the always-on layer (Req 13.7). Real end-to-end MP4 (H.264 + AAC) and plain-VP9 encode tests run on the PRIMARY path in the bundled Chromium, served over the localhost harness (no `chrome` channel, no gating) — Spike 4 verifies these codecs are supported from a secure context. ONLY the VP9-alpha real-encode test stays gated, behind a runtime `VideoEncoder.isConfigSupported({ codec: "vp09.00.10.08", alpha: "keep", ... })` check, and is skipped with a visible reason when unsupported (Req 13.9, Spike 4). R13.10's "chrome channel" question is resolved: the bundled Chromium suffices for H.264/VP9/AAC from a secure (localhost) context, so no channel change is required; VP9-alpha remains environment-dependent (Req 13.10). No test issues a network request (Req 11.4, 13.8). This task does not modify the Playwright configuration.
 
-**Font parity Playwright test (Property 14; Req 13.11, 13.12).** Lives in `packages/exporters/tests/`, served by a tiny Vite page (or the existing exporters Playwright setup if it already serves a localhost page). The test loads the studio's woff2 files from the page's own origin, hands the bytes to the exporter as `fonts`, and compares:
+**Font parity Playwright test (Property 14; Req 13.11, 13.12).** The spec is `packages/exporters/tests/visual/fonts-parity.spec.ts`, with harness `tests/visual/app/fonts-harness.ts` and fixture woff2 files plus their OFL texts in `tests/visual/app/public/fonts/` (copied from the studio). The test loads the woff2 files from the page's own origin, hands the bytes to the exporter as `fonts`, and compares:
 
 1. Worker-path frame with `fonts` vs the preview render of the same `Project` and `t` (the preview registers the same fonts in `document.fonts` and calls `renderFrame` with its own `layoutCache`): `diffRatio` of exactly `0`.
-2. Worker-path frame vs main-thread-path frame with the same `fonts`: `diffRatio` of exactly `0`.
+2. Main-thread-path frame with `fonts` vs the same preview render: `diffRatio` of exactly `0`.
 3. Worker-path frame with `fonts` omitted vs the preview: `diffRatio` greater than `0`, showing the system-font fallback mismatch. The test text uses glyphs the system fallback renders differently (for example Tamil), so the mismatch is not machine-dependent.
+4. After the exports, `document.fonts` holds the same faces as before them.
 
 Golden images are compared in Chromium only, as for the other visual tests.
 
@@ -449,7 +485,7 @@ Golden images are compared in Chromium only, as for the other visual tests.
 A suggested order for the later `tasks.md` (each `formats/*` is independently cuttable):
 
 1. Scaffold the package (`package.json`, `README.md`, tsconfig wiring), plus `errors.ts`, public types in `index.ts`, and `capabilities.ts`.
-2. `fonts/register.ts` (`registerFonts` / `releaseFonts` with their fake-`FontFaceSet` unit and property tests) and the `fonts` option validation in `validate-options.ts`, then `frame-stepper.ts`, `scale.ts`, and the shared worker + main-thread harness (`worker/driver.ts`, `worker-entry.ts`, `dispatch.ts`), which calls `registerFonts` first, owns the per-export `layoutCache`, and handles `fonts-unsupported` and the audio clone-versus-transfer rule. The font parity Playwright test (Property 14) lands once the harness and the first format exist, with MP4/PNG sequence in step 3.
+2. `worker/fonts.ts` (`prepareFonts` / `releaseFonts` with their fake-`FontEnv` unit tests) and `resolveFonts` in `api.ts`, then `frame-stepper.ts` (whose `FrameRenderer` owns the per-export `layoutCache`), `scale.ts`, and the shared worker + main-thread harness: `worker/driver.ts`, `worker-entry.ts` (calls `prepareFonts` before the driver), and `dispatch.ts` (`runWithFonts` does `prepareFonts`, then the driver in `try`, then `releaseFonts` in `finally`; also handles `fonts-unsupported` and the audio clone-versus-transfer rule). The font parity Playwright test (Property 14) lands once the harness and the first format exist, with MP4/PNG sequence in step 3.
 3. MP4 and PNG sequence (highest product priority); the blur fallback (`blur/`) lands with MP4, the first format that needs it.
 4. WebM alpha.
 5. GIF.

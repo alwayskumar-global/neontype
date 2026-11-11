@@ -20,6 +20,7 @@ import type { ExportResult, ExportProgress } from "../types.js";
 import { fail } from "../errors.js";
 import type { DriverArgs } from "./driver.js";
 import { resolveDriver } from "./driver.js";
+import { prepareFonts, releaseFonts } from "./fonts.js";
 import type { MainToWorker, WorkerToMain } from "./protocol.js";
 
 /** Inputs for a dispatched export. */
@@ -60,6 +61,13 @@ function runOnWorker(args: DispatchArgs): Promise<ExportResult> {
         args.onProgress?.({ fraction: msg.fraction, frame: msg.frame, frameCount: msg.frameCount });
       } else if (msg.type === "result") {
         finish(msg.result);
+      } else if (msg.type === "fonts-unsupported") {
+        // The worker cannot register fonts: settle it and rerun the same driver on the main thread.
+        if (settled) return;
+        settled = true;
+        if (args.signal) args.signal.removeEventListener("abort", onAbort);
+        worker.terminate();
+        resolve(runOnMainThread(args));
       } else if (msg.type === "error") {
         finish(fail("encoder-failure", msg.message));
       }
@@ -87,29 +95,51 @@ function runOnWorker(args: DispatchArgs): Promise<ExportResult> {
     // Transfer the decoded-PCM buffers (zero-copy) rather than clone them. After
     // this the main thread's copies are detached; it must not reuse them.
     const transfer: Transferable[] = [];
+    // PCM is cloned (not transferred) when fonts are requested, so the main-thread
+    // fallback after `fonts-unsupported` still has the audio. Font buffers are never transferred.
     const pcm = args.options.audioPcm;
-    if (pcm) {
+    const hasFonts = (args.options.fonts?.length ?? 0) > 0;
+    if (pcm && !hasFonts) {
       for (const ch of pcm.channels) transfer.push(ch.buffer as ArrayBuffer);
     }
     worker.postMessage(start, transfer);
   });
 }
 
+/**
+ * Registers fonts (Req 15), runs the driver, and releases exactly the faces this
+ * call added. Release lives here, not in the driver, because only the main-thread
+ * path shares `document.fonts` with the page; a worker is terminated instead.
+ */
+async function runWithFonts(
+  args: DispatchArgs,
+  driver: NonNullable<ReturnType<typeof resolveDriver>>,
+  isAborted: () => boolean,
+): Promise<ExportResult> {
+  const { failure, added } = await prepareFonts(args.options.fonts);
+  if (failure) return failure;
+  try {
+    return await driver(
+      { format: args.format, project: args.project, options: args.options, limits: args.limits },
+      (p) => args.onProgress?.(p),
+      isAborted,
+    );
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.name : "export error";
+    return fail("encoder-failure", `Encoding failed: ${message}`);
+  } finally {
+    releaseFonts(added);
+  }
+}
+
 /** Runs the driver inline on the main thread (fallback path). */
-function runOnMainThread(args: DispatchArgs): Promise<ExportResult> {
+export function runOnMainThread(args: DispatchArgs): Promise<ExportResult> {
   const driver = resolveDriver(args.driverId);
   if (!driver) {
     return Promise.resolve(fail("encoder-failure", `Unknown driver: ${args.driverId}`));
   }
   const isAborted = (): boolean => args.signal?.aborted ?? false;
-  return driver(
-    { format: args.format, project: args.project, options: args.options, limits: args.limits },
-    (p) => args.onProgress?.(p),
-    isAborted,
-  ).catch((err: unknown) => {
-    const message = err instanceof Error ? err.name : "export error";
-    return fail("encoder-failure", `Encoding failed: ${message}`);
-  });
+  return runWithFonts(args, driver, isAborted);
 }
 
 /**

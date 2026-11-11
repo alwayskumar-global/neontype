@@ -19,6 +19,7 @@ describe("MP4 option disposition (no silent drops)", () => {
     // type without being added here, this object fails to type-check.
     const allKeys: Record<keyof Mp4Options, true> = {
       output: true,
+      fonts: true,
       videoBitrate: true,
       backgroundFallback: true,
       addSilentTrack: true,
@@ -43,6 +44,7 @@ describe("MP4 option disposition (no silent drops)", () => {
       quality: true,
       addSilentTrack: true,
       audioPcm: true,
+      fonts: true,
     };
     for (const key of Object.keys(MP4_OPTION_DISPOSITION) as (keyof Mp4Options)[]) {
       if (MP4_OPTION_DISPOSITION[key] === "worker") {

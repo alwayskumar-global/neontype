@@ -18,6 +18,7 @@ import { ProjectSchema, type Project } from "@studio/engine";
 
 import type {
   ExportResult,
+  FontSource,
   Mp4Options,
   PngSequenceOptions,
   GifOptions,
@@ -27,7 +28,7 @@ import type {
 import { fail } from "./errors.js";
 import { dispatchExport } from "./worker/dispatch.js";
 import type { WorkerOptions, WorkerPcm } from "./worker/protocol.js";
-import { DEFAULT_LIMITS } from "./types.js";
+import { DEFAULT_LIMITS, MAX_FONT_BYTES } from "./types.js";
 import { decodeAudio } from "./audio/decode.js";
 import { trimOrPad, silentTrack } from "./audio/trim-pad.js";
 import { runWebmAlphaExport, runWebpExport } from "./formats/deferred.js";
@@ -42,6 +43,7 @@ import { runWebmAlphaExport, runWebpExport } from "./formats/deferred.js";
  */
 export const MP4_OPTION_DISPOSITION: Record<keyof Mp4Options, "worker" | "decoded-on-main" | "main-thread"> = {
   output: "worker",
+  fonts: "worker",
   videoBitrate: "worker",
   backgroundFallback: "worker",
   addSilentTrack: "worker",
@@ -50,6 +52,47 @@ export const MP4_OPTION_DISPOSITION: Record<keyof Mp4Options, "worker" | "decode
   signal: "main-thread",
   onProgress: "main-thread",
 };
+
+/** True when `x` is a failure `ExportResult` rather than a validated font list. */
+function isFailure(x: FontSource[] | undefined | ExportResult): x is ExportResult {
+  return x !== undefined && !Array.isArray(x);
+}
+
+const FONT_WEIGHT_RE = /^(?:[1-9]00|1000|normal|bold)$/;
+
+/**
+ * Validates the `fonts` option (Req 15). A bad shape is `invalid-options` with
+ * `fieldPaths: ["fonts[i]"]` (`["fonts"]` when not an array); a font over the
+ * 50 MB cap is `font-decode-failed`. The bytes are passed through uncopied: they
+ * are structured-cloned into a Worker and never transferred, so the caller's
+ * buffers stay usable. Returns `undefined` when no fonts were supplied.
+ */
+export function resolveFonts(fonts: unknown): FontSource[] | undefined | ExportResult {
+  if (fonts === undefined) return undefined;
+  if (!Array.isArray(fonts)) {
+    return fail("invalid-options", "fonts must be an array.", ["fonts"]);
+  }
+  if (fonts.length === 0) return undefined;
+  for (let i = 0; i < fonts.length; i++) {
+    const f = fonts[i] as Partial<FontSource> | null;
+    const path = `fonts[${i}]`;
+    const ok =
+      f !== null &&
+      typeof f === "object" &&
+      typeof f.family === "string" &&
+      f.family.length >= 1 &&
+      f.family.length <= 100 &&
+      (typeof f.weight === "number" || typeof f.weight === "string") &&
+      FONT_WEIGHT_RE.test(String(f.weight)) &&
+      f.data instanceof ArrayBuffer &&
+      f.data.byteLength > 0;
+    if (!ok) return fail("invalid-options", `${path} is not a valid font source.`, [path]);
+    if ((f.data as ArrayBuffer).byteLength > MAX_FONT_BYTES) {
+      return fail("font-decode-failed", `${path} exceeds the 50 MB font size cap.`, [path]);
+    }
+  }
+  return fonts as FontSource[];
+}
 
 /** Safe AAC support probe on the main thread; false on any throw/unknown. */
 async function aacSupported(): Promise<boolean> {
@@ -71,6 +114,9 @@ async function aacSupported(): Promise<boolean> {
 export async function exportMp4(project: Project, options: Mp4Options = {}): Promise<ExportResult> {
   // Touch the disposition map so it is retained and type-checked.
   void MP4_OPTION_DISPOSITION;
+
+  const fonts = resolveFonts(options.fonts);
+  if (isFailure(fonts)) return fonts;
 
   const wantsAudio = options.audio !== undefined || options.addSilentTrack === true;
 
@@ -108,6 +154,7 @@ export async function exportMp4(project: Project, options: Mp4Options = {}): Pro
     backgroundFallback: options.backgroundFallback,
     addSilentTrack: options.addSilentTrack,
     audioPcm,
+    fonts,
   };
 
   return dispatchExport({
@@ -126,11 +173,13 @@ export function exportPngSequence(
   project: Project,
   options: PngSequenceOptions = {},
 ): Promise<ExportResult> {
+  const fonts = resolveFonts(options.fonts);
+  if (isFailure(fonts)) return Promise.resolve(fonts);
   return dispatchExport({
     driverId: "png-sequence",
     format: "png-sequence",
     project,
-    options: { output: options.output },
+    options: { output: options.output, fonts },
     limits: { ...DEFAULT_LIMITS, ...options.limits },
     onProgress: options.onProgress,
     signal: options.signal,
@@ -139,11 +188,13 @@ export function exportPngSequence(
 
 /** Exports an animated GIF. Never throws. */
 export function exportGif(project: Project, options: GifOptions = {}): Promise<ExportResult> {
+  const fonts = resolveFonts(options.fonts);
+  if (isFailure(fonts)) return Promise.resolve(fonts);
   return dispatchExport({
     driverId: "gif",
     format: "gif",
     project,
-    options: { output: options.output },
+    options: { output: options.output, fonts },
     limits: { ...DEFAULT_LIMITS, ...options.limits },
     onProgress: options.onProgress,
     signal: options.signal,
