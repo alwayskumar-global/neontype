@@ -157,7 +157,9 @@ layers and control their type and placement, so that I can compose my title.
    engine `FrameState`. Each cluster box SHALL span x from `layoutX` to
    `layoutX + width` and y from `layoutY - 0.8 * height` to
    `layoutY + 0.2 * height` (the `FrameState` carries only the full
-   ascent-plus-descent height; 0.8/0.2 approximates Noto Sans). Effect scale,
+   ascent-plus-descent height; 0.8/0.2 approximates Noto Sans and is held in
+   the constant `ASCENT_RATIO = 0.8` in `hit.ts`, the descent share being
+   `1 - ASCENT_RATIO`). Effect scale,
    rotation, blur, and per-segment effect position offsets SHALL be ignored so
    the box is stable while the text animates. A layer that is active but fully
    transparent at time `t` SHALL still have its layout box; a layer not active
@@ -208,6 +210,14 @@ layers and control their type and placement, so that I can compose my title.
     Settings) SHALL keep working unchanged; canvas dragging and nudging SHALL be
     an additional way to edit `anchor`, and the `anchor` X/Y fields SHALL
     reflect the result. *(Playwright)*
+19. THE hit-only metrics provider SHALL measure text with exactly the font
+    string the painter sets on `ctx.font`, `${fontWeight} ${fontSize}px
+    ${fontFamily}` (the string the engine `drawFrame` sets), and SHALL be
+    rebuilt WHEN `document.fonts` fires `loadingdone`. *(unit)*
+20. THE hit bounds SHALL match the drawn glyphs: a Playwright drift guard SHALL
+    compare the hit bounds of the title layer with the pixel bounding box of
+    the drawn `#ffcc00` text within a tolerance of 2 canvas px per edge.
+    *(Playwright)*
 
 ### Requirement 4: Effect picker per layer
 
@@ -571,6 +581,24 @@ that I can recover from a mistaken edit or drag.
    accordingly; dragging a timeline end handle changes the layer end to a time
    on a frame; Ctrl/Cmd+Z restores each of these changes in one step; and the
    Landing, export, and strict-CSP specs stay green. *(Playwright)*
+10. WHEN Ctrl/Cmd+Z is pressed during an active gesture THE shell SHALL cancel
+    the gesture first (restoring its start state) and the key press SHALL add
+    no extra undo step. *(unit, Playwright)*
+11. WHEN Escape is pressed or a pointercancel occurs during a drag THE shell
+    SHALL cancel the gesture: the project returns to its start value and no
+    undo step is added. *(unit, Playwright)*
+12. WHEN an undo is applied THE shell SHALL clamp the playhead to the restored
+    project's duration. *(unit)*
+13. WHILE an export is running THE Ctrl/Cmd+Z shortcut SHALL do nothing (the
+    export dialog owns focus). *(Playwright or unit)*
+14. WHEN the history is empty THE undo SHALL be a no-op: no error and the same
+    Project reference. *(unit)*
+15. IF an action or gesture leaves the project unchanged (same reference, for
+    example a no-op set-anchor or set-layer-timing), THEN THE store SHALL add no
+    undo step. THE set-anchor and set-layer-timing transitions SHALL return the
+    same Project reference WHEN nothing changed. *(unit)*
+16. THE store SHALL NOT coalesce typing into one undo step; coalescing is out of
+    scope. *(unit)*
 
 ---
 

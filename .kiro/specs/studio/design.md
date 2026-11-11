@@ -152,6 +152,26 @@ and returns early when `event.target` is an `HTMLInputElement`, `HTMLTextAreaEle
 undo keeps working in fields. Otherwise it calls `preventDefault()` and
 `store.undo()`. Redo (Ctrl+Shift+Z / Ctrl+Y) is out of scope and is not bound.
 
+**Gesture cancel, export, and no-ops (Requirement 16.10 to 16.16).**
+
+- Ctrl/Cmd+Z during an open gesture calls `store.undo()`, which cancels the
+  gesture and restores its base project. The key press adds no history step.
+- Escape during a canvas or timeline drag, and `pointercancel` or
+  `lostpointercapture` without `pointerup`, call `store.cancelGesture()`: the
+  project returns to the base and history is unchanged. Escape with no open
+  gesture is ignored by this handler.
+- `undo` with empty history and no gesture returns `false` and leaves the same
+  `Project` reference (no error, no notification).
+- Both `undo` and `cancelGesture` clamp `ui.playhead` to the restored
+  `durationSeconds`.
+- While an export is running (export machine state `running`) the `keydown`
+  handler returns early and does nothing; the export dialog owns focus.
+- `set-anchor` and `set-layer-timing` return the input `Project` reference when
+  the new values equal the old ones (unit-tested), so `!==` detects "unchanged"
+  and no step is added.
+- Typing in fields is NOT coalesced: each accepted edit is one step (decision;
+  coalescing is out of scope).
+
 **Why not undo inside `setUi`.** Selection and playhead changes are not
 project edits and would flood the stack; keeping `history` project-only also
 guarantees saved JSON and undo see the same data.
@@ -244,12 +264,18 @@ Rules (all in CANVAS px):
 
 - `layerBounds`: for each segment whose `text` does not match `/^[ \t\r\n]+$/`
   (visible cluster), box = `x: layoutX .. layoutX + width`,
-  `y: layoutY - 0.8 * height .. layoutY + 0.2 * height`. The union is shifted by
+  `y: layoutY - ASCENT_RATIO * height .. layoutY + (1 - ASCENT_RATIO) * height`. The union is shifted by
   `layer.anchor + layer.transform.positionOffset`. `effectOverrides`, `scale`,
   `rotation`, `blur`, and `opacity` are ignored, so the box does not wobble while
   the text animates and a fully transparent active layer keeps its box. No visible
-  cluster returns `null`. The 0.8/0.2 split approximates Noto Sans because
-  `FrameState` carries only `height = ascent + descent`.
+  cluster returns `null`. The split is the named constant in `hit.ts`:
+
+  ```ts
+  // Share of the glyph box above the baseline. Tuned for Noto Sans; the
+  // descent share is 1 - ASCENT_RATIO. FrameState carries only
+  // height = ascent + descent, so the split is an approximation.
+  export const ASCENT_RATIO = 0.8;
+  ```
 - `hitTest`: iterate `state.layers` from the last to the first (topmost painted
   wins), skip `null` bounds, return the first `layerId` with
   `rectContains(bounds, x, y, 8 / displayScale)`. `displayScale <= 0` or
@@ -299,12 +325,18 @@ on which canvas measured it, and the engine's layout cache is keyed by those
 inputs. The hit boxes also ignore every effect-driven property, so no state that
 the painter alone has is needed.
 
+**Font string equality.** The hit-only provider MUST set exactly the painter's
+`ctx.font` string, `${fontWeight} ${fontSize}px ${fontFamily}`, the string the
+engine `drawFrame` sets. A unit test asserts the hit provider's font string equals
+the painter's for the same layer style (same weight, size, and family).
+
 Trade-offs: (1) a one-time duplicate layout per layer text/font (about the cost
 of one paint, then cached); (2) if fonts load late, the hit provider must be
-discarded like the renderer is: `PreviewCanvas` recreates provider and cache in
-the existing `onFontsLoadingDone` callback so boxes never stay on fallback-font
-metrics; (3) the studio compares nothing against the painter at runtime, so a
-Playwright check (pixel bbox vs. outline) guards against drift.
+discarded like the renderer is: `PreviewCanvas` rebuilds provider and cache on
+`document.fonts` `loadingdone` (the existing `onFontsLoadingDone` callback) so
+boxes never stay on fallback-font metrics; (3) the studio compares nothing
+against the painter at runtime, so a Playwright drift guard (hit bounds vs. the
+drawn `#ffcc00` pixel bounding box, within 2 canvas px per edge) stays.
 
 ### Canvas interaction model (`preview/PreviewCanvas.tsx`)
 
@@ -338,7 +370,7 @@ Playwright check (pixel bbox vs. outline) guards against drift.
   key press; a clamped no-op returns the same project and adds none). Other keys
   are ignored.
 - **Overlay.** A sibling `<div class="selection-outline" aria-hidden="true">` in
-  the stage. In a `useLayoutEffect` (on project, playhead, selection, and a
+  the stage (decision: the outline is hidden during playback). In a `useLayoutEffect` (on project, playhead, selection, and a
   `ResizeObserver` size) it calls
   `setCssVars(el, { "--x": b.x * s, "--y": b.y * s, "--w": b.w * s, "--h": b.h * s })`
   with `s = displayScale` and the canvas-to-stage offset. The overlay is hidden
@@ -385,9 +417,13 @@ sets individual `style` properties through the CSSOM, which is allowed, but the
 spec forbids it for the app to keep one auditable mechanism). Verification:
 `csp.spec` runs the representative session including a canvas drag, an arrow
 nudge, and a timeline drag against `vite preview`, and asserts zero
-`securitypolicyviolation` events other than the single named Zod eval probe. A
-unit check (grep over `apps/studio/src/**/*.tsx`) fails on `style=` JSX
-attributes and on `dangerouslySetInnerHTML`.
+`securitypolicyviolation` events other than the single named Zod eval probe. The
+inline-style guard is ESLint core `no-restricted-syntax` in
+`apps/studio/eslint.config.js` with the selector
+`JSXAttribute[name.name='style']` (and a second selector for
+`JSXAttribute[name.name='dangerouslySetInnerHTML']`), applied to
+`apps/studio/src/**/*.tsx`. It is NOT `eslint-plugin-react` and adds no
+dependency; there is no static audit test alternative.
 
 ### Timeline interaction model (`model/timeline.ts`, `model/timemap.ts`, pure)
 
@@ -423,7 +459,8 @@ durationSeconds`; plain rounding could overshoot, e.g. 0.1 s at 25 fps rounds to
    integer (`Math.trunc`) and a non-finite `d` is 0.
 6. **Duration shorter than one frame** (`N < 1`; possible because the schema
    allows `durationSeconds` 0.1 with `fps` 1): no valid on-grid timing of at
-   least 1 frame exists, so `dragTiming` returns `start` unchanged. The
+   least 1 frame exists, so `dragTiming` returns its input (`start`) unchanged
+   (approved decision). The
    timeline rows render disabled (`aria-disabled`); the numeric inputs remain
    the way to edit. `N = 1` yields `{0, 1/fps}` for every kind.
 7. **fps change.** `dragTiming` always uses the current `fps`; a layer's stored
@@ -726,8 +763,15 @@ failures to `font-not-ready` / `font-decode-failed`. No code path uses
   push drops the oldest), gesture commit/cancel, `setProject` clears history,
   selection fix-up after undo, structural sharing (`history[i].canvas ===
   next.canvas` for an edit that touches only layers). Property 9.
-- Purity test extended to `model/hit.ts` and `model/timeline.ts`; a source audit
-  fails on JSX `style=` attributes and `dangerouslySetInnerHTML`.
+- Purity test extended to `model/hit.ts` and `model/timeline.ts`; the ESLint
+  `no-restricted-syntax` rule fails lint on JSX `style=` attributes and
+  `dangerouslySetInnerHTML`.
+- Store and model undo cases: Ctrl/Cmd+Z path (`undo`) during a gesture restores
+  the base with no step; `cancelGesture` adds no step; `undo` clamps the
+  playhead; `undo` on empty history returns the same `Project` reference;
+  `set-anchor` and `set-layer-timing` return the same reference when unchanged.
+- Hit tests: the hit provider's font string equals the painter's
+  `${fontWeight} ${fontSize}px ${fontFamily}`.
 
 ### Playwright test list (expected timings, bundled Chromium, localhost)
 
@@ -740,7 +784,7 @@ failures to `font-not-ready` / `font-decode-failed`. No code path uses
 | `timeline.spec` | bar maps start/width, ruler scrub snaps to frames, drag move/trim, end-handle drag lands on a frame (`aria-valuenow * fps` is whole), Arrow/Shift+Arrow nudges, slider ARIA attributes | ~4 s |
 | `canvas-drag.spec` | click selects layer, empty click keeps selection; drag title: anchor X/Y fields change and the pixel bbox of colour `#ffcc00` follows by the same delta; Shift axis lock; pointer released outside canvas still commits; outline overlay matches the bbox | ~5 s |
 | `canvas-nudge.spec` | focused canvas: ArrowRight +1 px, Shift+ArrowDown +10 px, other keys ignored; each press is one undo step | ~3 s |
-| `undo.spec` | Ctrl/Cmd+Z restores a canvas drag, a nudge, a timeline end-handle drag, and a panel edit, each in one step; Ctrl/Cmd+Z inside a number input does not undo the project; Open/New clears undo | ~4 s |
+| `undo.spec` | Ctrl/Cmd+Z restores a canvas drag, a nudge, a timeline end-handle drag, and a panel edit, each in one step; Ctrl/Cmd+Z inside a number input does not undo the project; Ctrl/Cmd+Z mid-drag cancels the gesture with no extra step; Escape mid-drag cancels with no step; Ctrl/Cmd+Z while an export is running does nothing; Open/New clears undo | ~5 s |
 | `fonts.spec` | first frame waits for fonts; Tamil glyphs render; not-ready maps to error | ~2 s |
 | `saveload.spec` | download round-trips; open valid replaces project; invalid shows error, no change | ~2 s |
 | `export.spec` | dialog offers MP4/PNG/GIF only; capability gating; progress; cancel→cancelled; success download; mp4-no-transparency note; error mapping | ~6 s |
