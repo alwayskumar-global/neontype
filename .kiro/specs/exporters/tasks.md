@@ -214,6 +214,61 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - **Covers:** Requirement 11.4, Requirement 12.1, Requirement 12.5
     - **Completion:** Root `pnpm test` exits with code 0 and zero failures; the full Playwright suite passes (VP9-alpha real-encode skipped with a visible reason when unsupported); no dependency beyond the four approved and no `tsconfig` change outside `packages/exporters` is present.
 
+- [ ] 9. Group 9: Font sources (worker + main-thread) — amendment
+  - [ ] 9.1 Add the `FontSource` type, `BaseExportOptions.fonts`, and `fonts` option validation
+    - In `packages/exporters/src/types.ts` add `FontSource` (`{ family: string; weight: number | string; data: ArrayBuffer }`) and the optional `fonts?: FontSource[]` field on `BaseExportOptions`; add `fonts` to `WorkerOptions` in `packages/exporters/src/worker/protocol.ts` (it is not stripped like `onProgress`/`signal`).
+    - In the shared option validation (`validate-options.ts`; `validate.ts` if that is the file name in the tree) validate `fonts`: a non-array value returns `invalid-options` with `fieldPaths: ["fonts"]`; an entry with an empty or non-string `family`, a `weight` that is neither string nor number, or a `data` that is not an `ArrayBuffer` returns `invalid-options` with `fieldPaths: ["fonts[i]"]` for the first offending index `i`; a `data` payload over 52,428,800 bytes returns `font-decode-failed` before any `FontFace` is constructed. Omitted or empty `fonts` changes nothing. No new `ErrorCode` value is added.
+    - Add unit tests next to the validation tests covering: valid list accepted, non-array, each malformed field, first-offending-index reporting, the exact 52,428,800-byte boundary (accepted) and one byte over (`font-decode-failed`), and omitted/empty `fonts`.
+    - **Covers:** Requirement 15.1, Requirement 15.2, Requirement 15.7, Requirement 15.9, Requirement 15.12, Requirement 11.1, Requirement 13.13
+    - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/validate` passes with zero failures; `pnpm --filter @studio/exporters exec tsc --noEmit` passes.
+
+  - [ ] 9.2 Implement `fonts/register.ts` with `registerFonts` / `releaseFonts`
+    - Create `packages/exporters/src/fonts/register.ts` exporting `registerFonts(fonts, fontSet, FontFaceCtor, timeoutMs = 30000): Promise<RegisterFontsResult>` and `releaseFonts(fontSet, added)`, with `fontSet` and the `FontFace` constructor injected (no direct global access, no fetch, no network). In array order: skip a font whose family and weight match an already-loaded face in `fontSet` (not added, not in `added`); re-check the 50 MB cap before constructing any `FontFace`; construct a `FontFace` from the `data` bytes (decode failure → `font-decode-failed`); `load()` then `fontSet.add`. The whole sequence shares one `timeoutMs` deadline (expiry → `font-not-ready`); an undefined `FontFaceCtor` with non-empty `fonts` → `font-not-ready`. On any partial failure, `fontSet.delete` every face already in `added` before returning the error. `releaseFonts` deletes exactly the faces in `added` and nothing else. The timeout uses an injectable timer so the module stays free of banned wall-clock APIs.
+    - Create `packages/exporters/src/fonts/register.test.ts` with unit tests using a fake `FontFaceSet` and fake `FontFace` constructor: success path adds in order; dedupe of an already-loaded same family+weight face; undecodable data → `font-decode-failed`; over-cap → `font-decode-failed` with no `FontFace` constructed; 30 s timeout via a fake timer → `font-not-ready` with no face left in the set; missing constructor → `font-not-ready`; rollback on failure at the second and last font; `releaseFonts` leaves every pre-existing face present; the caller's `ArrayBuffer` is not detached.
+    - Add a fast-check test tagged `// Feature: exporters, Property 13: Font registration is symmetric and exact` asserting, for any initial font set (mixed loaded and unloaded faces), any `fonts` list (including entries matching a loaded face), and any injected failure point or none, that `registerFonts` adds exactly the faces it returns in `added`, never adds a face already loaded for the same family and weight, and that `releaseFonts(fontSet, added)` (or the internal rollback on failure) restores the set to its initial contents. Runs a minimum of 100 iterations.
+    - **Covers:** Requirement 15.3, Requirement 15.4, Requirement 15.5, Requirement 15.6, Requirement 15.7, Requirement 15.8, Requirement 15.9, Requirement 15.11, Requirement 15.14, Requirement 1.6, Requirement 1.7, Requirement 11.1, Requirement 13.13, Requirement 13.14, Property 13
+    - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/fonts` passes with zero failures.
+
+  - [ ] 9.3 Wire font registration into the shared driver and pass the per-export `layoutCache`
+    - In the shared driver path (`packages/exporters/src/worker/driver.ts`, used by both `worker-entry.ts` and `runOnMainThread`), register fonts FIRST: call `registerFonts` with `self.fonts` / `FontFace` in a Worker and `document.fonts` / `FontFace` on the main thread, then create the single metrics provider and the single per-export `layoutCache`, then render frame 0. Registration failure returns the `font-decode-failed` / `font-not-ready` `ExportResult` with no frame rendered and the `Project` unchanged. With `fonts` omitted or empty the driver skips registration and behaves exactly as before.
+    - On the main thread, call `releaseFonts(document.fonts, added)` in a `finally` block so it runs on success, failure, and cancel. The Worker path performs no removal. Delete, replace, or mutate no global (`Worker`, `OffscreenCanvas`, or other) anywhere in the path.
+    - Make `FrameRenderer` (`frame-stepper.ts`) take the per-export `layoutCache` and pass it as `opts.layoutCache` to every `renderFrame` call, alongside the single metrics provider.
+    - Add or extend tests: exactly one metrics provider and one `layoutCache` per export, and the same `layoutCache` instance reaches every `renderFrame` call; registration happens before provider creation and frame 0 (call-order assertion); `releaseFonts` runs in `finally` on success, failure, and cancel on the main thread; no `releaseFonts` call on the Worker path. All existing exporter tests must stay green without edits to their assertions.
+    - **Covers:** Requirement 1.5, Requirement 1.6, Requirement 1.7, Requirement 15.5, Requirement 15.6, Requirement 15.11, Requirement 15.12, Requirement 15.13, Requirement 13.14, Property 1
+    - **Completion:** `pnpm --filter @studio/exporters exec vitest run` passes with zero failures, including every pre-existing test.
+
+  - [ ] 9.4 Add `fonts` to the worker protocol and the `fonts-unsupported` main-thread fallback
+    - In `packages/exporters/src/worker/protocol.ts` add `{ type: "fonts-unsupported" }` to `WorkerToMain`. In `worker/dispatch.ts` (host side) put `fonts` in the `start` message by structured clone and never in the transfer list, so the caller's `ArrayBuffer`s stay attached and byte-equal. When `fonts` is non-empty, CLONE the PCM audio buffers; when `fonts` is empty or omitted, keep the existing audio transfer list unchanged.
+    - In the Worker-side driver, when `fonts` is non-empty and `FontFace` or `self.fonts` is absent, post exactly `{ type: "fonts-unsupported" }` and stop, before the metrics provider, `layoutCache`, or frame 0 exist. With `fonts` empty or omitted the Worker never probes for `FontFace` and never posts this message.
+    - On `fonts-unsupported`, the host terminates the worker and runs the same driver through `runOnMainThread` with the same `project`, `options`, and `fonts`, reusing the caller's `onProgress` and `signal`; an `abort` already requested is honored by the main-thread run.
+    - Add tests with a fake `Worker` in `packages/exporters/src/worker/dispatch.test.ts` (or the existing host test file): the `start` message carries `fonts` and the transfer list excludes every font buffer; `fonts-unsupported` posted only when `fonts` is non-empty; the host terminates the worker and the main-thread run receives the same `fonts` list; PCM audio is present in the final output after the fallback; with empty/omitted `fonts` the PCM buffers are still transferred as before; font buffers are non-detached and byte-equal after a worker-path export followed by a main-thread export reusing the same buffers; abort during fallback yields `cancelled`.
+    - **Covers:** Requirement 15.3, Requirement 15.10, Requirement 15.15, Requirement 15.16, Requirement 15.17, Requirement 9.8, Requirement 13.13, Requirement 13.15
+    - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/worker` passes with zero failures.
+
+  - [ ] 9.5 Export `FontSource` from the public API and document the no-fetch rule
+    - Export the `FontSource` type from `packages/exporters/src/index.ts` (type-only; no internal re-exports such as `registerFonts`).
+    - Update `packages/exporters/README.md` with the `fonts` option: the `FontSource` shape, that the exporter NEVER fetches font data and only reads the supplied bytes (the caller fetches once and passes them in), structured-clone-not-transfer behavior, the main-thread fallback via `fonts-unsupported`, and the error codes used (`invalid-options`, `font-decode-failed`, `font-not-ready`). Update `docs/dependencies.md` ONLY if a dependency changes (none expected; verify and leave unchanged).
+    - **Covers:** Requirement 15.1, Requirement 15.3, Requirement 15.9, Requirement 15.10, Requirement 12.1, Requirement 12.2
+    - **Completion:** `pnpm --filter @studio/exporters exec tsc --noEmit` passes and a consumer import of `FontSource` from `@studio/exporters` type-checks; the README documents the `fonts` option; `docs/dependencies.md` is unchanged unless a dependency changed.
+
+  - [ ] 9.6 Add the Chromium font-parity Playwright test in `packages/exporters/tests`
+    - Add the minimal dev-only harness within `packages/exporters` needed to run it (a small Vite page under `packages/exporters/tests/` and, if the existing exporters Playwright config does not already serve a localhost page, a `playwright.config.ts` with a `webServer`), reusing the existing localhost harness where present. No CDN, no third-party request; fonts are same-origin woff2 files committed locally under the test fixtures (OFL, with the license text alongside), and no runtime dependency is added.
+    - Create `packages/exporters/tests/visual/fonts.spec.ts` that loads the woff2 bytes from the page's own origin, passes them as `fonts`, and asserts over a small fixed set of projects and times: (a) the Worker-path frame with `fonts` vs the preview render of the same `Project` and `t` (preview registers the same fonts in `document.fonts` and uses its own `layoutCache`) has `diffRatio` of exactly `0`; (b) the Worker-path frame with `fonts` vs the main-thread frame with the same `fonts` has `diffRatio` of exactly `0`; (c) the Worker-path frame with `fonts` omitted vs the preview shows the system-font fallback mismatch, `diffRatio` greater than `0`. No test issues a network request beyond the localhost origin.
+    - **Covers:** Requirement 13.8, Requirement 13.11, Requirement 13.12, Requirement 15.5, Requirement 15.6, Requirement 15.10, Requirement 11.4, Property 14
+    - **Completion:** `pnpm --filter @studio/exporters exec playwright test tests/visual/fonts.spec.ts` passes with zero failures.
+
+  - [ ] 9.7 Studio integration: fetch the four woff2 fonts once and pass them as `fonts`
+    - In `apps/studio/src`, add a small module (for example `fonts/export-fonts.ts`) that fetches the four same-origin woff2 files (`noto-sans-latin-400-normal`, `noto-sans-latin-700-normal`, `noto-sans-tamil-tamil-400-normal`, `noto-sans-tamil-tamil-700-normal` under `public/fonts`) ONCE, caches the resulting `FontSource[]` (family and weight taken from the existing `fonts.ts` definitions, not hard-coded in components), and returns the cached list on later calls. Each export passes the cached list; the cache must not hand out buffers the exporter would transfer (the exporter clones, so the cached `ArrayBuffer`s remain valid).
+    - Pass `fonts` from the export dialog (`export/dialog.tsx`) into the exporter call and from the export-parity probe (`preview/parity-probe.ts`). Delete, replace, or mutate no global (`Worker`, `OffscreenCanvas`, etc.) in the studio.
+    - Add a studio regression so the parity probe's `diffRatio` is exactly `0` for the demo project at `t = 3` s through the worker path, and add an assertion (d) to the studio `fonts.spec` Playwright spec checking that result. Add unit tests for the fetch-once cache (a second call does not fetch again) and for a failed fetch surfacing a typed error rather than being swallowed.
+    - **Covers:** Requirement 15.1, Requirement 15.3, Requirement 15.5, Requirement 15.10, Requirement 15.13, Requirement 13.11, Requirement 11.4
+    - **Completion:** `pnpm --filter @studio/studio exec vitest run` passes (use the studio package's actual filter name if it differs); the studio `fonts.spec` passes including assertion (d) with probe `diffRatio` of exactly `0`.
+
+  - [ ] 9.8 Checkpoint — Group 9
+    - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, `pnpm --filter @studio/exporters exec vitest run`, and `pnpm --filter @studio/exporters exec playwright test`; then the studio typecheck, lint, vitest, and production build, the studio Playwright suite including `fonts.spec`, and the CSP spec (`playwright.csp.config.ts`) to confirm no third-party request is introduced.
+    - **Covers:** Requirement 13.8, Requirement 13.11, Requirement 13.12, Requirement 11.4, Requirement 15.9, Requirement 15.13
+    - **Completion:** All commands exit with code 0 and zero failures; the VP9-alpha real-encode case may be skipped with a visible reason when unsupported.
+
 ---
 
 ## Notes
@@ -257,7 +312,13 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     { "id": 21, "tasks": ["7.1"] },
     { "id": 22, "tasks": ["7.2"] },
     { "id": 23, "tasks": ["8.1"] },
-    { "id": 24, "tasks": ["8.2"] }
+    { "id": 24, "tasks": ["8.2"] },
+    { "id": 25, "tasks": ["9.1"] },
+    { "id": 26, "tasks": ["9.2"] },
+    { "id": 27, "tasks": ["9.3"] },
+    { "id": 28, "tasks": ["9.4"] },
+    { "id": 29, "tasks": ["9.5", "9.6"] },
+    { "id": 30, "tasks": ["9.7"] }
   ]
 }
 ```

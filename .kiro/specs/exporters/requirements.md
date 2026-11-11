@@ -31,6 +31,9 @@ Exporting is deterministic: frame `i` is rendered at `t = i / fps` through the s
 - **blur fallback**: The exporter-local DETERMINISTIC blur the exporters package always uses instead of `ctx.filter`, so blurred output does not depend on the browser's filter support. The engine's `drawFrame` is unchanged; the exporter intercepts blur via a draw-surface wrapper (a design-phase spike if the engine draw surface does not permit interception).
 - **CapabilityReport**: The aggregate of per-format `CapabilityResult` values, used by the UI to show available formats and the recommended-browser guidance.
 - **ExportNote**: A typed, non-error note carried in a successful `ExportResult` summary as `notes: ExportNote[]`. It is a closed string-literal union (initially `mp4-no-transparency`) and is NOT part of `ErrorCode`.
+- **FontSource**: One entry of the optional `fonts` array in `BaseExportOptions`: `{ family: string; weight: number | string; data: ArrayBuffer }`. FontSource carries bytes only; the Exporter never fetches font data (the caller, e.g. the studio, fetches the bytes once and passes them in). Each FontSource is decoded with `FontFace` and registered with the global font set (`self.fonts` in a Worker, `document.fonts` on the main thread).
+- **BaseExportOptions**: The export options common to every format, including the optional `fonts: FontSource[]`.
+- **layoutCache**: The engine's layout memo `Map`, passed to `renderFrame` / `computeFrameState` via `opts.layoutCache`.
 - **backgroundFallback**: An MP4 export option — a `#rrggbb` hex string (default `#000000`) — used as the solid background color when the project `background` is `"transparent"`, since MP4 has no alpha channel.
 
 ## Requirements
@@ -45,8 +48,8 @@ Exporting is deterministic: frame `i` is rendered at `t = i / fps` through the s
 2. THE FrameStepper SHALL compute the total frame count as `round(durationSeconds * fps)` using round-half-away-from-zero (where `durationSeconds` is `project.canvas.durationSeconds`, in `[0.1, 600]`), SHALL render frames for integer indices `i` in the inclusive range `[0, frameCount - 1]` (frame `i = 0` included, frame at index `frameCount` excluded), and SHALL report `frameCount` as the progress total.
 3. IF the computed `frameCount` is less than `1`, THEN THE Exporter SHALL render no frame and return a failure `ExportResult` with code `empty-frame-range`, leaving the input `Project` unchanged.
 4. WHEN the same `Project` and the same export options are exported twice in one runtime, THE Exporter SHALL produce byte-identical output for every frame index.
-5. THE Exporter SHALL construct exactly one text-metrics provider instance for an export and SHALL pass that same instance to every `renderFrame` call of that export, so that layout does not vary across frames.
-6. THE Exporter SHALL await font readiness before rendering frame `0`, and WHILE the required fonts are not ready THE Exporter SHALL render no frame.
+5. THE Exporter SHALL construct exactly one text-metrics provider instance and exactly one `layoutCache` for an export, and SHALL pass that same provider instance and that same `layoutCache` (via `opts.layoutCache`) to every `renderFrame` call of that export, so that layout does not vary across frames.
+6. THE Exporter SHALL await font readiness (including registration of every supplied FontSource per Requirement 15) before rendering frame `0`, and WHILE the required fonts are not ready THE Exporter SHALL render no frame.
 7. IF the required fonts do not become ready within 30 seconds, THEN THE Exporter SHALL return a failure `ExportResult` with code `font-not-ready`, render no frame, and leave the input `Project` unchanged.
 8. THE Exporter SHALL treat the input `Project`, including its nested values, as read-only and SHALL NOT mutate it during export.
 9. THE Exporter SHALL treat `project.canvas.fps` as the only frame rate for every format and SHALL NOT accept an independent output `fps`; output size scaling is governed by Requirement 14.
@@ -197,7 +200,7 @@ Exporting is deterministic: frame `i` is rendered at `t = i / fps` through the s
 5. THE Exporter SHALL NOT use `eval` or the `Function` constructor anywhere in its code path.
 6. THE Exporter SHALL produce its output only as in-memory data returned to the caller for download, and SHALL NOT write project data or media to any destination other than that returned result nor transmit it across a network or origin boundary.
 7. WHILE decoding imported audio, THE Exporter SHALL return a failure `ExportResult` with code `audio-decode-failed` as soon as the decoded PCM is known or found to exceed either `600` seconds of duration or `512 MB` (536,870,912 bytes) of decoded size, SHALL release any partial decode buffers, SHALL leave the input `Project` unchanged, and SHALL remain able to accept a subsequent export request.
-8. WHEN loading an imported font, THE Exporter SHALL load it via `FontFace.load()` with the 30-second readiness timeout of Requirement 1, and IF the font exceeds the 52,428,800-byte (50 MB) size cap or fails to load within that 30-second timeout THEN THE Exporter SHALL return a failure `ExportResult` with code `font-decode-failed`, leave the input `Project` unchanged, and remain able to accept a subsequent export request.
+8. WHEN loading a supplied font, THE Exporter SHALL apply the error mapping of Requirement 15: IF the font does not finish loading within the 30-second readiness timeout of Requirement 1, THEN THE Exporter SHALL return a failure `ExportResult` with code `font-not-ready`; IF the font file is bad (fails to decode) or exceeds the 52,428,800-byte (50 MB) size cap, THEN THE Exporter SHALL return a failure `ExportResult` with code `font-decode-failed`; in both cases THE Exporter SHALL leave the input `Project` unchanged and remain able to accept a subsequent export request.
 
 ### Requirement 12: Dependency Governance
 
@@ -227,6 +230,11 @@ Exporting is deterministic: frame `i` is rendered at `t = i / fps` through the s
 8. THE exporters test suite SHALL run every test in Chromium with no network access, and SHALL assert that exporting the same `Project` and options twice in one runtime produces byte-identical frame output.
 9. THE exporters test suite SHALL run the MP4 and WebM encode tests only in a Chromium that provides H.264 and VP9 encoders, and WHEN the CI Chromium lacks a required encoder THE suite SHALL skip those encode tests with a visible skip reason while still running a mocked-encoder test that does not depend on the real codec.
 10. (Verify in design phase) The Playwright-bundled Chromium may lack an H.264 encoder; the design phase SHALL determine whether the test setup needs the `chrome` channel (system Chrome) for the real-encode tests. This task does not change the Playwright configuration.
+11. THE exporters test suite SHALL include a Chromium test asserting that, WHEN the same `fonts` list is supplied, a frame rendered on the Worker path and a frame rendered on the main-thread path for the same `Project` at the same `t` are pixel-identical (`diffRatio` of exactly `0`).
+12. THE exporters package SHALL include a Playwright test that exports the same `Project` on the Worker path (a) with `fonts` supplied, asserting the frame measures and draws with the supplied fonts and matches the preview with `diffRatio` of exactly `0`, and (b) with `fonts` omitted, asserting the frame shows the system-font fallback mismatch (`diffRatio` greater than `0`).
+13. THE exporters test suite SHALL include unit tests asserting that a malformed `fonts` option returns `invalid-options` with `fieldPaths` of `["fonts[i]"]` for the offending index `i`, an undecodable or over-cap font returns `font-decode-failed`, a font that does not finish loading within 30 seconds returns `font-not-ready` with no frame rendered, a runtime with no `FontFace` returns `font-not-ready`, and a caller-supplied `ArrayBuffer` remains non-detached and byte-equal after the export, including after a Worker-path export followed by a main-thread export reusing the same buffers.
+14. THE exporters test suite SHALL include unit tests asserting that, after an export ends by success, failure, or cancel, the font set contains none of the `FontFace` objects the export added and every pre-existing face is still present; that a face already present and loaded for the same family and weight is not added again; and that WHEN registration fails partway, the faces added so far are removed before the error is returned.
+15. THE exporters test suite SHALL include unit tests asserting that a Worker lacking `FontFace` or `self.fonts` posts exactly `{ type: "fonts-unsupported" }`, that the host then terminates that Worker and completes the export on the main thread with the same `fonts` list, that PCM audio is still present in the output after the fallback, and that WHEN `fonts` is empty or omitted the PCM audio buffers are still transferred as before.
 
 ### Requirement 14: Output Scaling
 
@@ -241,6 +249,30 @@ Exporting is deterministic: frame `i` is rendered at `t = i / fps` through the s
 5. IF the output `width` is outside `[1, 7680]` or the output `height` is outside `[1, 4320]`, THEN THE Exporter SHALL return a failure `ExportResult` with code `invalid-options` whose message identifies the out-of-range dimension, and SHALL NOT start encoding.
 6. THE Exporter SHALL apply the scaling rule of criteria 1 and 2 identically for MP4, PNG sequence, WebM with alpha, GIF, and WebP output formats.
 7. WHEN the same `Project` and the same output `width`×`height` are exported twice within one runtime, THE Exporter SHALL produce byte-identical scaled frame output for every corresponding frame.
+
+### Requirement 15: Font Sources for Worker and Main-Thread Paths
+
+**User Story:** As a studio developer, I want to hand the exporter the fonts my project uses, so that a Worker export measures and draws text with the same fonts as the preview instead of falling back to a system font.
+
+#### Acceptance Criteria
+
+1. WHERE the caller supplies the optional `fonts` option of `BaseExportOptions`, THE Exporter SHALL accept it as an array of FontSource values, each with a non-empty `family` string, a `weight` that is a string or a number, and a `data` that is an `ArrayBuffer`.
+2. IF the `fonts` option is not an array, or any entry has an empty or non-string `family`, a `weight` that is neither a string nor a number, or a `data` that is not an `ArrayBuffer`, THEN THE Exporter SHALL return a failure `ExportResult` with code `invalid-options` carrying `fieldPaths` of `["fonts[i]"]` where `i` is the index of the offending entry (or the first offending entry), SHALL render no frame, and SHALL leave the input `Project` unchanged.
+3. THE Exporter SHALL read font data only from the `data` bytes of each FontSource and SHALL initiate no fetch or other network request for font data on any thread, so that the Worker receives only bytes.
+4. IF the runtime provides no `FontFace` and `fonts` is non-empty on the main-thread path, THEN THE Exporter SHALL return a failure `ExportResult` with code `font-not-ready`, render no frame, and leave the input `Project` unchanged.
+5. THE Exporter SHALL decode each FontSource with `FontFace` and register it with the global font set (`self.fonts.add` in a Worker, `document.fonts.add` on the main thread) in array order, and SHALL complete registration of every supplied font before the first text measurement and before frame `0` is rendered.
+6. THE Exporter SHALL load and register every supplied font on both the Worker path and the main-thread fallback using one shared registration routine and the same `fonts` list, so that both paths apply identical font-registration semantics.
+7. IF a FontSource `data` payload exceeds 52,428,800 bytes (50 MB) or fails to decode, THEN THE Exporter SHALL return a failure `ExportResult` with code `font-decode-failed`, render no frame, and leave the input `Project` unchanged.
+8. IF the supplied fonts do not finish loading within the 30-second timeout of Requirement 1, THEN THE Exporter SHALL return a failure `ExportResult` with code `font-not-ready`, render no frame, and leave the input `Project` unchanged.
+9. THE Exporter SHALL report every failure of this requirement using the existing `ErrorCode` union of Requirement 10 and SHALL NOT add an `ErrorCode` value.
+10. THE Exporter SHALL pass font buffers to a Worker by structured clone and SHALL NOT transfer them, so the caller's buffers stay usable for every export and the main-thread fallback still has intact bytes.
+11. WHEN an export ends (success, failure or cancel), THE Exporter SHALL remove from the font set exactly the `FontFace` objects that export added. THE Exporter SHALL NOT remove a face it did not add. A face already present and loaded for the same family and weight SHALL NOT be added again. On the Worker path no removal is needed because the Worker is terminated.
+12. WHERE the `fonts` option is omitted, THE Exporter SHALL behave exactly as before this requirement, rendering with whatever fonts the executing context already provides.
+13. THE Exporter SHALL NOT delete, replace, or otherwise mutate `Worker`, `OffscreenCanvas`, or any other global as a mechanism anywhere in its code path; the only global state it may change is the addition and removal of its own `FontFace` objects in the font set per criteria 5 and 11.
+14. IF font registration fails partway, THEN THE Exporter SHALL remove the faces added so far from the font set before returning the failure `ExportResult`.
+15. IF the Worker has no `FontFace` or no `self.fonts`, THEN THE Worker SHALL post the message `{ type: "fonts-unsupported" }`, and WHEN the host receives that message, THE Exporter SHALL terminate that Worker and run the same driver on the main thread with the same `fonts` list.
+16. WHEN `fonts` is non-empty, THE Exporter SHALL clone the PCM audio buffers to the Worker rather than transfer them, so that the main-thread fallback of criterion 15 still has the audio.
+17. WHEN `fonts` is empty or omitted, THE Exporter SHALL keep the existing audio buffer transfer behavior unchanged.
 
 ## Approved dependencies
 

@@ -33,7 +33,8 @@ renderFrame(project, t, opts?)             ← public composition entry point
   │       ├─ evaluate active layers (half-open [start, end); end==duration → inclusive)
   │       ├─ per-layer: compute tLocal, interpolate KeyframeTracks → LayerState.transform
   │       ├─ per-layer: segment text via Intl.Segmenter → BaseSegment[] (charIndex/wordIndex/lineIndex)
-  │       ├─ per-layer: layout grapheme clusters (layoutX/layoutY/width/height via TextMetricsProvider)
+  │       ├─ per-layer: layout grapheme clusters (layoutX/layoutY/width/height via TextMetricsProvider;
+  │       │             wrap by maxWidth, then per-line align offset folded into layoutX)
   │       ├─ per-segment: derive PRNG, apply effects, compose SegmentOverrides → effectOverrides
   │       ├─ normalise -0 → 0 in all number fields
   │       └─ return FrameState (JSON-serialisable, no undefined/NaN/Inf/fn)
@@ -47,7 +48,8 @@ renderFrame(project, t, opts?)             ← public composition entry point
                (c) rotate by layer rotation about layer center
                (d) scale by layer scale about layer center
                (e) set ctx.globalAlpha = layer opacity
-               (f) per segment: save, translate to layoutX/layoutY,
+               (f) per segment: ctx.textAlign = "left" (always; alignment is already in layoutX),
+                   save, translate to layoutX/layoutY,
                    apply effectOverrides (positionOffset add, scale/rotation about segment center,
                    opacity multiply+clamp, blur: set `ctx.filter = 'blur(Npx)'` only when effective blur > 0, otherwise set `ctx.filter = 'none'` (avoids per-glyph filter overhead when blur is zero),
                    color: effectOverride.color → colorOverride → fill), draw text
@@ -179,7 +181,7 @@ interface BaseSegment {
   charIndex: number;      // 0-based index in layer text
   wordIndex: number;      // 0-based word index
   lineIndex: number;      // 0-based line index
-  layoutX: number;        // px relative to layer anchor
+  layoutX: number;        // px relative to layer anchor; includes the per-line alignment offset
   layoutY: number;        // px relative to layer anchor
   width: number;          // px
   height: number;         // px
@@ -192,7 +194,7 @@ interface LayerState {
   fontFamily: string;      // copied verbatim from the layer
   fontSize: number;        // px, copied verbatim from the layer
   fontWeight: string;      // copied verbatim from the layer
-  align: "left" | "center" | "right"; // copied verbatim from the layer
+  align: "left" | "center" | "right"; // copied verbatim from the layer; data only, NOT read by drawFrame
   anchor: { x: number; y: number };   // fresh plain object copied from the layer
   letterSpacing: number;   // px, copied verbatim from the layer
   lineHeight: number;      // multiplier, copied verbatim from the layer
@@ -322,6 +324,65 @@ type MigrationMap = Map<number, MigrationFn>;
 | `createPRNG` | function | `(seed: number) → PRNG` |
 | `ParseError`, `MigrationError`, `DuplicateEffectError`, `InvalidEffectParamsError` | classes | Typed errors |
 
+### Per-line alignment in layout (`layout.ts`) — Requirements 5.15, 15.1
+
+**Decision.** Horizontal alignment is resolved in `layoutSegments`, not in the painter. Previously `drawFrame` set `ctx.textAlign = layer.align` while `layoutX` was always computed as left-aligned from pen position `0`, so `center` and `right` layers drew each glyph centred or right-aligned on its own `layoutX`, which is wrong for any text longer than one cluster. Resolving alignment in layout keeps one geometry source of truth for the painter, the studio hit-test, and every exporter, and keeps the painter free of logic.
+
+**Algorithm.** `layoutSegments` still computes raw per-cluster geometry exactly as before (wrap by `maxWidth` first, `layoutX` starting at `0` on each line, pen advancing by `width + letterSpacing`). A second pass then groups the raw geometry by line and shifts each line independently. Lines are identified by `layoutY`-derived line index, tracked during the first pass as a parallel `lineIndexOf[i]` array so no floating-point comparison on `layoutY` is needed.
+
+```typescript
+// Pass 1 (unchanged): raw[i] = { layoutX, layoutY, width, height }, lineOf[i] = currentLine
+// Pass 2: per-line alignment
+const isBlank = (text: string) => /^\s*$/.test(text);   // true for " ", "\t", "\n", ""
+
+const result: LayoutGeometry[] = new Array(raw.length);
+let start = 0;
+while (start < raw.length) {
+  let end = start;
+  while (end < raw.length && lineOf[end] === lineOf[start]) end++;   // [start, end) = one line
+
+  // extent = right edge (pre-offset) of the LAST non-whitespace cluster; 0 if none
+  let extent = 0;
+  for (let i = end - 1; i >= start; i--) {
+    if (!isBlank(tokens[i].text)) { extent = raw[i].layoutX + raw[i].width; break; }
+  }
+
+  const offset =
+    layer.align === "center" ? -extent / 2 :
+    layer.align === "right"  ? -extent     : 0;
+
+  // apply to EVERY cluster in the line, whitespace clusters included
+  for (let i = start; i < end; i++) {
+    result[i] = Object.freeze({ ...raw[i], layoutX: raw[i].layoutX + offset });
+  }
+  start = end;
+}
+Object.freeze(result);
+cache.set(key, result);
+```
+
+Cache key (the only change is the trailing `layer.align`):
+
+```typescript
+const key = JSON.stringify([
+  layer.text, layer.fontFamily, layer.fontSize, layer.fontWeight,
+  layer.letterSpacing, layer.lineHeight, layer.maxWidth, layer.align,
+]);
+```
+
+Notes:
+
+- **Extent excludes trailing whitespace and trailing `letterSpacing`.** The pen advance after the last cluster (`+ letterSpacing`) is never part of `layoutX + width`, and trailing spaces or the `"\n"` cluster are skipped by `isBlank`. A line that wrapped because of a trailing space therefore centres on its visible text.
+- **Whitespace test.** `/^\s*$/` on the cluster text. `"\n"` matches, so newline clusters never define the extent. The newline cluster is still shifted with its line.
+- **`left` is a no-op offset** (`0`), so left-aligned layouts are bit-identical to the pre-amendment output apart from the extra frozen copies.
+- **`-0`.** `-extent / 2` and `-extent` produce `-0` when `extent` is `0`, and `layoutX + -0` can yield `-0` when `layoutX` is `0`. Layout does not special-case this; `computeFrameState`'s existing `normalizeNegativeZero` pass over the assembled `FrameState` converts it to `0` (Requirement 5.10). Layout-level unit tests compare with `toBeCloseTo` or `Object.is`-insensitive matchers accordingly.
+- **Purity.** The second pass uses only arithmetic, a regex test, `Object.freeze`, and the same `Map`. No DOM, no `Math.random`, no time APIs. `metricsProvider.measure` is still called once per cluster in pass 1 and not at all on a cache hit.
+- **Cost.** One extra linear pass over the clusters, paid only on cache misses.
+
+### Painter change (`draw.ts`) — Requirement 5.2
+
+`drawFrame` currently sets `ctx.textAlign = layer.align` once per layer. That line becomes `ctx.textAlign = "left"`, set for every layer regardless of `LayerState.align`. The painter no longer reads `layer.align`. The field stays in `LayerState` as copied data (it is useful to the studio UI and to tests), but it has no effect on painting. The segment pivot is unchanged: segment `scale` and `rotation` are applied about the segment-local centre after translating to `(layoutX + dx, layoutY + dy)`, so aligned layouts need no pivot adjustment. Layer-level scale and rotation remain about the layer centre.
+
 ---
 
 ## Data Models
@@ -412,6 +473,21 @@ The build-time script `packages/engine/scripts/generate-schemas.ts` calls `z.toJ
 
 ---
 
+#### Alignment amendment: no shape change (Requirement 5.16)
+
+`ProjectSchema`, `TextLayerSchema`, the `align` enum (`left` | `center` | `right`), `LayerState`, and `BaseSegment` keep their current shapes. `CURRENT_PROJECT_VERSION` stays `1`, so no migration, fixture, or generated JSON Schema changes (the schema staleness test stays green with no regeneration).
+
+Only the semantics of `BaseSegment.layoutX` change: it now includes the per-line alignment offset, so for `center` and `right` layers it can be negative, relative to the layer anchor. Consumers:
+
+| Consumer | Effect |
+|---|---|
+| `drawFrame` | Paints at `layoutX` with `textAlign = "left"`; no change beyond the painter edit above. |
+| `apps/studio` hit-test and selection bounds | Already use `layoutX` and `width` directly, so they become correct for `center`/`right` without modification. |
+| `packages/exporters` | Call `renderFrame`/`computeFrameState`; no change. |
+| `packages/embed` | Wraps the engine; no change. |
+
+---
+
 ### Directory structure
 
 ```
@@ -430,7 +506,7 @@ packages/engine/
 │   ├── easing.ts                        ← evaluate(easing, a, b, p): number
 │   ├── interpolate.ts                   ← interpolateTrack(track, tLocal): KeyframeValue
 │   ├── segment.ts                       ← grapheme cluster segmentation via `Intl.Segmenter`; produces `BaseSegment[]` with charIndex/wordIndex/lineIndex
-│   ├── layout.ts                        ← computes layoutX/layoutY/width/height per grapheme cluster using TextMetricsProvider; memoized by JSON.stringify key of (text, fontSpec fields, maxWidth); geometry-only cache, immutable
+│   ├── layout.ts                        ← computes layoutX/layoutY/width/height per grapheme cluster using TextMetricsProvider; wraps by maxWidth, then applies the per-line alignment offset; memoized by JSON.stringify key of (text, fontSpec fields, lineHeight, maxWidth, align); geometry-only cache, immutable
 │   ├── compute.ts                       ← computeFrameState
 │   ├── compute.bench.ts                 ← Vitest benchmark for computeFrameState performance
 │   ├── draw.ts                          ← drawFrame
@@ -614,6 +690,32 @@ packages/engine/
 
 ---
 
+### Property 18: Per-line alignment
+
+*For any* `text`, `fontSize`, `letterSpacing`, `maxWidth` (including `null`) and `align`, laid out with `FakeMetricsProvider`, every line of the resulting layout that contains at least one non-whitespace cluster (including every line produced by `maxWidth` wrapping and by explicit `"\n"`) SHALL satisfy, with `start` = the `layoutX` of the line's first cluster and `right` = `layoutX + width` of the line's last non-whitespace cluster:
+
+- `align = "center"`: `|start + right| <= epsilon`, so the line's origin and its visible right edge are symmetric around the anchor.
+- `align = "left"`: `start` equals `0` (within `epsilon`).
+- `align = "right"`: `right` equals `0` (within `epsilon`).
+
+Lines with no non-whitespace cluster are exempt. `epsilon = 1e-9 * max(1, |start|, |right|)` (a relative tolerance), because `-extent / 2` and `layoutX + offset` are floating-point operations whose rounding error scales with the magnitude of the line.
+
+This is the exact statement of the Requirement 11.18 min/max formulation. The two coincide when `letterSpacing >= 0` and the line has no leading whitespace. They differ otherwise: a negative `letterSpacing` below `-width` moves later clusters left of the line origin (so the minimum `layoutX` can be below `0`), and a leading space makes the minimum over non-whitespace clusters positive. Because the arbitraries below deliberately include negative `letterSpacing` and leading whitespace, the test uses the first-cluster / last-non-whitespace-cluster form, and additionally asserts the literal min/max form on the sub-population `letterSpacing >= 0` with a non-whitespace first cluster.
+
+**Validates: Requirements 5.15, 11.18**
+
+Arbitraries (in `testing/arbitraries.ts`):
+
+- `arbAlign`: `fc.constantFrom("left", "center", "right")`.
+- `arbAlignText`: strings built from a weighted mix of non-whitespace graphemes (ASCII letters, emoji, Tamil), `" "`, `"\t"`, and `"\n"`, `minLength: 1`, `maxLength: 200`, with runs of consecutive spaces and newlines so trailing-space and blank-line cases occur often.
+- `fontSize`: `fc.double({ min: 1, max: 200, noNaN: true })`.
+- `letterSpacing`: `fc.double({ min: -500, max: 500, noNaN: true })`, deliberately including negative values.
+- `maxWidth`: `fc.option(fc.double({ min: 1, max: 4000, noNaN: true }), { nil: null })`, deliberately including values narrower than one cluster.
+
+The test derives each cluster's line from its `layoutY` divided by `fontSize * lineHeight` (rounded) or, equivalently, from `lineIndex` in `computeFrameState` output, and classifies whitespace with the same `/^\s*$/` test as the implementation.
+
+---
+
 ## Error Handling
 
 ### Input validation strategy
@@ -647,6 +749,20 @@ Keyframe-interpolated values serve as the baseline. Effect overrides layer on to
 
 Before returning `FrameState`, a shallow recursive pass replaces every `Object.is(v, -0)` value with `+0`. This is implemented as a small utility `normalise(val)` called on the assembled `FrameState` object.
 
+### Alignment edge cases
+
+Layout never throws on any valid layer; each case below resolves to a defined result.
+
+| Case | Behaviour |
+|---|---|
+| Empty line (consecutive `"\n"`) or whitespace-only line | No non-whitespace cluster, so `extent = 0` and offset is `0` (`-0` for `center`/`right`, normalised later). Its clusters keep their raw `layoutX`. No division or `NaN`. |
+| Single cluster on a line | `extent = width`. `center` gives `layoutX = -width / 2`, `right` gives `-width`, `left` gives `0`. |
+| Negative `letterSpacing` | Pen advance `width + letterSpacing` can shrink or reverse, so later clusters may sit left of earlier ones. The extent is still the right edge of the last non-whitespace cluster, not the maximum right edge, per Requirement 5.15. Output stays finite (range is bounded to ±500 px by the schema). Visible text can overhang the computed extent on the right when a wide earlier cluster extends past the last one; this is accepted and not corrected. |
+| `maxWidth` wrap with trailing spaces | The wrap rule is unchanged: a space that would overflow wraps to the next line start, so a line can end in a space that fit, or begin with a space. Trailing spaces never count toward the extent, so the visible text of each wrapped line is aligned. A leading space on a wrapped line is part of the line's pen run (it occupies `layoutX = 0` before alignment) and shifts the visible text right of the line origin by its width. |
+| Single cluster wider than `maxWidth` | The existing `currentX > 0` guard still prevents an infinite loop; the overflowing cluster is aligned like any other line. |
+| `maxWidth: null` | No wrapping; only explicit `"\n"` ends lines. |
+| `-0` | See the layout notes above; normalised by `normalizeNegativeZero` in `computeFrameState`. Direct callers of `layoutSegments` may observe `-0`. |
+
 ### Migration errors
 
 `migrateProject` returns a `MigrationError` (not throws) when `schemaVersion > CURRENT_PROJECT_VERSION`. This is a recoverable data error (the user needs a newer engine version), not a programming error.
@@ -667,7 +783,7 @@ interface ComputeOpts {
 }
 ```
 
-The cache key is `JSON.stringify([text, fontFamily, fontSize, fontWeight, letterSpacing, lineHeight, maxWidth])`. `metricsProvider` identity is not included in the key string; callers who switch providers between frames must pass a fresh `ComputeOpts`.
+The cache key is `JSON.stringify([text, fontFamily, fontSize, fontWeight, letterSpacing, lineHeight, maxWidth, align])`. `align` is part of the key because the cached `layoutX` values include the alignment offset (Requirement 15.1); changing a layer's `align` therefore misses the cache and never returns geometry computed for the previous alignment. `metricsProvider` identity is not included in the key string; callers who switch providers between frames must pass a fresh `ComputeOpts`.
 
 The cache is a plain `Map` — no WeakRef or LRU eviction. Callers are responsible for clearing or replacing it when the project changes. For video rendering, the same opts object is reused across all frames of a single export pass.
 
@@ -703,7 +819,9 @@ Co-located `*.test.ts` files exercise specific examples, edge cases, and error c
 - `prng.test.ts` — known seed → known first `N` values (regression against mulberry32 reference).
 - `easing.test.ts` — boundary conditions: `p=0` returns `a`, `p=1` returns `b` for all easing types; `step` discrete count.
 - `compute.test.ts` — specific layer visibility boundary cases; `tLocal` calculation; keyframe interpolation examples.
-- `draw.test.ts` — `drawFrame` with a mock `CanvasRenderingContext2D` (spy object); verifies `clearRect` is called for transparent background; verifies `ctx.filter` is set for blur > 0.
+- `draw.test.ts` — `drawFrame` with a mock `CanvasRenderingContext2D` (spy object); verifies `clearRect` is called for transparent background; verifies `ctx.filter` is set for blur > 0. **Alignment (Req 11.19):** the spy records every assignment to `textAlign` (via a setter) while painting a `LayerState` with `align: "center"` and again with `"right"`; the test asserts the recorded values are non-empty and all equal `"left"`.
+- `layout.test.ts` (updated, Req 11.17) — with `FakeMetricsProvider` (advance `fontSize * 0.6`), asserts exact `layoutX` for `left`, `center`, `right` on: a single line; a line with trailing spaces (extent ignores them); a line ended by `"\n"` (newline cluster shifted with its line, not counted in extent); a whitespace-only line (extent `0`, offset `0`); `maxWidth`-wrapped multi-line text with lines of differing widths (each aligned independently); non-zero positive and negative `letterSpacing` (trailing spacing excluded from extent). Also asserts the cached array is frozen and each element is frozen.
+- `layout.test.ts` cache-key test (Req 11.17, 15.1) — calls `layoutSegments` twice with a shared `Map` and layers identical except `align`; asserts a second `Map` entry exists, `metricsProvider.measure` is called again (spy count rises), and the `center` result is not the `left` array. A third call with the original `align` returns the first array by identity with no new `measure` calls.
 - `registry.test.ts` — `DuplicateEffectError` on re-registration; `get` returns `undefined` for unknown id.
 - `effects/typewriter/typewriter.test.ts` — forward/backward opacity at specific `tLocal` values; `InvalidEffectParamsError` on bad params.
 - `effects/fade-slide/fade-slide.test.ts` — `p=0` → full offset, `p=1` → zero offset; `InvalidEffectParamsError` on bad params.
@@ -736,6 +854,7 @@ Each test is tagged:
 | 15 | `effects/fade-slide/fade-slide.test.ts` | `arbFadeSlideParams` |
 | 16 | `effects/typewriter/typewriter.test.ts` | `arbTypewriterBackwardParams` × `fc.nat` × `fc.nat` × `fc.float` |
 | 17 | `prng.test.ts` | `fc.integer` × `fc.string` × `fc.string` |
+| 18 | `layout.test.ts` | `arbAlignText` × `fc.double` (fontSize, letterSpacing) × `fc.option(fc.double)` (maxWidth) × `arbAlign` |
 
 ### Arbitrary generators (`testing/arbitraries.ts`)
 
@@ -754,6 +873,8 @@ arbT(project): fc.Arbitrary<number>            // uniform in [0, durationSeconds
 arbTypewriterParams: fc.Arbitrary<TypewriterParams>
 arbFadeSlideParams: fc.Arbitrary<FadeSlideParams>
 arbGraphemeText: fc.Arbitrary<string>          // strings with ASCII, emoji, and Tamil chars; exercises Intl.Segmenter
+arbAlign: fc.Arbitrary<"left" | "center" | "right">
+arbAlignText: fc.Arbitrary<string>             // graphemes + runs of " ", "\t", "\n"; exercises trailing/leading/blank lines
 ```
 
 `arbValidProject` generates projects where:
@@ -775,6 +896,17 @@ Constraints:
 - `maxDiffPixelRatio: 0.001`.
 - On golden mismatch, Playwright writes a diff PNG; the test failure message includes the path.
 - `computeFrameState` and `renderFrame` are NOT called in the Playwright test body.
+
+Alignment amendment and goldens (Requirement 12.7):
+
+- Every existing fixture uses `align: "left"`, and `left` adds a `0` offset and `textAlign = "left"` was already what the painter produced for left layers, so the committed fixtures in `tests/visual/fixtures/` and the PNGs in `tests/visual/__snapshots__/` are expected to stay byte-for-byte unchanged. Running `generate-visual-fixtures` after the change must produce no `git diff` in `tests/visual/fixtures/`.
+- Verification: run the visual suite without any update flag and confirm it passes with no snapshot written or modified.
+- Regeneration policy: if any golden fails, the change is reported (which fixture, diff image path, and why), not silently accepted. Regenerating a golden is a deliberate, separately reported step and never part of an automated or default run. No script in the repo regenerates goldens automatically.
+- Commands (run from the repo root; `packages/engine/package.json` has no script for Playwright, so these call the binary directly):
+  - Verify: `pnpm --filter ./packages/engine exec playwright test`
+  - Regenerate fixtures (only if a fixture input is deliberately changed): `pnpm --filter ./packages/engine generate-visual-fixtures`
+  - Regenerate goldens (deliberate, reported): `pnpm --filter ./packages/engine exec playwright test --update-snapshots`
+- No new golden is added by this amendment; the requirements do not ask for one. Alignment correctness is covered by the Node layout tests and the `drawFrame` `textAlign` test.
 
 ### Schema staleness test
 
