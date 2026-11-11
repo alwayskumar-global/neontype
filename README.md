@@ -1,6 +1,6 @@
 # Motion-text studio
 
-A browser-only, fully client-side studio for Flash-era text animation tools: type
+A browser-only, fully client-side studio for classic kinetic-typography text animation: type
 text, apply a preset effect, tweak timing with numeric controls, preview on a
 canvas, and export — no backend, no accounts, and no network calls at runtime.
 
