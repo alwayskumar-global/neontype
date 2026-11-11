@@ -55,6 +55,20 @@ is the UI layer that holds the only playback clock.
 - **Parity:** the property that the preview and an export produce the same frame
   for the same project and time.
 - **ErrorCode:** the exporters' closed 12-value error union surfaced in the UI.
+- **Hit box:** the axis-aligned canvas-pixel rectangle used to select and drag a
+  layer on the canvas: the union of the boxes of the layer's visible glyph
+  clusters, offset by the layer `anchor` and the layer transform
+  `positionOffset` (see Requirement 3.8).
+- **Visible glyph cluster:** a glyph cluster of the resolved engine `FrameState`
+  that is not collapsible whitespace (space, tab, CR, LF).
+- **Display scale:** the displayed canvas width in CSS px divided by the canvas
+  pixel width.
+- **Frame grid:** the set of times `k / fps` for whole `k`; every time the
+  timeline writes to the `Project` lies on it.
+- **History:** the linear, capped list of earlier `Project` states kept by the
+  store for undo (see Requirement 16).
+- **CSS custom property helper:** `ui/cssvars.ts` `setCssVars(el, vars)`, which
+  applies dynamic positions and sizes through `el.style.setProperty`.
 
 ---
 
@@ -136,6 +150,64 @@ layers and control their type and placement, so that I can compose my title.
 7. WHEN any layer edit is made THE model SHALL remain `ProjectSchema`-valid, and
    an edit that would violate the schema SHALL be rejected with an inline message.
    *(unit, property)*
+8. THE pure module `apps/studio/src/model/hit.ts` (no DOM, no clock, no
+   randomness; Requirement 10 purity applies) SHALL compute the hit box of a
+   layer as the layer `anchor`, plus the layer transform `positionOffset`, plus
+   the union of the boxes of its visible glyph clusters taken from the resolved
+   engine `FrameState`. Each cluster box SHALL span x from `layoutX` to
+   `layoutX + width` and y from `layoutY - 0.8 * height` to
+   `layoutY + 0.2 * height` (the `FrameState` carries only the full
+   ascent-plus-descent height; 0.8/0.2 approximates Noto Sans). Effect scale,
+   rotation, blur, and per-segment effect position offsets SHALL be ignored so
+   the box is stable while the text animates. A layer that is active but fully
+   transparent at time `t` SHALL still have its layout box; a layer not active
+   at `t` is not in the `FrameState` and SHALL NOT be selectable on the canvas;
+   a layer with no visible cluster SHALL have no box. *(unit, property)*
+9. WHEN the hit test runs THE `hit.ts` module SHALL test layers from the last in
+   `Project.layers` to the first so the topmost painted layer wins, and SHALL pad
+   each box by `8 / displayScale` canvas px on every side so the on-screen slop
+   is 8 CSS px at any zoom. *(unit, property)*
+10. THE `hit.ts` function `clientToCanvas` SHALL map viewport (client)
+    coordinates to canvas pixel coordinates using the canvas element's bounding
+    rect and the project canvas size, and SHALL return null for a rect of zero
+    width or zero height. *(unit)*
+11. WHEN the user clicks a layer's hit area on the canvas THE shell SHALL select
+    that layer (the same selection as the Layers panel); WHEN the user clicks
+    empty canvas THE shell SHALL leave the selection unchanged. *(Playwright)*
+12. WHEN the user drags a selected or newly selected layer on the canvas THE
+    shell SHALL edit ONLY the layer `anchor` through the existing set-anchor
+    action: new anchor = start anchor + (pointer − start pointer) in canvas px,
+    rounded to whole px (or to a multiple of an optional snap value, default 1),
+    and clamped to `[0, canvas width] x [0, canvas height]`. *(unit, property,
+    Playwright)*
+13. WHILE Shift is held during a canvas drag THE shell SHALL keep only the
+    dominant axis of the delta (the larger absolute component; a tie keeps x).
+    *(unit)*
+14. WHILE a canvas drag is in progress THE preview SHALL update live without
+    committing to history on every pointermove; WHEN the pointer is released THE
+    shell SHALL commit the project once; WHEN the pointer is cancelled THE shell
+    SHALL restore the start anchor. WHEN a drag starts THE shell SHALL pause
+    playback, and SHALL use pointer capture so the drag continues outside the
+    canvas. *(Playwright)*
+15. WHEN an Arrow key is pressed on the focused canvas AND a layer is selected
+    THE shell SHALL move that layer's anchor by 1 px (10 px with Shift), clamped
+    to the canvas, as one undo step per key press, and SHALL ignore all other
+    keys. THE canvas SHALL be focusable (`tabindex` 0), SHALL have an accessible
+    label, and SHALL show a visible focus style. *(unit, Playwright)*
+16. WHILE a layer is selected THE shell SHALL draw an outline of that layer's hit
+    box (without the pad) as an overlay element positioned with CSS custom
+    properties (Requirement 11.2), not by painting into the canvas, so exports
+    and the parity check (Requirement 9) are unaffected. THE shell SHALL set the
+    cursor with a CSS class (`grab` over a hit layer, `grabbing` while
+    dragging). *(Playwright)*
+17. WHEN the project canvas width, height, or background changes (including after
+    New or Open) THE preview component SHALL resize the canvas element's pixel
+    size and update its transparent flag to match the current project.
+    *(Playwright)*
+18. THE layer editing in criteria 3.1–3.7 and all panels (Layers, Effects,
+    Settings) SHALL keep working unchanged; canvas dragging and nudging SHALL be
+    an additional way to edit `anchor`, and the `anchor` X/Y fields SHALL
+    reflect the result. *(Playwright)*
 
 ### Requirement 4: Effect picker per layer
 
@@ -166,20 +238,48 @@ draggable playhead, so that I can arrange timing visually.
 
 #### Acceptance criteria
 
-1. THE timeline SHALL show one row per layer with a bar whose left edge maps to
-   `startSeconds` and whose width maps to `endSeconds - startSeconds`, on a time
-   axis spanning `[0, durationSeconds]`. *(unit for mapping, Playwright)*
-2. THE timeline SHALL show a playhead at the current preview time; dragging the
-   playhead SHALL scrub the preview (same behaviour as Requirement 1.5). *(Playwright)*
-3. WHEN the user drags a bar's body THE shell SHALL move the layer in time
-   (changing `startSeconds` and `endSeconds` together, preserving duration),
-   clamped to `[0, durationSeconds]`. *(unit, property, Playwright)*
-4. WHEN the user drags a bar's edge THE shell SHALL trim that edge
-   (`startSeconds` or `endSeconds`), keeping `endSeconds > startSeconds` and
-   staying within `[0, durationSeconds]`. *(unit, property, Playwright)*
-5. THE time↔pixel mapping SHALL be a pure function in the model/util layer,
-   round-tripping within one pixel, and SHALL NOT read a wall-clock. *(unit, property)*
-6. WHEN a drag completes THE model SHALL remain `ProjectSchema`-valid. *(property)*
+1. THE pure module `apps/studio/src/model/timeline.ts` SHALL do all timeline math
+   in whole frames: `frame = round-half-away-from-zero(seconds * fps)` and
+   `seconds = frames / fps` rounded to 1e-6, so everything the timeline writes to
+   the project lies on the frame grid. *(unit, property)*
+2. THE function `dragTiming(kind, start, deltaFrames, fps, durationSeconds)` for
+   `kind` in `move | start | end` SHALL behave as follows: `move` keeps the
+   layer length in frames and clamps so `0 <= start` and `end <= duration`;
+   `start` changes only the start, keeps at least 1 frame of length, and never
+   passes the out-point; `end` changes only the end, keeps at least 1 frame, and
+   never exceeds the duration. THE output SHALL always satisfy
+   `0 <= start < end <= duration`, on the frame grid, with length of at least 1
+   frame. *(unit, property)*
+3. THE helpers `pxToSeconds` and `snapToFrame` SHALL convert a pointer position
+   on the ruler to a frame-snapped time using the existing `timemap`, and SHALL
+   NOT read a wall-clock; the time↔pixel mapping SHALL round-trip within one
+   pixel. *(unit, property)*
+4. THE timeline SHALL show a ruler spanning `[0, durationSeconds]` with
+   `role="slider"`, and WHEN the user clicks or drags the ruler THE shell SHALL
+   scrub the playhead to the frame-snapped time (same behaviour as Requirement
+   1.5). THE timeline SHALL show a playhead at the current preview time.
+   *(Playwright)*
+5. THE timeline SHALL show one row per layer with a bar (move), a start handle,
+   and an end handle (trim), whose positions map the layer `startSeconds` and
+   `endSeconds` onto the time axis. *(unit for mapping, Playwright)*
+6. WHILE the user drags a bar or handle THE shell SHALL update the layer live;
+   WHEN the pointer is released THE shell SHALL commit exactly ONE
+   `set-layer-timing` transition (one undo step); WHEN the pointer is cancelled
+   THE shell SHALL restore the start timing. *(Playwright)*
+7. WHEN a focused bar or handle receives ArrowLeft or ArrowRight THE shell SHALL
+   move that part by 1 frame (10 frames with Shift), as one undo step per key
+   press. *(unit, Playwright)*
+8. THE bars and handles SHALL be focusable, SHALL have `role="slider"`, an
+   `aria-label` naming the layer and the part (move / start / end), and
+   `aria-valuenow`, `aria-valuemin`, `aria-valuemax` carrying their time in
+   SECONDS, plus `aria-valuetext` with the time and unit. *(Playwright)*
+9. THE layer start and duration numeric inputs in the Layers panel SHALL keep
+   working and SHALL remain the non-pointer alternative (Requirement 12.6).
+   *(Playwright)*
+10. WHEN a timeline gesture or key press completes THE model SHALL remain
+    `ProjectSchema`-valid. *(property)*
+11. THE timeline SHALL apply bar, handle, playhead, and ruler positions and
+    sizes through CSS custom properties (Requirement 11.2). *(Playwright)*
 
 ### Requirement 6: Bundled fonts and font readiness
 
@@ -284,7 +384,9 @@ so that state is testable, deterministic, and the single source of truth.
 
 1. THE project model and all state transitions (add/edit/delete/reorder layer,
    set effect/param, settings edits, timeline moves) SHALL be pure functions over
-   the `Project` with no DOM access and no wall-clock read. *(unit, property)*
+   the `Project` with no DOM access and no wall-clock read; the new modules
+   `model/hit.ts` and `model/timeline.ts` SHALL meet the same purity rule and
+   the purity test of 10.4 SHALL cover them. *(unit, property)*
 2. THE model SHALL be the single source of truth; UI panels SHALL derive from it
    and SHALL NOT hold competing copies of project state. *(unit)*
 3. ANY model transition applied to a `ProjectSchema`-valid project SHALL yield a
@@ -308,15 +410,19 @@ file or typing text cannot execute code or leak data.
    styles and no `eval`/`new Function`: `index.html` and any server-rendered
    string SHALL contain no inline `<script>`, no `<style>` element, and no
    `style="..."` attribute. Dynamic styling SHALL be applied only through the
-   CSSOM (React's `style` prop, which sets properties on the element's
-   `CSSStyleDeclaration`, and `setProperty` on CSS custom properties), which CSP
-   permits; no code path SHALL inject `style` or `script` markup. *(unit for build
-   check, Playwright, manual)*
+   CSSOM (`setProperty` on CSS custom properties, which CSP permits); no code path SHALL inject `style` or `script` markup. Dynamic
+   positions and sizes (selection outline, timeline bars, handles, playhead,
+   ruler) SHALL be applied through the CSS custom property helper
+   `ui/cssvars.ts` `setCssVars(el, vars)` (`el.style.setProperty`); JSX SHALL
+   contain no `style` attribute or prop, and no inline `<style>` or
+   `unsafe-inline` SHALL be added. *(unit for build check, Playwright, manual)*
 3. THE app SHALL produce zero CSP violation reports during the Playwright run
    against the production build under the strict CSP, EXCEPT exactly one named,
    caught feature probe: Zod's `allowsEval` (`new Function("")`, guarded by
    jitless/Cloudflare checks and a try/catch), which surfaces as a `script-src`
-   directive with blocked value `eval`. The test asserts that single allowance by
+   directive with blocked value `eval`. The canvas drag, nudge, and timeline
+   features SHALL add ZERO new violations, and this single Zod probe is
+   unchanged. The test asserts that single allowance by
    exact match (package: `zod`; directive: `script-src`; blocked: `eval`);
    `'unsafe-eval'` is NOT added. Any OTHER violation, or a second occurrence of
    anything (including a second eval probe), fails the test. Verified by
@@ -351,7 +457,10 @@ labelled controls with visible focus, so that I can use the studio.
    UI chrome animation (transitions), WITHOUT altering the preview animation
    itself. *(manual, Playwright for the media-query wiring)*
 6. THE timeline drag interactions SHALL have keyboard-accessible equivalents for
-   moving and trimming a layer (e.g. numeric start/duration inputs). *(Playwright)*
+   moving and trimming a layer: the focusable slider bars and handles with
+   Arrow-key stepping (Requirement 5.7, 5.8) and the numeric start/duration
+   inputs (Requirement 5.9). THE canvas drag SHALL have the Arrow-key
+   equivalent of Requirement 3.15. *(Playwright)*
 
 ### Requirement 13: Performance budget
 
@@ -426,21 +535,60 @@ was made.
    Design) while all CODE was written in Kiro, and SHALL link the dependency list
    to `docs/dependencies.md`. *(manual)*
 
+### Requirement 16: Undo
+
+**User Story:** As a creator, I want to undo my last change with Ctrl/Cmd+Z, so
+that I can recover from a mistaken edit or drag.
+
+#### Acceptance criteria
+
+1. THE store SHALL keep a linear history of `Project` states (not UI state).
+   Every accepted project change made through the store (panel edits, effect
+   edits, canvas drags, nudges, timeline edits) SHALL be exactly one undo step;
+   a rejected (schema-invalid or unchanged) action SHALL add none. *(unit, property)*
+2. A drag or other pointer gesture SHALL be ONE undo step; the live frames during
+   the gesture SHALL NOT be steps. *(unit, Playwright)*
+3. THE history depth SHALL be capped at 100 steps, and WHEN the cap is exceeded
+   THE store SHALL drop the oldest step. *(unit)*
+4. WHEN the user presses Ctrl+Z (Cmd+Z on macOS) THE store SHALL restore the
+   previous project state in one step. THE shortcut SHALL work WHILE focus is on
+   the canvas, the timeline, or the page body, and SHALL NOT be intercepted WHILE
+   focus is in a text input, number input, or textarea (the browser's own text
+   undo applies there). *(Playwright)*
+5. WHEN a file is opened, a New project is created, or the demo is loaded THE
+   store SHALL replace the project and clear the history. *(unit)*
+6. WHEN an undo is applied THE store SHALL restore the project only, keeping the
+   selection and playhead where valid; IF the selected layer no longer exists
+   THEN the store SHALL move the selection to the first layer, or to none when no
+   layers remain. *(unit)*
+7. THE history SHALL hold structurally shared immutable `Project` values (no deep
+   copies) and SHALL add no dependency. *(unit)*
+8. FOR ALL sequences of accepted actions, undoing every step SHALL return a
+   project deep-equal to the original (undo-restores property). *(property)*
+9. THE following SHALL hold in Playwright: dragging the title on the canvas
+   changes its anchor (X/Y fields) and its on-canvas bounding box follows;
+   Arrow-nudging the title by +1 px and +10 px (Shift) changes the anchor
+   accordingly; dragging a timeline end handle changes the layer end to a time
+   on a frame; Ctrl/Cmd+Z restores each of these changes in one step; and the
+   Landing, export, and strict-CSP specs stay green. *(Playwright)*
+
 ---
 
 ## Out of scope (v1)
 
 - Audio UI: the exporters support an AAC track, but studio v1 exposes no audio
   import or audio options in the export dialog.
-- Undo / redo history.
+- Redo (undo is covered by Requirement 16).
+- Multi-select, rotate/scale handles, resizing text by dragging, canvas
+  zoom/pan, and snapping to other layers.
 - Lottie export; WebM-with-alpha export; animated WebP export.
 - The `<motion-text>` embed web component (a separate later spec).
 - Templates/presets gallery, sample-project library.
 - Collaboration, sharing links, cloud storage, accounts — any backend or network
   feature.
 - Dedicated mobile/touch layout (desktop layout only in v1).
-- Keyframe-track editing UI (per-property keyframe curves) beyond effect params
-  and layer timing.
+- Keyframe-track editing UI (per-property keyframe curves) and keyframe editing
+  generally, beyond effect params and layer timing.
 
 ---
 
@@ -504,7 +652,23 @@ They are recorded here as decisions.
 - **unit** (Vitest, Node): pure model transitions, mapping/util functions,
   error-code→message mapping, manifest/config audits, schema round-trips.
 - **property** (fast-check): model transitions preserve `ProjectSchema` validity;
-  timeline time↔pixel mapping round-trips; layer-timing invariants hold.
+  timeline time↔pixel mapping round-trips; layer-timing invariants hold. New
+  properties (each >= 100 iterations, tagged
+  `// Feature: studio, Property N: ...`, numbering continues after Property 5):
+  - Property 6, drag identity (Req 3.12): `dragAnchor(start, start.pointer)`
+    deep-equals `start.anchor` for an on-grid, in-canvas start anchor.
+  - Property 7, drag stays in canvas (Req 3.12, 3.13): for any start, pointer,
+    shift, snap, and canvas size, the output anchor is inside `[0,w] x [0,h]` and
+    on the whole-pixel/snap grid.
+  - Property 8, timing drag stays on the frame grid (Req 5.1, 5.2, 5.10): for any
+    kind, start timing, delta, fps, and duration, `dragTiming` output is on the
+    frame grid, inside `[0, duration]`, with length >= 1 frame; `move` preserves
+    the length in frames.
+  - Property 9, undo restores (Req 16.1, 16.2, 16.8): for any sequence of
+    accepted actions, undoing them all returns the original project (deep-equal);
+    one gesture is one step.
+  - Existing Property 3 (Drag bounds) is updated to refer to the frame-grid
+    version, Property 8 (Req 5.2, 5.10).
 - **Playwright** (bundled Chromium, localhost): preview playback/scrub, settings,
   layer and effect editing, timeline drags, font readiness, save/load, the export
   dialog end-to-end, preview/export parity, no-network session, and accessibility

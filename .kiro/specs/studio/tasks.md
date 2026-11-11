@@ -8,7 +8,7 @@ demoable studio exists after Group 3 (preview + edit + export end to end). It
 scaffolds the app (Vite + React + strict TS, strict CSP, Vercel static headers,
 tooling, purity guard) and the pure model layer with its property tests (G1);
 then fonts + preview + playback + transport + parity (G2); the editing panels and
-the export dialog (G3); the timeline (G4); save/load + a built-in demo project
+the export dialog (G3); canvas drag, timeline editing, and undo (G4); save/load + a built-in demo project
 (G5); the accessibility, performance, and CSP specs (G6); and repository
 readiness + the final checkpoint (G7). Each task names the files it touches,
 cites the requirement clauses and correctness properties it covers, states a
@@ -93,7 +93,7 @@ reported). They are planning estimates, not budgets.
 
   - [ ] 1.5 Property tests for the model (Properties 1, 2)
     - In `apps/studio/src/model/transitions.test.ts` add a fast-check test tagged `// Feature: studio, Property 1: Schema-preserving transitions` asserting that for any `ProjectSchema`-valid project (local arbitrary) and any `Action`, the result is schema-valid OR the unchanged input. In `apps/studio/src/model/timemap.test.ts` add `// Feature: studio, Property 2: Time-pixel round-trip` asserting `xToTime(timeToX(t)) ~= t` within one pixel and the integer-x inverse. Each >= 100 iterations. On any counterexample, STOP and show it.
-    - **Covers:** Requirement 5.5, 10.3; Design Properties 1, 2
+    - **Covers:** Requirement 5.3, 10.3; Design Properties 1, 2
     - **Completion:** `pnpm --filter @studio/app exec vitest run src/model` passes; both properties run >= 100 iterations with no counterexample (run 3x).
 
   - [ ] 1.6 Checkpoint — Group 1
@@ -174,26 +174,67 @@ reported). They are planning estimates, not budgets.
     - **Completion:** all pass; a demoable studio exists.
     - Commit: `feat(studio): editing panels and export dialog`
 
-- [ ] 4. Group 4: Timeline  *(est. ~12 credits)*
-  - [ ] 4.1 Pure drag math
-    - Create `apps/studio/src/timeline/drag.ts`: pure `move`/`trim-start`/`trim-end` returning clamped `{ startSeconds, endSeconds }` with `0 <= start < end <= durationSeconds`, `move` preserving duration. Unit tests.
-    - **Covers:** Requirement 5.3, 5.4; Design "Timeline interaction model"
-    - **Completion:** `pnpm --filter @studio/app exec vitest run src/timeline` passes.
+- [ ] 4. Group 4: Canvas drag, timeline editing, and undo  *(est. ~22 credits)*
+  - [ ] 4.1 Store history and gesture API
+    - In `apps/studio/src/shell/store.ts` (move to `apps/studio/src/shell/history.ts` only if `store.ts` passes ~200 lines) add `history: Project[]` capped at `HISTORY_LIMIT = 100` (oldest dropped), holding `Project` values only (structurally shared, no copies). `dispatchGuarded` pushes the previous project on an accepted change and adds nothing for a rejected or unchanged (same-reference) action. Add `beginGesture` (commits any open gesture first), `preview` (live, no history, no-op without an open gesture), `commitGesture` (one step iff `project !== base`), `cancelGesture`, `undo` (cancels an open gesture, else pops history), `canUndo`. `setProject` replaces the project and clears history and any gesture. After `undo` and `cancelGesture`, keep `ui.selectedLayerId` if the layer still exists, else `layers[0]?.id ?? null`, and clamp `ui.playhead` to the restored `durationSeconds`. Follow the state table in the design "Undo history and gestures". No DOM, no clock.
+    - Create `apps/studio/src/shell/store.test.ts` (Vitest, Node, no DOM): the design table row by row, the cap (the 101st push drops the oldest), gesture commit with and without change, cancel, mid-gesture undo, `setProject` clearing history, selection fix-up, and structural sharing (`history[i].canvas === next.canvas` after a layers-only edit).
+    - Add the fast-check test tagged `// Feature: studio, Property 9: Undo restores` using the existing `arb-project` and action arbitraries interleaved with gesture groups, >= 100 iterations. On any counterexample, STOP and show it before changing a bound, the store, or the property.
+    - **Covers:** Requirement 16.1, 16.2, 16.3, 16.5, 16.6, 16.7, 16.8; Design "Undo history and gestures", Property 9
+    - **Completion:** `pnpm --filter @studio/app exec vitest run src/shell/store.test.ts` passes, including Property 9 (>= 100 iterations, run 3x with no counterexample).
 
-  - [ ] 4.2 Timeline component (pointer + keyboard)
-    - Create `apps/studio/src/timeline/Timeline.tsx`: one row/bar per layer mapped via `timemap`; draggable playhead scrubbing the preview; drag bar body (move) and edges (trim) through `drag.ts`; keyboard equivalents (numeric start/duration inputs + arrow nudges) routing through the same math. Completed drag/nudge dispatches one transition.
-    - **Covers:** Requirement 5.1, 5.2, 5.3, 5.4, 5.6, 12.6; Design "Timeline interaction model"
-    - **Completion:** `tests/timeline.spec.ts` passes (map, scrub, move, trim, keyboard).
+  - [ ] 4.2 Pure frame-grid timeline math
+    - Create `apps/studio/src/model/timeline.ts` (pure; no DOM, no clock) exporting `toFrames` (round-half-away-from-zero), `toSeconds` (rounded to 1e-6), `snapToFrame`, `pxToSeconds` (uses `timemap.xToTime`, snaps, clamps to `[0, toSeconds(N)]` with `N = floor(durationSeconds * fps + 1e-9)`), `dragTiming(kind, start, deltaFrames, fps, durationSeconds)` for `move | start | end`, and `nudgeTiming`. Implement the exact rules in the design "Timeline interaction model": snap on entry, `move` preserves frame length, `start`/`end` keep at least 1 frame, `N < 1` returns the input unchanged, `N = 1` yields `{0, 1/fps}`, non-finite delta is 0. The old `timeline/drag.ts` is not created.
+    - Create `apps/studio/src/model/timeline.test.ts`: examples for `toFrames` ties, `toSeconds` rounding, each kind including off-grid input, `N < 1`, `N = 1`, fps change, `nudgeTiming` 1 and 10 frames, and `pxToSeconds`/`snapToFrame`.
+    - Add `// Feature: studio, Property 8: Timing drag stays on the frame grid` (frame-grid check `|sec * fps - round(sec * fps)| < 1e-4`, `0 <= start < end <= duration` with `1e-9` slack, `move` length preserved) and extend `timemap.test.ts` so `// Feature: studio, Property 2: Time-pixel round-trip` also covers the pixel round-trip used by `pxToSeconds`. Each >= 100 iterations. Property 3 is satisfied by Property 8. On any counterexample, STOP and show it before changing a formula, a bound, or the property.
+    - **Covers:** Requirement 5.1, 5.2, 5.3, 5.10, 10.1; Design "Timeline interaction model", Properties 2, 3, 8
+    - **Completion:** `pnpm --filter @studio/app exec vitest run src/model` passes; Properties 2 and 8 run >= 100 iterations with no counterexample (run 3x).
 
-  - [ ] 4.3 Property tests for drag (Property 3)
-    - Add `// Feature: studio, Property 3: Drag bounds` asserting the bounds + duration-preservation invariants for any timing/kind/delta. On counterexample, STOP and show.
-    - **Covers:** Requirement 5.3, 5.4, 5.6; Design Property 3
-    - **Completion:** the property passes (>= 100 iterations, 3x).
+  - [ ] 4.3 Pure canvas hit testing and drag math
+    - Create `apps/studio/src/model/hit.ts` (pure; no DOM, no clock) exporting `Rect`, `layerBounds` (visible clusters only, box `layoutX..layoutX+width` by `layoutY-0.8h..layoutY+0.2h`, shifted by `anchor + transform.positionOffset`, effect scale/rotation/blur/opacity ignored, `null` when no visible cluster), `rectContains`, `hitTest` (last layer first, pad `8 / displayScale`, `displayScale <= 0` or non-finite treated as 1), `clientToCanvas` (`null` for a zero-size rect, no clamping), `dragAnchor` (Shift keeps the dominant axis, tie keeps x; round to `snap ?? 1` before clamping to `[0, w] x [0, h]`), and `nudgeAnchor` (1 px, 10 with Shift, clamped, `null` for non-arrow keys).
+    - Create `apps/studio/src/model/hit.test.ts` with the unit cases listed in the design "Unit tests", plus `// Feature: studio, Property 6: Drag identity` and `// Feature: studio, Property 7: Drag stays in canvas and on the grid` with the design arbitraries, each >= 100 iterations. On any counterexample, STOP and show it before changing a formula, a bound, or the property.
+    - Extend `apps/studio/src/__tests__/purity.test.ts` so the purity guard also covers `model/hit.ts` and `model/timeline.ts` (no `Math.random`, `Date.now`, `performance.now`, no DOM globals).
+    - **Covers:** Requirement 3.8, 3.9, 3.10, 3.12, 3.13, 3.15, 10.1, 10.4; Design "Canvas hit testing", Properties 6, 7
+    - **Completion:** `pnpm --filter @studio/app exec vitest run src/model src/__tests__` passes; Properties 6 and 7 run >= 100 iterations with no counterexample (run 3x); the purity test fails if a banned call is added to `hit.ts` or `timeline.ts`.
 
-  - [ ] 4.4 Checkpoint — Group 4
-    - Run typecheck, lint, Vitest, and `playwright test tests/timeline.spec.ts`.
-    - **Completion:** all pass.
-    - Commit: `feat(studio): timeline with pure drag math and keyboard equivalents`
+  - [ ] 4.4 CSS custom property helper and no-inline-style guard
+    - Create `apps/studio/src/ui/cssvars.ts` exporting `setCssVars(el, vars)` over a minimal structural element type (`{ style: { setProperty(name, value) } }`): every key must start with `--` and numbers must be finite, otherwise throw a typed `Error`; values are written as `String(value)`.
+    - Create `apps/studio/src/ui/cssvars.test.ts` with a fake element (`vi.fn()` for `setProperty`): exact names and stringified values, throws for a name without `--` and for a non-finite number.
+    - Add a guard that fails on a JSX `style=` attribute or prop and on `dangerouslySetInnerHTML` in `apps/studio/src/**/*.tsx`: an ESLint rule in `apps/studio/eslint.config.js` (`react`-free `no-restricted-syntax` selector on `JSXAttribute[name.name='style']`), or a static audit test `apps/studio/src/__tests__/no-inline-style.test.ts`. No `eslint-disable` in `src`.
+    - **Covers:** Requirement 11.1, 11.2; Design "CSS custom property helper"
+    - **Completion:** `pnpm --filter @studio/app exec vitest run src/ui src/__tests__` passes; a probe `.tsx` containing `style={{}}` makes the guard fail, and the existing source passes it.
+
+  - [ ] 4.5 Canvas selection, drag, nudge, and overlay in `PreviewCanvas`
+    - In `apps/studio/src/preview/PreviewCanvas.tsx` add a hit-only `CanvasMetricsProvider` bound to a detached `document.createElement("canvas")` context, with its own layout cache, recreated in the existing fonts `loadingdone` callback and whenever the canvas size changes; compute the hit `FrameState` with `computeFrameState(project, playhead, { metricsProvider, layoutCache })` on pointerdown and when the overlay refreshes. Never share this provider with the paint renderer or any export.
+    - Pointer handling with `setPointerCapture`: primary-button `pointerdown` uses `clientToCanvas` and `hitTest` (empty canvas leaves the selection unchanged; a hit selects the layer, pauses the clock, calls `store.beginGesture()`, focuses the canvas); `pointermove` runs `dragAnchor` (Shift axis lock) and `store.preview({ type: "set-anchor", ... })`; `pointerup` calls `commitGesture`; `pointercancel` and `lostpointercapture` without `pointerup` call `cancelGesture`. Without a drag, `pointermove` only toggles the `is-over-layer` class.
+    - Keyboard: the canvas has `tabindex="0"`, an `aria-label`, and a focus-visible style in `layout.css`; `keydown` uses `nudgeAnchor` and, when non-null, `preventDefault()` plus `store.dispatchGuarded(set-anchor)` (one step per press); other keys are ignored.
+    - Selection outline: a sibling `<div class="selection-outline" aria-hidden="true">` positioned by `setCssVars` (`--x`, `--y`, `--w`, `--h`) from the unpadded `layerBounds` times the display scale, in `useLayoutEffect`; hidden when nothing is selected, the layer has no bounds, or playback is running. Cursor via classes `is-over-layer` and `is-dragging` in `layout.css`; `touch-action: none` on the canvas. Canvas pixel size and the transparent flag follow `project.canvas` width, height, and background (also after New or Open).
+    - **Covers:** Requirement 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.15, 3.16, 3.17, 3.18, 11.2; Design "Canvas interaction model", "Where the bounds come from"
+    - **Completion:** `pnpm --filter @studio/app exec tsc --noEmit` and lint pass; `tests/canvas-drag.spec.ts` (task 4.8) passes against this component; the parity probe still reports 0 with a layer selected.
+
+  - [ ] 4.6 Timeline component, StudioView wiring, and layout
+    - Create `apps/studio/src/timeline/Timeline.tsx`: a ruler with `role="slider"` (`aria-label="Playhead"`, `aria-valuemin`/`aria-valuemax`/`aria-valuenow` in seconds, `aria-valuetext`) that scrubs via `pxToSeconds` on click or drag and with ArrowLeft/Right (1 frame, 10 with Shift); a playhead at the current time; one row per layer with a bar (`move`), a start handle, and an end handle, each focusable with `role="slider"`, an `aria-label` such as `"Title, move"`, and `aria-valuenow`/`aria-valuemin`/`aria-valuemax` in seconds plus `aria-valuetext` like `"1.20 seconds"`. Rows render `aria-disabled` when the duration is under one frame.
+    - Pointer drag: `setPointerCapture`, `store.beginGesture()`, select the layer, `deltaFrames` from the pointer-down position each move (not accumulated), `dragTiming`, `store.preview({ type: "set-layer-timing", ... })`; `pointerup` calls `commitGesture` (one step); `pointercancel` calls `cancelGesture`. Arrow keys on a focused part call `nudgeTiming` and `store.dispatchGuarded` (one step per press); other keys ignored. All bar, handle, playhead, and ruler geometry goes through `setCssVars` (`--from`, `--len`, `--at`); no `style` prop.
+    - Wire the component into `apps/studio/src/shell/StudioView.tsx` and add the timeline styles (consuming the CSS variables, focus-visible, reduced-motion) to `apps/studio/src/shell/layout.css`. The Layers panel numeric start/duration inputs stay unchanged.
+    - **Covers:** Requirement 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 5.11, 11.2, 12.6; Design "Timeline component"
+    - **Completion:** `pnpm --filter @studio/app exec tsc --noEmit` and lint pass; `tests/timeline.spec.ts` (task 4.8) passes against this component.
+
+  - [ ] 4.7 Ctrl/Cmd+Z handler
+    - In `apps/studio/src/shell/StudioView.tsx` register one `keydown` listener on `window` (removed on unmount) acting on `(ctrlKey || metaKey) && key.toLowerCase() === "z" && !shiftKey`. Return early, without `preventDefault`, when `event.target` is an `HTMLInputElement`, `HTMLTextAreaElement`, `HTMLSelectElement`, or `isContentEditable`; otherwise `preventDefault()` and `store.undo()` (a mid-gesture press cancels the gesture). No redo binding.
+    - **Covers:** Requirement 16.2, 16.4, 16.6; Design "Keyboard"
+    - **Completion:** typecheck and lint pass; the undo cases in `tests/canvas-drag.spec.ts` and `tests/timeline.spec.ts` (task 4.8) pass, including that Ctrl/Cmd+Z inside a number input does not undo the project.
+
+  - [ ] 4.8 Playwright specs for canvas drag, timeline, and undo
+    - Create `apps/studio/tests/canvas-drag.spec.ts`: click selects the right layer and an empty click keeps the selection; dragging the title changes the anchor X/Y fields and the `#ffcc00` pixel bounding box follows by the same delta; Shift locks an axis; releasing outside the canvas still commits; the outline overlay matches the bbox; Arrow nudge moves +1 px and Shift+Arrow +10 px, other keys are ignored; Ctrl/Cmd+Z restores the drag and each nudge in one step; Ctrl/Cmd+Z inside a number input does not undo the project.
+    - Create `apps/studio/tests/timeline.spec.ts`: bars map start and width; ruler scrub snaps to frames; dragging a timeline end handle lands the end on a frame (`aria-valuenow * fps` is whole) and changes the duration; Arrow and Shift+Arrow nudge by 1 and 10 frames; slider ARIA attributes; Ctrl/Cmd+Z restores the end-handle drag in one step.
+    - Keep the Landing and export specs green; run the CSP spec (`playwright.csp.config.ts`, `tests-csp`) with a canvas drag, a nudge, and a timeline drag added to the session, asserting zero new violations beyond the single named Zod eval probe; assert `await window.__studioExportParity(3)` is exactly 0.
+    - **Covers:** Requirement 3.11, 3.12, 3.14, 3.15, 3.16, 3.18, 5.4, 5.6, 5.7, 5.8, 11.3, 16.2, 16.4, 16.9
+    - **Completion:** `pnpm --filter @studio/app exec playwright test tests/canvas-drag.spec.ts tests/timeline.spec.ts` passes; the CSP spec passes with zero new violations; the parity probe returns exactly 0.
+
+  - [ ] 4.9 Checkpoint — Group 4
+    - Run `pnpm --filter @studio/app exec tsc --noEmit`, `pnpm --filter @studio/app lint`, `pnpm --filter @studio/app exec vitest run`, the studio Playwright suite, the CSP spec, and the parity probe (`await window.__studioExportParity(3)` is exactly 0). Run `git diff --stat -- packages/` and confirm it shows no change under `packages/` (exporters and engine untouched).
+    - If any property test fails, show the counterexample and stop before changing a bound.
+    - **Completion:** all commands exit 0; the parity probe is exactly 0; `git diff` shows no change under `packages/`.
+    - Commit: `feat(studio): canvas drag and timeline editing`
 
 - [ ] 5. Group 5: Save/load + built-in demo project  *(est. ~10 credits)*
   - [ ] 5.1 Save and load
@@ -279,10 +320,14 @@ reported). They are planning estimates, not budgets.
 ## Correctness properties referenced
 
 - Property 1: Schema-preserving transitions (Task 1.5)
-- Property 2: Time-pixel round-trip (Task 1.5)
-- Property 3: Drag bounds (Task 4.3)
+- Property 2: Time-pixel round-trip (Task 1.5; pixel round-trip also exercised in Task 4.2)
+- Property 3: Timing drag bounds, frame-grid version (superseded by and satisfied by Property 8, Task 4.2)
 - Property 4: Save/load round-trip (Task 5.2)
 - Property 5: ErrorCode map total (Task 3.6)
+- Property 6: Drag identity (Task 4.3)
+- Property 7: Drag stays in canvas and on the grid (Task 4.3)
+- Property 8: Timing drag stays on the frame grid (Task 4.2)
+- Property 9: Undo restores (Task 4.1)
 
 
 ## Task Dependency Graph
@@ -304,16 +349,20 @@ reported). They are planning estimates, not budgets.
     { "id": 11, "tasks": ["3.6"] },
     { "id": 12, "tasks": ["3.7"] },
     { "id": 13, "tasks": ["3.8"] },
-    { "id": 14, "tasks": ["4.1"] },
-    { "id": 15, "tasks": ["4.2", "4.3"] },
-    { "id": 16, "tasks": ["4.4"] },
-    { "id": 17, "tasks": ["5.1", "5.3"] },
-    { "id": 18, "tasks": ["5.2"] },
-    { "id": 19, "tasks": ["5.4"] },
-    { "id": 20, "tasks": ["6.1", "6.2", "6.3"] },
-    { "id": 21, "tasks": ["6.4"] },
-    { "id": 22, "tasks": ["7.1"] },
-    { "id": 23, "tasks": ["7.2"] }
+    { "id": 14, "tasks": ["4.1", "4.2", "4.4"] },
+    { "id": 15, "tasks": ["4.3"] },
+    { "id": 16, "tasks": ["4.5"] },
+    { "id": 17, "tasks": ["4.6"] },
+    { "id": 18, "tasks": ["4.7"] },
+    { "id": 19, "tasks": ["4.8"] },
+    { "id": 20, "tasks": ["4.9"] },
+    { "id": 21, "tasks": ["5.1", "5.3"] },
+    { "id": 22, "tasks": ["5.2"] },
+    { "id": 23, "tasks": ["5.4"] },
+    { "id": 24, "tasks": ["6.1", "6.2", "6.3"] },
+    { "id": 25, "tasks": ["6.4"] },
+    { "id": 26, "tasks": ["7.1"] },
+    { "id": 27, "tasks": ["7.2"] }
   ]
 }
 ```
