@@ -1,0 +1,2 @@
+/* Harness page only: the screen's root takes the full window (see the design note on html/body rules). */
+html, body, #root { height: 100%; margin: 0; }

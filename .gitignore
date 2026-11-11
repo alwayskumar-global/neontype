@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-dc-harness/
 .vite/
 coverage/
 playwright-report/

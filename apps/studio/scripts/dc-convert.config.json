@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "designDir": "../../design",
+  "outDir": "src/generated",
+  "forbid": [
+    { "regex": "\\bFlash\\b" },
+    { "text": "http://" },
+    { "text": "https://" },
+    { "text": "design/" },
+    { "text": "support.js" }
+  ],
+  "files": [
+    { "source": "Studio Editor.dc.html", "omitIf": [], "replaceText": [], "forbid": [] },
+    { "source": "Effects Library.dc.html", "omitIf": [], "replaceText": [], "forbid": [] },
+    {
+      "source": "Export Flow.dc.html",
+      "omitIf": [{ "attr": { "data-screen-label": "Review bar" } }],
+      "replaceText": [],
+      "forbid": []
+    },
+    {
+      "source": "Error States.dc.html",
+      "omitIf": [],
+      "replaceText": [
+        {
+          "from": "style=\"{{ w.iconStyle }}\"",
+          "to": "style=\"flex:none;margin-top:1px\" data-variant=\"{{ w.icon }}\"",
+          "expect": 1
+        },
+        {
+          "from": "</style>",
+          "to": "[data-variant=\"error\"]{color:var(--color-error)}\n[data-variant=\"warning\"]{color:var(--color-warning)}\n</style>",
+          "expect": 1
+        }
+      ],
+      "forbid": []
+    },
+    {
+      "source": "Landing Page.dc.html",
+      "omitIf": [],
+      "replaceText": [
+        { "from": "href=\"Studio Editor.dc.html\"", "to": "href=\"#studio\" onClick=\"{{ onOpenStudio }}\"", "expect": 4 }
+      ],
+      "forbid": []
+    }
+  ]
+}

@@ -303,28 +303,28 @@ reported). They are planning estimates, not budgets.
 - [ ] 8. Group 8: Reserve (only if needed)
     - Reserved for overflow from G1–G7 (e.g. a design-fidelity polish pass or a Playwright flake-stabilisation pass). Not planned work; opened only with owner approval.
 
-- [ ] 9. Group 9: Design-source converter and design-system port  *(est. ~35 credits)*
+- [x] 9. Group 9: Design-source converter and design-system port  *(est. ~35 credits)*
   - **Stop-and-wait rules for this group.** STOP and ask the owner if:
     - (a) the font licence text or copyright line cannot be verified upstream (never invent a copyright line);
     - (b) `react-dom/server` `renderToStaticMarkup` is unavailable;
     - (c) the converter meets a construct outside the supported grammar in any of the five real files (do not widen the grammar silently; report it with file and line);
     - (d) a property counterexample appears (show it before changing a formula, a bound, or the property);
     - (e) a per-file config rule would be needed beyond the three listed in the design (Landing Page href rewrite, Export Flow review-bar omission, Error States icon-style rewrite). These three are approved by the owner (requirements "Deviations" item 3); any further rule is a STOP.
-  - [ ] 9.1 Fonts and licences
+  - [x] 9.1 Fonts and licences
     - Binary-copy `InstrumentSans-400-700-latin(.ext).woff2` (latin and latin-ext) and `DMMono-400/500-latin(-ext).woff2` from the design export into `apps/studio/public/fonts/`; record the sha256 of every copied file in the commit message. No Noto Sans Tamil file is copied.
     - Take the SIL OFL 1.1 texts unchanged from the upstream `google/fonts` repository (`ofl/instrumentsans/OFL.txt` and `ofl/dmmono/OFL.txt`; a read-only web lookup is owner-approved) and compare the copyright lines with the font files. If either cannot be verified, STOP (rule a). Add `apps/studio/public/fonts/OFL-Instrument-Sans.txt` and `OFL-DM-Mono.txt` next to the existing OFL files, and `apps/studio/public/fonts/README.md` recording the source URL and the commit or date of each text. Add one `docs/dependencies.md` row per family (name, licence, source, reason).
     - **Covers:** Requirement 18.2
     - **Completion:** the font files exist under `public/fonts/` and their sha256 values match the export; no Tamil font file was added; both OFL files are the `google/fonts` texts with upstream-verified copyright lines; `public/fonts/README.md` names the source URL and commit or date; `docs/dependencies.md` has a row for Instrument Sans and one for DM Mono.
 
-  - [ ] 9.2 Design-system stylesheet `ds.css`
+  - [x] 9.2 Design-system stylesheet `ds.css`
     - Hand-assemble `apps/studio/src/ds/ds.css`: header comment with export id `f5b901ae-a7fb-489e-9b53-af9bc496124b` and the bundle namespace `MotionTextStudioDesignSystem_f5b901`; `@font-face` rules for Instrument Sans and DM Mono only, `url("/fonts/...")` sources only (drop every `local("...")` source, and do NOT port the design system's `Noto Sans Tamil` `@font-face`, because the studio's `src/fonts/fonts.css` already declares that family and a second declaration with different files would break export parity); tokens scoped under `.ds-root` (not `:root`); `components/ui.css` verbatim; keep the `prefers-reduced-motion` blocks. Never import from `design/`.
-    - Create `apps/studio/src/ds/ds.test.ts` asserting: no `:root`; no `url(` except in the `@font-face` sources; every component rule starts with `.ui-` or is an `@keyframes` / `@media` block; each of the 44 token names shared with `src/tokens.css` appears only inside `.ds-root` rules; no `local(`; no `Noto Sans Tamil` `@font-face`.
-    - Create `apps/studio/src/ds/ds-fonts.test.ts`: parse `ds.css` and `apps/studio/src/fonts/fonts.css`, extract the declared `font-family` names, and assert the two sets are disjoint (`ds.css`: Instrument Sans, DM Mono only) and that `ds.css` has no `local(`.
+    - Create `apps/studio/src/ds/ds-css.test.ts` asserting: no `:root`; no `url(` except in the `@font-face` sources; every component rule starts with `.ui-` or is an `@keyframes` / `@media` block; each of the 44 token names shared with `src/tokens.css` appears only inside `.ds-root` rules; no `local(`; no `Noto Sans Tamil` `@font-face`.
+    - In the same `ds-css.test.ts` (describe "font-face rules"): parse `ds.css` and `apps/studio/src/fonts/fonts.css`, extract the declared `font-family` names, and assert the two sets are disjoint (`ds.css`: Instrument Sans, DM Mono only) and that `ds.css` has no `local(`.
     - Import `./ds/ds.css` as a plain CSS import in `apps/studio/src/main.tsx` (it is scoped under `.ds-root`, so it restyles nothing), so export parity is checked with `ds.css` loaded.
     - **Covers:** Requirement 18.1, 18.7, 18.8, 18.9
-    - **Completion:** `pnpm --filter @studio/app exec vitest run src/ds/ds.test.ts src/ds/ds-fonts.test.ts` passes; `src/tokens.css` is unchanged.
+    - **Completion:** `pnpm --filter @studio/app exec vitest run src/ds/ds-css.test.ts` passes; `src/tokens.css` is unchanged.
 
-  - [ ] 9.3 Design-system runtime, icons, and helpers
+  - [x] 9.3 Design-system runtime, icons, and helpers
     - Create `apps/studio/src/ds/dc-runtime.ts`: `DcData` / `Scope` types, a safe `get(scope, path)` over objects and arrays that returns `undefined` for a missing segment, a `dcVars` ref-callback helper built on `ui/cssvars.ts` `setCssVars`, and an `asHandler` guard for function-valued bindings. No `any`, no `eval`.
     - Create `apps/studio/src/ds/icons.ts`: exactly the 27 icons listed in design.md (22 static `name=`/`icon=`/`icon-right=` names, plus `clock`, `grid`, `layers` from the data scripts, plus `minus` and `chevron-down`) as typed shape data derived by hand from `ICONS`; no markup strings, no `dangerouslySetInnerHTML`. `viewport` is not an icon.
     - Create `apps/studio/src/ds/helpers.ts` with `stepNumber` and `tokenizeCode`.
@@ -332,57 +332,59 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 18.3, 18.4
     - **Completion:** `pnpm --filter @studio/app exec vitest run src/ds` passes for these files; lint passes on `src/ds/`.
 
-  - [ ] 9.4 The 12 design-system components
+  - [x] 9.4 The 12 design-system components
     - Create `apps/studio/src/ds/index.tsx` exporting Button, Chip, CodeBlock, Icon, IconButton, NumberScrub, ProgressBar, SegmentedControl, Select, Slider, Toast, and Toggle. Markup and `ui-*` classes match `_ds_bundle.js` (read as a reference only, never imported); every control has an accessible name; keyboard focus is visible; dynamic values go through `setCssVars`; Icon renders typed shapes as React SVG children; CodeBlock renders tokenized spans. No JSX `style`, no `dangerouslySetInnerHTML`.
     - Create `apps/studio/src/ds/index.test.tsx` using `react-dom/server` `renderToStaticMarkup`: each component renders its root `ui-*` class; roles and ARIA (for example `role="switch"` with `aria-checked`, `role="progressbar"` values, `role="slider"` values); controlled and uncontrolled basics. Add the static audit of `src/ds/` (no `style=`, `dangerouslySetInnerHTML`, `<script`, `http(s)://`, `design/` import). If `renderToStaticMarkup` is unavailable, STOP (rule b).
     - **Covers:** Requirement 18.3, 18.5
     - **Completion:** `pnpm --filter @studio/app exec vitest run src/ds` passes; `pnpm --filter @studio/app lint` passes on `src/ds/`.
 
-  - [ ] 9.5 Converter core, part 1: tokenizer, tree, structure pass, bindings
+  - [x] 9.5 Converter core, part 1: tokenizer, tree, structure pass, bindings
     - Create `apps/studio/scripts/dc-convert-lib.mjs` with the strict tokenizer, tree builder, structure pass (drops the `support.js` script, every `text/x-dc` data script, and the `_ds_bundle.js` script inside `<helmet>`), and the `{{ }}` binding parser (dotted path, numeric/boolean/null literal, `$index`). Create `scripts/dc-convert-lib.d.mts`, `scripts/dc-io.mjs` (all file reads/writes for tests and CLI), and `scripts/dc-io.d.mts`. Add `scripts` to the `apps/studio` tsconfig `include`. No `@types/node`, no new dependency.
     - Create `apps/studio/src/__tests__/dc/parse.test.ts`: all five real files parse without error; the structure pass drops the three script kinds; synthetic fail-loud cases (unknown tag, unknown directive, operator inside `{{ }}`, unterminated attribute) throw `DcConvertError` whose message names the file and a line >= 1. If a real file contains a construct outside the grammar, STOP (rule c).
     - **Covers:** Requirement 17.1, 17.3.4, 17.3.10
     - **Completion:** `pnpm --filter @studio/app exec vitest run src/__tests__/dc/parse.test.ts` passes; `tsc --noEmit` passes with the scripts included.
 
-  - [ ] 9.6 Converter core, part 2: style compiler and CSS scoper
+  - [x] 9.6 Converter core, part 2: style compiler and CSS scoper
     - Extend `scripts/dc-convert-lib.mjs` with the style compiler (static classes shared by stable declaration hash; dynamic declarations as `prop: var(--dc-N)`; mixed values as `calc(var(--dc-N) * 1<unit>)`; `style-hover` / `-focus` / `-active` as `:hover` / `:focus` / `:active` rules) and the CSS scoper (`:where(.dc-<slug>)` prefix, `html` / `body` / `:root` to the root class, `@keyframes` names prefixed `dc-<slug>-`, `@media` / `@container` recursion, specificity guard failing at (0,2,0) or more, `@supports` error).
     - Create `apps/studio/src/__tests__/dc/style.test.ts` and `scope.test.ts` using real excerpts from the design (the quoted examples) and synthetic cases: unit-suffixed binding, object-valued style binding error, selector specificity error, `@supports` error.
     - Add the scoper-check half of Property 12 (balanced braces; every selector under `.dc-<slug>` or `:where(.dc-<slug>)`; keyframes prefix) as example tests here; the property run is in 9.8.
     - **Covers:** Requirement 17.3.1, 17.3.2, 17.3.3, 17.3.13, 17.5; Design Property 12 (partial)
     - **Completion:** `pnpm --filter @studio/app exec vitest run src/__tests__/dc/style.test.ts src/__tests__/dc/scope.test.ts` passes.
 
-  - [ ] 9.7 Converter core, part 3: JSX emitter, config, CLI
+  - [x] 9.7 Converter core, part 3: JSX emitter, config, CLI
     - Extend `scripts/dc-convert-lib.mjs` with the JSX emitter: `sc-if`; `sc-for` keyed by index with `$index`; `x-import` to the ported DS component with camelCased props, `hint-*` dropped, children kept, any other namespace an error; `dc-import` to the `backdrop` slot; `ref` binding and `dc-props` dropping; static `style` on `x-import` to `className`; event attributes bound to function values; HTML and SVG attribute renames (`class`, `for`, `tabindex`, `stroke-width`, `viewBox` kept); `<img>` to an asset import with byte-for-byte asset copy; `<NAME>_BINDINGS` and `<NAME>_KEYFRAMES` exports; header comment with source file name and sha256; typed props `data` and optional `backdrop`; no `any` and no `ts-ignore`.
     - Create `apps/studio/scripts/dc-convert.config.json` and the config loader with `omitIf`, `replaceText`, and `forbid` (default forbid list: the legacy product name `Flash` and remote URLs). Implement the three owner-approved per-file rules: Landing Page (`href="Studio Editor.dc.html"` to `href="#studio"` plus an optional `onClick="{{ onOpenStudio }}"` handler from `data.onOpenStudio`, 4 occurrences), Export Flow (omit the `data-screen-label="Review bar"` element), and Error States (`style="{{ w.iconStyle }}"` to a static class plus `data-variant="{{ w.icon }}"`, with per-variant CSS rules added to the scoped CSS; no object-valued style in the output). Any further rule: STOP (rule e).
     - In the emitter, create the `dcVars` callback ref per element; inside `sc-for` it is created in the map body so each list item sets its own custom properties.
     - Create `apps/studio/scripts/dc-convert.mjs` (CLI; non-zero exit and a file:line message on error) and the `dc:convert` script in `apps/studio/package.json`.
     - Create `apps/studio/src/__tests__/dc/emit.test.ts` with unit tests for each mapping on small inputs (including a dynamic style inside `sc-for` getting a callback ref per item), plus a `forbid` failure test. Create `src/__tests__/dc/config-rules.test.ts` for the three rule outcomes (four `href="#studio"` anchors with the optional handler; no Review bar; Error States has a `data-variant` per item, the per-variant CSS rules, and no object-valued style).
+    - Done: handler typing correction. A `(...args: never[]) => unknown` function is NOT assignable to an event-handler prop (TS2322, verified with `tsc`); `(...args: unknown[]) => unknown` is. In `ds/dc-runtime.ts`, `DcFn` (`never[]`) stays the type stored in `DcValue`, and `asHandler` returns the new `DcHandler` (`unknown[]`), built as `(...args) => Reflect.apply(fn, undefined, args)` (no `any`, no assertion). Generated code also uses `asBooleanish`, `asTristate`, and `asCurrent` for the ARIA attributes. The converter library is split across `dc-parse.mjs`, `dc-css.mjs`, `dc-emit.mjs`, and `dc-convert-lib.mjs`.
     - **Covers:** Requirement 17.2, 17.3.4–17.3.12, 17.3.14, 17.4, 17.6, 17.7
     - **Completion:** `pnpm --filter @studio/app exec vitest run src/__tests__/dc/emit.test.ts` passes; `pnpm --filter @studio/app dc:convert --help` or a dry run exits 0.
 
-  - [ ] 9.8 Generate, commit, and verify the output
+  - [x] 9.8 Generate, commit, and verify the output
     - Run `pnpm --filter @studio/app dc:convert` for all five screens into `apps/studio/src/generated/` (`<slug>/<PascalName>.tsx`, `<slug>.css`, `assets/`). The folder is committed and never hand-edited.
     - Create `apps/studio/src/__tests__/dc/generated.test.ts`: determinism (convert twice, byte-identical, all five); staleness (in-memory regeneration equals the committed files, including assets); static audit of `generated/` (no `style=`, `dangerouslySetInnerHTML`, `<script`, `http(s)://`, `design/` import path, JSX `style` attribute); `tsc` over `generated/*.tsx`; ESLint over `generated/` and `ds/`.
     - Create `apps/studio/src/__tests__/dc/arb-dc.ts` (the generator described in the design) and add `// Feature: studio, Property 11: Converter determinism` (twice-equal, no hidden state, header sha256 equals input) and `// Feature: studio, Property 12: Generated output is CSP-clean` (throws `DcConvertError` or output free of the forbidden patterns, with its own scan) as fast-check properties, `numRuns: 200` (>= 100), run 3x. The five real files are example cases. On any counterexample, STOP (rule d).
     - **Covers:** Requirement 17.2, 17.6, 17.9; Design Properties 11, 12
     - **Completion:** `pnpm --filter @studio/app exec vitest run src/__tests__/dc` passes 3 times in a row; `git status` is clean after a second `dc:convert` run.
 
-  - [ ] 9.9 Smoke harness and production-leak guard
+  - [x] 9.9 Smoke harness and production-leak guard
     - Extract the CSP into a shared module (`apps/studio/csp.ts`) used by `vite.config.ts` and the new harness config. Record a hash of the production `dist/` before the extraction and confirm it is byte-identical after (build hash).
     - The harness has TWO pages built by the same `apps/studio/vite.dc-harness.config.ts` (own output folder, not `dist/`, both pages as Rollup inputs, same strict CSP injected the same way):
-      - Page 1: `apps/studio/dc-harness/index.html` (external module script only, no inline script or style), `main.tsx` (mounts the generated Studio Editor; imports NO engine code), and `fixture.ts` (static data covering `STUDIO_EDITOR_BINDINGS`). `apps/studio/tests-dc/dc-csp.spec.ts` asserts the landmarks render and ZERO `securitypolicyviolation` events and no CSP console errors.
-      - Page 2: `apps/studio/dc-harness/parity.html` and `parity-main.ts`: loads `ds.css` and `src/fonts/fonts.css` and exposes `window.__studioExportParity(t)` over the demo project (`runExportParity`). `apps/studio/tests-dc/parity.spec.ts` asserts the parity is exactly 0 for t = 1, 3, 5.5 and that at most the one allowed Zod `allowsEval` violation occurs (same assertion as `tests-csp`), with no other violation.
+      - Page 1: `apps/studio/dc-harness/index.html` (external module script only, no inline script or style), `main.tsx` (mounts the generated Studio Editor; imports NO engine code), and `fixture.ts` (static data covering `STUDIO_EDITOR_BINDINGS`). `apps/studio/tests-dc/harness.spec.ts` asserts the landmarks render and ZERO `securitypolicyviolation` events and no CSP console errors.
+      - Page 2: `apps/studio/dc-harness/parity.html` and `parity.ts`: loads `ds.css` and `src/fonts/fonts.css` and exposes `window.__studioExportParity(t)` over the demo project (`runExportParity`). `apps/studio/tests-dc/harness.spec.ts` (third test) asserts the parity is exactly 0 for t = 1, 3, 5.5 and that at most the one allowed Zod `allowsEval` violation occurs (same assertion as `tests-csp`), with no other violation.
     - Create `apps/studio/playwright.dc.config.ts` serving the built harness.
     - Create `apps/studio/src/__tests__/dc/no-leak.test.ts`: `vite build({ write: false })` of the production config emits no path or text matching `design/` (word-boundary guarded), `_ds/`, `_ds_bundle`, `support.js`, `.dc.html`, or `MotionTextStudioDesignSystem`.
+    - Done: the harness spec is `tests-dc/harness.spec.ts` (not `dc-csp.spec.ts` or `parity.spec.ts`), with 3 tests over the two harness pages (`dc-harness/index.html` + `main.tsx`, and `dc-harness/parity.html` + `parity.ts`); the Playwright config uses port 5276; the leak guard is `src/__tests__/dc/dist-scan.test.ts` and scans both the production and the harness build.
     - **Covers:** Requirement 17.10, 18.10
     - **Completion:** `pnpm --filter @studio/app exec playwright test -c playwright.dc.config.ts` passes: page 1 with zero violations, page 2 with parity exactly 0 at the three times and at most the one allowed Zod probe; the no-leak unit test passes; production `dist` hash is unchanged by the CSP extraction.
 
-  - [ ] 9.10 Documentation
+  - [x] 9.10 Documentation
     - Add a root `README.md` section for the converter: the `dc:convert` command, what it reads (`design/*.dc.html`, input only), that output is deterministic, and that `apps/studio/src/generated/` is never edited by hand. Add a note on the design-system port to `apps/studio/README.md`. Add a short `docs/` entry listing the three owner-approved Deviations.
     - **Covers:** Requirement 17.1–17.10 (documentation only)
     - **Completion:** the README section, the `apps/studio/README.md` note, and the docs entry exist and name the command, the input, and the three deviations.
 
-  - [ ] 9.11 Checkpoint — Group 9
+  - [x] 9.11 Checkpoint — Group 9
     - Run `pnpm --filter @studio/app exec tsc --noEmit`, `pnpm --filter @studio/app lint` (including `generated/` and `ds/`), `pnpm --filter @studio/app exec vitest run`, the studio Playwright suite, the studio CSP spec, and the dc-harness Playwright specs (page 1 zero violations; page 2 parity with at most the one allowed Zod probe). Confirm export parity is exactly 0 at t = 1, 3, and 5.5 (`await window.__studioExportParity(t)`) BOTH on the default studio route in the dev server (`main.tsx` imports `ds.css`; the owner starts `pnpm dev`) AND in the harness `parity.html` build, both with `ds.css` loaded, `git diff --stat -- packages/` shows no change, `apps/studio/src/tokens.css` is unchanged, and the production `dist/` contains nothing from `design/`.
     - **Completion:** all commands exit 0; parity is exactly 0 at the three times on both routes; no change under `packages/`; `tokens.css` unchanged; `dist/` scan clean.
     - Commit: `feat(studio): dc converter and design-system port`

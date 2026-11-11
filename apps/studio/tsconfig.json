@@ -24,6 +24,11 @@
     "playwright.config.ts",
     "../../packages/exporters/src/types/*.d.ts",
     "tests-csp/**/*",
-    "playwright.csp.config.ts"
+    "playwright.csp.config.ts",
+    "dc-harness/**/*",
+    "vite.dc-harness.config.ts",
+    "playwright.dc.config.ts",
+    "tests-dc/**/*",
+    "csp.ts"
   ]
 }

@@ -39,6 +39,15 @@ docs/                 Dependency log and project docs (incl. docs/kiro-usage.md)
 .kiro/                Specs, steering, and hooks used to build the project.
 ```
 
+## Design conversion
+
+`design/` (the owner's mockups) is a visual reference only. A small converter,
+`pnpm --filter @studio/app dc:convert`, turns the five `.dc.html` screens into typed React
+components and scoped CSS under `apps/studio/src/generated/` (committed, never hand-edited), using
+the ported design-system components in `apps/studio/src/ds/`. It has no dependencies, is
+deterministic, and its output is CSP-clean. See `apps/studio/README.md`. Generated screens are not
+yet wired into the live studio.
+
 ## Export formats
 
 Supported: **MP4** (H.264, optional AAC), **PNG sequence** (ZIP of stored PNGs),
