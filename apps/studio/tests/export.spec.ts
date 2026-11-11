@@ -60,3 +60,26 @@ test("cancel during export ends in the cancelled state", async ({ page }) => {
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByText("Export cancelled.")).toBeVisible({ timeout: 9000 });
 });
+
+test("dialog traps Tab inside and returns focus to the Export button on close", async ({ page }) => {
+  await gotoStudio(page);
+  const opener = page.getByRole("button", { name: "Export", exact: true });
+  await opener.focus();
+  await opener.click();
+  const dialog = page.getByRole("dialog", { name: "Export" });
+  await expect(dialog).toBeVisible();
+  // Tab many times: focus must never leave the dialog.
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press("Tab");
+    const inside = await page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'));
+    expect(inside, `focus inside dialog after Tab #${i + 1}`).toBe(true);
+  }
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press("Shift+Tab");
+    const inside = await page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'));
+    expect(inside, `focus inside dialog after Shift+Tab #${i + 1}`).toBe(true);
+  }
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(opener).toBeFocused();
+});

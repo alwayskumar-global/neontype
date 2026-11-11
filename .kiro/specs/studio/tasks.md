@@ -155,6 +155,7 @@ reported). They are planning estimates, not budgets.
 
   - [ ] 3.5 Export dialog UI over `@studio/exporters`
     - Create `apps/studio/src/export/dialog.tsx`: call `detectCapabilities()` on open; offer EXACTLY MP4, PNG sequence, GIF; disable an `unsupported` format with its reason; per-format option fields (MP4 `videoBitrate`/`backgroundFallback`; output size) seeded from the project; progress bar from `onProgress`; Cancel via an `AbortController` signal → `cancelled`; success offers the file for download by `fileName`; the `mp4-no-transparency` note shown for a transparent project targeting MP4; errors shown via the error map. The export runs off the main thread when the exporter uses a worker, and the dialog stays responsive.
+    - Done: the dialog passes the four bundled font files to the exporters as `fonts` bytes (fetched once, memoized; the font gate is memoized per document) so Worker exports match the preview; a font failure now shows in the dialog because it enters the running state before the font checks. _Requirements: 6.1–6.5, 8.6, 9.1_
     - **Covers:** Requirement 8.1, 8.2, 8.3, 8.4, 8.7, 8.8, 8.9; Design "Export dialog state machine"
     - **Completion:** `tests/export.spec.ts` passes (format set, gating, progress, cancel, success download, note, error mapping).
 
@@ -197,6 +198,8 @@ reported). They are planning estimates, not budgets.
 - [ ] 5. Group 5: Save/load + built-in demo project  *(est. ~10 credits)*
   - [ ] 5.1 Save and load
     - Create `apps/studio/src/io/save.ts` (`serializeProject` → Blob download, named JSON) and `io/load.ts` (file input → `parseProject` → typed result; on `ParseError` show a specific message and leave the project unchanged; on success replace the store project and reset UI selection/playhead). No network; file validated before any field is read.
+    - Done: downloads (project save and export) go through one `downloadBlob` helper that revokes the object URL after 60 s, not synchronously. _Requirements: 7.1, 8.8_
+    - Done: opening a project file rejects files over 5 MiB by `file.size` before reading them. _Requirements: 7.1–7.6, 11.4_
     - **Covers:** Requirement 7.1–7.6, 10.5, 11.4; Design "Save / load"
     - **Completion:** `tests/saveload.spec.ts` passes (round-trip, invalid-file error, valid-replace).
 
@@ -218,6 +221,7 @@ reported). They are planning estimates, not budgets.
 - [ ] 6. Group 6: Accessibility, performance, and CSP specs  *(est. ~12 credits)*
   - [ ] 6.1 Accessibility pass
     - Ensure all interactive controls are keyboard-operable with programmatic labels and visible focus; the export dialog traps focus, closes on Escape, and restores focus to the invoker; reduced-motion reduces UI chrome transitions only (not the preview); add the keyboard timeline equivalents if not already present. Add `tests/a11y.spec.ts`.
+    - Done: the export dialog traps Tab/Shift+Tab, returns focus to the opener on close, and aborts a running export when closed. _Requirements: 12.1–12.6_
     - **Covers:** Requirement 12.1–12.6; Design "Error Handling"/shell
     - **Completion:** `tests/a11y.spec.ts` passes.
 
@@ -228,6 +232,7 @@ reported). They are planning estimates, not budgets.
 
   - [ ] 6.3 CSP-violation spec
     - Create `apps/studio/tests/csp.spec.ts` listening for `securitypolicyviolation` events and CSP console errors across a representative session (edit, preview, open dialog, export), asserting ZERO violations. Also assert no `style`/`script` markup injection path is exercised.
+    - Done: a production-build Playwright test runs a worker-path export under the strict CSP. _Requirements: 11.2, 11.3_
     - **Covers:** Requirement 11.2, 11.3; Design "CSP and security", risk 2
     - **Completion:** `tests/csp.spec.ts` passes with zero violations.
 

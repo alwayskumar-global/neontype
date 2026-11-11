@@ -18,3 +18,15 @@ describe("Property 4: Save/load round-trip", () => {
     );
   });
 });
+
+describe("loadProjectFromFile size precheck", () => {
+  it("rejects an oversized file before reading its text", async () => {
+    const { loadProjectFromFile, MAX_PROJECT_BYTES } = await import("./load.js");
+    let read = false;
+    const file = { size: MAX_PROJECT_BYTES + 1, text: async () => { read = true; return ""; } } as unknown as File;
+    const res = await loadProjectFromFile(file);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.message).toContain("5 MiB");
+    expect(read).toBe(false);
+  });
+});

@@ -21,6 +21,7 @@ import { messageFor } from "./errors.js";
 import { whenFontsReady, loadBundledFontBytes } from "../fonts/fonts.js";
 import type { Store } from "../shell/store.js";
 import { useStoreState } from "../shell/useStore.js";
+import { downloadBlob } from "../io/download.js";
 
 const CAP_KEY: Record<ExportFormatId, keyof CapabilityReport> = {
   mp4: "mp4",
@@ -43,17 +44,6 @@ function runExport(
   return exportGif(project, base);
 }
 
-function download(file: Blob, fileName: string): void {
-  const url = URL.createObjectURL(file);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
 export function ExportDialog({ store, onClose }: { store: Store; onClose: () => void }) {
   const project = useStoreState(store, (s) => s.project);
   const [state, dispatch] = useReducer(reduce, INITIAL);
@@ -72,14 +62,49 @@ export function ExportDialog({ store, onClose }: { store: Store; onClose: () => 
     };
   }, []);
 
-  // Escape closes; focus the dialog on open (focus trap handled by the overlay).
+  // Cancel any running export when the dialog closes or unmounts.
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Escape closes; Tab / Shift+Tab cycle inside the dialog; focus moves into the
+  // dialog on open and returns to the element that opened it on close.
   useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
     dialogRef.current?.focus();
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const root = dialogRef.current;
+      if (!root) return;
+      const focusable = Array.from(
+        root.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'),
+      );
+      if (focusable.length === 0) {
+        e.preventDefault();
+        root.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || active === root)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      } else if (!root.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      opener?.focus?.();
+    };
   }, [onClose]);
 
   const start = async (format: ExportFormatId): Promise<void> => {
@@ -186,7 +211,7 @@ export function ExportDialog({ store, onClose }: { store: Store; onClose: () => 
             {state.result.summary.notes.includes("mp4-no-transparency") && (
               <p className="note">Exported without transparency (mp4-no-transparency).</p>
             )}
-            <button type="button" onClick={() => download(state.result.file, state.result.fileName)}>Download</button>
+            <button type="button" onClick={() => downloadBlob(state.result.file, state.result.fileName)}>Download</button>
             <button type="button" onClick={() => dispatch({ type: "reset" })}>Export again</button>
           </div>
         )}

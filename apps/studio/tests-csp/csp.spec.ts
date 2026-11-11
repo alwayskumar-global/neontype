@@ -57,3 +57,41 @@ test("production build emits only the one allowed Zod eval probe CSP violation",
   expect(evalProbes.length, "exactly one caught Zod eval probe").toBeLessThanOrEqual(1);
   expect(consoleCsp, `non-eval CSP console errors: ${consoleCsp.join("; ")}`).toEqual([]);
 });
+
+test("a worker-path export with bundled fonts completes under the strict CSP", async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as unknown as { __csp: unknown[] }).__csp = [];
+    document.addEventListener("securitypolicyviolation", (e) => {
+      (window as unknown as { __csp: { directive: string; blocked: string }[] }).__csp.push({
+        directive: e.effectiveDirective || e.violatedDirective,
+        blocked: e.blockedURI,
+      });
+    });
+  });
+  const consoleCsp: string[] = [];
+  page.on("console", (m) => {
+    const t = m.text();
+    if (/content security policy/i.test(t) && !/eval/i.test(t)) consoleCsp.push(t);
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open the studio" }).first().click();
+  await expect(page.locator("canvas.preview-canvas")).toBeVisible();
+  // Keep the export small: 160x90, 0.5 s.
+  const nums = page.locator(".app-left .panel input[type='number']");
+  await nums.nth(0).fill("160");
+  await nums.nth(1).fill("90");
+  await nums.nth(3).fill("0.5");
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await page.getByRole("button", { name: /Export png-sequence/ }).click();
+  await expect(page.getByText(/^Done: frames\.zip/)).toBeVisible({ timeout: 30_000 });
+
+  const violations = await page.evaluate(
+    () => (window as unknown as { __csp: { directive: string; blocked: string }[] }).__csp,
+  );
+  const disallowed = violations.filter(
+    (v) => !(v.directive.startsWith(ALLOWED.directive) && v.blocked === ALLOWED.blocked),
+  );
+  expect(disallowed, `unexpected CSP violations: ${JSON.stringify(disallowed)}`).toEqual([]);
+  expect(consoleCsp, `non-eval CSP console errors: ${consoleCsp.join("; ")}`).toEqual([]);
+});

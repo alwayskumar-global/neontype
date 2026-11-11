@@ -4,7 +4,7 @@
  * browser Back from the studio returns to the landing. Awaits the font gate
  * before rendering either view. DEV probes are gated by import.meta.env.DEV.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import "./../fonts/fonts.css";
 import "./layout.css";
@@ -35,7 +35,6 @@ type View = "landing" | "studio";
 export function App() {
   const [fonts, setFonts] = useState<FontStatus | null>(null);
   const [view, setView] = useState<View>("landing");
-  const initialState = useRef<unknown>(null);
 
   useEffect(() => {
     let active = true;
@@ -61,7 +60,6 @@ export function App() {
         });
       };
     }
-    void initialState;
     return () => {
       active = false;
       window.removeEventListener("popstate", onPop);

@@ -6,10 +6,17 @@
  */
 import { parseProject, ParseError, type Project } from "@studio/engine";
 
+/** Same 5 MiB cap the engine parser enforces; checked on `file.size` before reading. */
+export const MAX_PROJECT_BYTES = 5 * 1024 * 1024;
+
 export type LoadResult = { ok: true; project: Project } | { ok: false; message: string };
 
 /** Reads a File's text and validates it into a Project (never throws). */
 export async function loadProjectFromFile(file: File): Promise<LoadResult> {
+  // Reject oversized files BEFORE reading them into memory.
+  if (file.size > MAX_PROJECT_BYTES) {
+    return { ok: false, message: "Could not open the project: the file is larger than the 5 MiB limit." };
+  }
   let text: string;
   try {
     text = await file.text();
