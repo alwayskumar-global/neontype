@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,6 +16,9 @@
 html,body{margin:0;height:100%;background:#0C0E12;overflow:hidden;color-scheme:dark}
 body{color:var(--color-text-primary);font:13px/18px var(--font-ui);-webkit-font-smoothing:antialiased}
 a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
+.ui-dest:disabled{cursor:not-allowed}
+.ui-dest:disabled .ui-dest__name{color:var(--color-text-disabled)}
+.ui-dest:disabled .ui-dest__frame{background:transparent;box-shadow:inset 0 0 0 1px var(--color-border-strong);color:var(--color-text-disabled)}
 </style>
 </helmet>
 
@@ -23,18 +26,10 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
 <div style="position:relative;min-width:1100px;height:100%;min-height:760px;overflow:hidden">
 
   <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none">
-    <dc-import name="Studio Editor" playing="{{ false }}" keyframe-editor="{{ false }}" warning="{{ false }}" hint-size="100%,100%"></dc-import>
+    <dc-import name="Studio Editor" playing="{{ false }}" hint-size="100%,100%"></dc-import>
   </div>
 
-  <!-- Review state selector (not product UI) -->
-  <div data-screen-label="Review bar" style="position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:600;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:8px 10px 8px 14px;background:var(--color-bg-raised);border:1px dashed var(--color-cyan-700);border-radius:var(--radius-lg);box-shadow:var(--shadow-pop);max-width:calc(100% - 24px)">
-    <span class="ui-caption" style="color:var(--color-text-accent-2)">Review</span>
-    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.SegmentedControl" label="Dialog state" options="{{ stepOpts }}" value="{{ stepVal }}" on-change="{{ onStep }}" hint-size="520px,30px"></x-import>
-    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Select" label="Destination" options="{{ destOpts }}" value="{{ dest }}" on-change="{{ onDest }}" width="176px" hint-size="176px,28px"></x-import>
-    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Toggle" label="Unsupported browser" checked="{{ unsupported }}" on-change="{{ onUnsupported }}" hint-size="170px,20px"></x-import>
-  </div>
-
-  <div class="ui-scrim" style="padding:64px 24px 24px">
+  <div class="ui-scrim" style="padding:24px">
     <div class="ui-modal ui-modal--lg" role="dialog" aria-modal="true" aria-labelledby="exp-title" data-screen-label="Export dialog" style="width:min(820px,100%)">
 
       <div class="ui-modal__head">
@@ -52,27 +47,27 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
         <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.IconButton" icon="close" label="Close export" shortcut="Esc" hint-size="28px,28px"></x-import>
       </div>
 
-      <!-- STEP 1 -->
+      <!-- STEP 1: FORMAT -->
       <sc-if value="{{ s1 }}" hint-placeholder-val="{{ true }}">
         <div class="ui-modal__body" style="gap:14px">
           <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
-            <span style="font-size:var(--text-title-size);font-weight:600">Where is this going?</span>
-            <span class="ui-help">You can change size and format on the next step.</span>
+            <span style="font-size:var(--text-title-size);font-weight:600">Choose a format</span>
+            <span class="ui-help">You can change the size on the next step.</span>
           </div>
-          <div class="ui-dest-grid" role="radiogroup" aria-label="Destination">
-            <sc-for list="{{ destCards }}" as="d" hint-placeholder-count="6">
-              <button type="button" class="ui-dest" role="radio" aria-checked="{{ d.checked }}" aria-label="{{ d.aria }}" onClick="{{ d.pick }}" style="text-align:left;grid-template-rows:72px auto">
+          <div class="ui-dest-grid" role="radiogroup" aria-label="Format">
+            <sc-for list="{{ destCards }}" as="c" hint-placeholder-count="5">
+              <button type="button" class="ui-dest" role="radio" aria-checked="{{ c.checked }}" disabled="{{ c.limited }}" onClick="{{ c.pick }}" style="text-align:left;grid-template-rows:72px auto">
                 <span class="ui-dest__art">
-                  <span class="{{ d.frameClass }}" style="aspect-ratio:{{ d.ar }};height:{{ d.fh }}px;color:var(--color-text-secondary)">
-                    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="{{ d.icon }}" hint-size="20px,20px"></x-import>
+                  <span class="ui-dest__frame" style="aspect-ratio:{{ thumbAspect }};max-width:100%;height:52px;color:var(--color-text-secondary)">
+                    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="{{ c.icon }}" hint-size="20px,20px"></x-import>
                   </span>
                 </span>
                 <span style="display:grid;gap:2px;min-width:0">
-                  <span style="display:flex;align-items:center;gap:6px"><span class="ui-dest__name">{{ d.name }}</span><span class="ui-mono" style="font-size:11px;color:var(--color-text-secondary)">{{ d.ratio }}</span></span>
-                  <span class="ui-dest__meta">{{ d.meta }}</span>
-                  <span style="font-size:12px;line-height:16px;color:var(--color-text-secondary);text-wrap:pretty;margin-top:2px">{{ d.use }}</span>
-                  <sc-if value="{{ d.limited }}" hint-placeholder-val="{{ false }}">
-                    <span class="ui-chip ui-chip--static" style="justify-self:start;margin-top:6px;height:20px;border-color:var(--color-warning-border);background:var(--color-warning-bg);color:var(--color-text-warning)"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="warning" hint-size="12px,12px"></x-import>WebM not available here</span>
+                  <span class="ui-dest__name">{{ c.name }}</span>
+                  <span class="ui-dest__meta">{{ c.meta }}</span>
+                  <span style="font-size:12px;line-height:16px;color:var(--color-text-secondary);text-wrap:pretty;margin-top:2px">{{ c.use }}</span>
+                  <sc-if value="{{ c.limited }}" hint-placeholder-val="{{ false }}">
+                    <span style="display:inline-flex;align-items:flex-start;gap:4px;margin-top:6px;font-size:12px;line-height:16px;color:var(--color-text-warning)"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="warning" hint-size="14px,14px"></x-import>{{ c.limitedReason }}</span>
                   </sc-if>
                 </span>
                 <span class="ui-dest__check"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="check" hint-size="12px,12px"></x-import></span>
@@ -81,185 +76,49 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
           </div>
         </div>
         <div class="ui-modal__foot">
-          <span class="ui-modal__foot-meta ui-mono">Stage 1080 × 1080 · 6.0 s · 30 fps</span>
+          <span class="ui-modal__foot-meta ui-mono">Project · {{ fps }} · {{ dur }}</span>
           <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" hint-size="72px,28px">Cancel</x-import>
           <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" icon-right="chevron-right" on-click="{{ toOptions }}" hint-size="104px,28px">Continue</x-import>
         </div>
       </sc-if>
 
-      <!-- STEP 2 -->
+      <!-- STEP 2: OPTIONS -->
       <sc-if value="{{ s2 }}" hint-placeholder-val="{{ false }}">
         <div class="ui-modal__body" style="gap:16px">
           <div style="display:flex;align-items:center;gap:10px">
             <span style="font-size:var(--text-title-size);font-weight:600">{{ d.name }} options</span>
-            <span class="ui-chip ui-chip--static ui-mono">{{ d.ratio }}</span>
             <span style="flex:1"></span>
-            <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" size="sm" icon="chevron-left" on-click="{{ toDest }}" hint-size="140px,24px">Change destination</x-import>
+            <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" size="sm" icon="chevron-left" on-click="{{ toDest }}" hint-size="120px,24px">Change format</x-import>
           </div>
-
-          <!-- MP4 -->
-          <sc-if value="{{ isMp4 }}" hint-placeholder-val="{{ true }}">
-            <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:24px;align-items:start">
-              <div style="display:grid;gap:6px;justify-items:center">
-                <div style="position:relative;width:{{ thumbW }};aspect-ratio:{{ d.ar }};background:var(--color-bg-stage);border-radius:var(--radius-sm);box-shadow:inset 0 0 0 1px var(--color-border-default);display:grid;place-items:center;overflow:hidden">
-                  <div style="width:{{ stageInThumb }};aspect-ratio:1/1;display:grid;place-items:center;align-content:center;gap:2px;box-shadow:0 0 0 1px var(--color-cyan-800)">
-                    <span style="font-weight:700;font-size:13px;line-height:1;letter-spacing:-0.02em">Grand Opening</span>
-                    <span style="font-weight:500;font-size:8px;color:#FFD27A">Sale starts Friday</span>
-                    <span style="font-family:var(--font-tamil);font-weight:600;font-size:9px">வணக்கம்</span>
-                  </div>
-                </div>
-                <span class="ui-mono" style="font-size:11px;color:var(--color-text-tertiary)">{{ res }}</span>
-              </div>
-              <div class="ui-export__fields">
-                <div class="ui-formrow">
-                  <span class="ui-label">Resolution</span>
-                  <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Select" label="Resolution" options="{{ resOpts }}" value="{{ res }}" on-change="{{ onRes }}" hint-size="100%,28px"></x-import>
-                </div>
-                <div class="ui-formrow">
-                  <span class="ui-label">Frame rate</span>
-                  <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.SegmentedControl" label="Frame rate" options="{{ fpsOpts }}" value="{{ fps }}" on-change="{{ onFps }}" block="{{ true }}" hint-size="100%,30px"></x-import>
-                </div>
-                <div class="ui-formrow">
-                  <span class="ui-label">Duration</span>
-                  <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.NumberScrub" label="Dur" aria-label="Duration" value="{{ dur }}" on-change="{{ onDur }}" step="{{ 0.1 }}" min="{{ 1 }}" max="{{ 60 }}" precision="{{ 2 }}" unit="s" hint-size="100%,28px"></x-import>
-                  <span class="ui-help">Project is 6.00 s.</span>
-                </div>
-                <div class="ui-formrow">
-                  <span class="ui-label">Framing</span>
-                  <sc-if value="{{ needsFraming }}" hint-placeholder-val="{{ true }}">
-                    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.SegmentedControl" label="Framing" options="{{ framingOpts }}" value="{{ framing }}" on-change="{{ onFraming }}" block="{{ true }}" hint-size="100%,30px"></x-import>
-                    <span class="ui-help">{{ framingHelp }}</span>
-                  </sc-if>
-                  <sc-if value="{{ noFraming }}" hint-placeholder-val="{{ false }}">
-                    <span class="ui-help" style="height:30px">Same shape as your stage. Nothing is cropped.</span>
-                  </sc-if>
-                </div>
-                <div class="ui-formrow ui-formrow--wide" style="gap:12px;padding-top:12px;border-top:1px solid var(--color-border-subtle)">
-                  <div style="display:grid;gap:4px">
-                    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Toggle" label="Loop to fill duration" show-state="{{ true }}" checked="{{ loop }}" on-change="{{ onLoop }}" hint-size="220px,20px"></x-import>
-                    <span class="ui-help" style="padding-left:62px">{{ loopHelp }}</span>
-                  </div>
-                  <div style="display:grid;gap:4px">
-                    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Toggle" label="Include audio track" show-state="{{ true }}" checked="{{ audio }}" on-change="{{ onAudio }}" hint-size="220px,20px"></x-import>
-                    <span class="ui-help" style="padding-left:62px">This project has no sound. On adds a silent track, which some apps need before they accept an upload.</span>
-                  </div>
+          <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:24px;align-items:start">
+            <div style="display:grid;gap:6px;justify-items:center">
+              <div style="position:relative;width:{{ thumbW }};aspect-ratio:{{ thumbAspect }};background:var(--color-bg-stage);border-radius:var(--radius-sm);box-shadow:inset 0 0 0 1px var(--color-border-default);display:grid;place-items:center;overflow:hidden">
+                <div style="width:{{ stageInThumb }};aspect-ratio:{{ thumbAspect }};display:grid;place-items:center;align-content:center;gap:2px">
+                  <span style="font-weight:700;font-size:13px;line-height:1;letter-spacing:-0.02em">Grand Opening</span>
+                  <span style="font-weight:500;font-size:8px;color:#FFD27A">Sale starts Friday</span>
+                  <span style="font-family:var(--font-tamil);font-weight:600;font-size:9px">வணக்கம்</span>
                 </div>
               </div>
+              <span class="ui-mono" style="font-size:11px;color:var(--color-text-tertiary)">{{ res }}</span>
             </div>
-          </sc-if>
-
-          <!-- Transparent -->
-          <sc-if value="{{ isAlpha }}" hint-placeholder-val="{{ false }}">
-            <div style="display:grid;gap:16px">
-              <div class="ui-banner ui-banner--info" role="note">
-                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="info" hint-size="20px,20px"></x-import>
-                <div class="ui-banner__body">
-                  <div class="ui-banner__title">MP4 can’t store transparency</div>
-                  <div class="ui-banner__text">An MP4 always has a solid background. For see-through titles, use PNG sequence or WebM with alpha. Need an MP4 anyway? Pick Square or Reel instead.</div>
-                </div>
+            <div class="ui-export__fields">
+              <div class="ui-formrow">
+                <span class="ui-label">Size</span>
+                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Select" label="Size" options="{{ resOpts }}" value="{{ res }}" on-change="{{ onRes }}" hint-size="100%,28px"></x-import>
+                <span class="ui-help">Scales of your project size. The shape never changes.</span>
               </div>
               <div class="ui-formrow">
-                <span class="ui-label">Format</span>
-                <div role="radiogroup" aria-label="Transparent format" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
-                  <button type="button" class="ui-dest" role="radio" aria-checked="{{ pngChecked }}" onClick="{{ pickPng }}" style="grid-template-rows:auto;grid-template-columns:56px minmax(0,1fr);align-items:center;gap:12px;text-align:left">
-                    <span class="ui-dest__frame ui-checker" style="height:56px;aspect-ratio:1/1;color:var(--color-text-secondary)"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="image" hint-size="20px,20px"></x-import></span>
-                    <span style="display:grid;gap:2px">
-                      <span class="ui-dest__name">PNG sequence</span>
-                      <span class="ui-dest__meta">ZIP · {{ frames }} files · {{ pngSize }}</span>
-                      <span style="font-size:12px;line-height:16px;color:var(--color-text-secondary)">Lossless frames. Works in every editor.</span>
-                    </span>
-                    <span class="ui-dest__check"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="check" hint-size="12px,12px"></x-import></span>
-                  </button>
-                  <sc-if value="{{ webmOk }}" hint-placeholder-val="{{ true }}">
-                    <button type="button" class="ui-dest" role="radio" aria-checked="{{ webmChecked }}" onClick="{{ pickWebm }}" style="grid-template-rows:auto;grid-template-columns:56px minmax(0,1fr);align-items:center;gap:12px;text-align:left">
-                      <span class="ui-dest__frame ui-checker" style="height:56px;aspect-ratio:1/1;color:var(--color-text-secondary)"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="play" hint-size="20px,20px"></x-import></span>
-                      <span style="display:grid;gap:2px">
-                        <span class="ui-dest__name">WebM with alpha</span>
-                        <span class="ui-dest__meta">VP9 · 1 file · {{ webmSize }}</span>
-                        <span style="font-size:12px;line-height:16px;color:var(--color-text-secondary)">One small file. For video editors and web pages.</span>
-                      </span>
-                      <span class="ui-dest__check"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="check" hint-size="12px,12px"></x-import></span>
-                    </button>
-                  </sc-if>
-                  <sc-if value="{{ unsupported }}" hint-placeholder-val="{{ false }}">
-                    <button type="button" class="ui-dest" role="radio" aria-checked="false" disabled="{{ true }}" aria-describedby="webm-unsupported" style="grid-template-rows:auto;grid-template-columns:56px minmax(0,1fr);align-items:center;gap:12px;text-align:left">
-                      <span class="ui-dest__frame" style="height:56px;aspect-ratio:1/1;background:transparent;box-shadow:inset 0 0 0 1px var(--color-border-strong);color:var(--color-text-disabled)"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="play" hint-size="20px,20px"></x-import></span>
-                      <span style="display:grid;gap:2px">
-                        <span class="ui-dest__name" style="color:var(--color-text-disabled)">WebM with alpha</span>
-                        <span class="ui-dest__meta">VP9 · 1 file</span>
-                        <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:16px;color:var(--color-text-warning)"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="warning" hint-size="14px,14px"></x-import>Not supported in this browser</span>
-                      </span>
-                    </button>
-                  </sc-if>
-                </div>
+                <span class="ui-label">Frame rate</span>
+                <span class="ui-mono" style="display:flex;align-items:center;height:28px;font-size:13px">{{ fps }}</span>
+                <span class="ui-help">Set in the project panel.</span>
               </div>
-              <sc-if value="{{ unsupported }}" hint-placeholder-val="{{ false }}">
-                <div id="webm-unsupported" class="ui-banner" role="status">
-                  <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="warning" hint-size="20px,20px"></x-import>
-                  <div class="ui-banner__body">
-                    <div class="ui-banner__title">This browser can’t make WebM with alpha</div>
-                    <div class="ui-banner__text">It has no VP9 encoder with transparency. PNG sequence works here. For a single WebM file, open this project in a recent desktop Chrome or Edge.</div>
-                  </div>
-                  <div class="ui-banner__actions">
-                    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="secondary" size="sm" icon="copy" hint-size="120px,24px">Copy project link</x-import>
-                  </div>
-                </div>
-              </sc-if>
-              <div class="ui-export__fields">
-                <div class="ui-formrow">
-                  <span class="ui-label">Resolution</span>
-                  <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Select" label="Resolution" options="{{ resOpts }}" value="{{ res }}" on-change="{{ onRes }}" hint-size="100%,28px"></x-import>
-                </div>
-                <div class="ui-formrow">
-                  <span class="ui-label">Frame rate</span>
-                  <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.SegmentedControl" label="Frame rate" options="{{ fpsOpts }}" value="{{ fps }}" on-change="{{ onFps }}" block="{{ true }}" hint-size="100%,30px"></x-import>
-                </div>
+              <div class="ui-formrow">
+                <span class="ui-label">Duration</span>
+                <span class="ui-mono" style="display:flex;align-items:center;height:28px;font-size:13px">{{ dur }}</span>
+                <span class="ui-help">{{ frames }} frames. Set in the project panel.</span>
               </div>
             </div>
-          </sc-if>
-
-          <!-- Web embed -->
-          <sc-if value="{{ isEmbed }}" hint-placeholder-val="{{ false }}">
-            <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:20px;align-items:start">
-              <div style="display:grid;gap:14px">
-                <div class="ui-formrow">
-                  <span class="ui-label">Live preview</span>
-                  <div style="display:grid;gap:8px;padding:12px;border-radius:var(--radius-md);background:var(--color-neutral-800);box-shadow:inset 0 0 0 1px var(--color-border-default)">
-                    <div style="display:flex;gap:6px"><span style="width:28%;height:6px;border-radius:2px;background:var(--color-neutral-650)"></span><span style="flex:1"></span><span style="width:10%;height:6px;border-radius:2px;background:var(--color-neutral-650)"></span><span style="width:10%;height:6px;border-radius:2px;background:var(--color-neutral-650)"></span></div>
-                    <div aria-label="Embed preview" style="position:relative;display:grid;place-items:center;align-content:center;gap:4px;width:{{ embedW }};justify-self:center;aspect-ratio:16/9;border:1px dashed var(--color-cyan-700);border-radius:2px;background:var(--color-bg-stage)">
-                      {{ embedPreview }}
-                      <span class="ui-mono" style="position:absolute;top:3px;right:5px;font-size:11px;color:var(--color-text-accent-2)">{{ embedTag }}</span>
-                    </div>
-                    <span style="width:80%;height:6px;border-radius:2px;background:var(--color-neutral-650)"></span>
-                    <span style="width:64%;height:6px;border-radius:2px;background:var(--color-neutral-650)"></span>
-                  </div>
-                </div>
-                <div class="ui-export__fields" style="gap:12px">
-                  <div class="ui-formrow">
-                    <span class="ui-label">Size</span>
-                    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.SegmentedControl" label="Size" options="{{ sizeOpts }}" value="{{ embedSize }}" on-change="{{ onEmbedSize }}" block="{{ true }}" hint-size="100%,30px"></x-import>
-                  </div>
-                  <div class="ui-formrow">
-                    <span class="ui-label">Starts</span>
-                    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Select" label="Starts" options="{{ startOpts }}" value="{{ embedStart }}" on-change="{{ onEmbedStart }}" hint-size="100%,28px"></x-import>
-                  </div>
-                  <div class="ui-formrow ui-formrow--wide">
-                    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Toggle" label="Loop" show-state="{{ true }}" checked="{{ embedLoop }}" on-change="{{ onEmbedLoop }}" hint-size="120px,20px"></x-import>
-                  </div>
-                </div>
-              </div>
-              <div style="display:grid;gap:12px;min-width:0">
-                <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.CodeBlock" code="{{ embedCode }}" language="HTML" label="Paste into your page" hint-size="100%,220px"></x-import>
-                <div class="ui-banner ui-banner--info" role="note">
-                  <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="info" hint-size="20px,20px"></x-import>
-                  <div class="ui-banner__body">
-                    <div class="ui-banner__title">Accessible by default</div>
-                    <div class="ui-banner__text">The full text stays in the page as real, hidden text, so screen readers and search can read it. Visitors who turn on reduced motion see the final frame, with no animation.</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </sc-if>
+          </div>
         </div>
         <div class="ui-modal__foot">
           <span class="ui-modal__foot-meta ui-mono">{{ estimate }}</span>
@@ -268,12 +127,11 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
         </div>
       </sc-if>
 
-      <!-- STEP 3 -->
+      <!-- STEP 3: EXPORTING -->
       <sc-if value="{{ s3 }}" hint-placeholder-val="{{ false }}">
         <div class="ui-modal__body">
           <div class="ui-render" style="grid-template-columns:140px minmax(0,1fr)">
-            <div style="position:relative;justify-self:center;width:{{ thumbW }};aspect-ratio:{{ d.ar }};background:var(--color-bg-stage);border-radius:var(--radius-sm);box-shadow:inset 0 0 0 1px var(--color-border-default);display:grid;place-items:center;align-content:center;gap:2px;overflow:hidden">
-              <sc-if value="{{ isAlpha }}" hint-placeholder-val="{{ false }}"><span class="ui-checker" style="position:absolute;inset:0;opacity:.6"></span></sc-if>
+            <div style="position:relative;justify-self:center;width:{{ thumbW }};aspect-ratio:{{ thumbAspect }};background:var(--color-bg-stage);border-radius:var(--radius-sm);box-shadow:inset 0 0 0 1px var(--color-border-default);display:grid;place-items:center;align-content:center;gap:2px;overflow:hidden">
               <span style="position:relative;font-weight:700;font-size:13px;line-height:1;letter-spacing:-0.02em">Grand Ope</span>
               <span style="position:relative;font-weight:500;font-size:8px;color:#FFD27A;opacity:.6">Sale starts</span>
               <span class="ui-mono" style="position:absolute;left:4px;bottom:3px;font-size:10px;color:var(--color-text-accent-2)">{{ frameTc }}</span>
@@ -286,7 +144,6 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
               <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.ProgressBar" value="{{ pct }}" label="Rendering frames" detail="{{ framesText }}" hint-size="100%,32px"></x-import>
               <div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--color-text-secondary)">
                 <span class="ui-mono">{{ pctText }}</span>
-                <span class="ui-mono">{{ eta }}</span>
               </div>
               <ol class="ui-steps" aria-label="Export steps">
                 <sc-for list="{{ exportSteps }}" as="st" hint-placeholder-count="4">
@@ -302,7 +159,7 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
         </div>
       </sc-if>
 
-      <!-- STEP 4 -->
+      <!-- STEP 4: SUCCESS -->
       <sc-if value="{{ s4 }}" hint-placeholder-val="{{ false }}">
         <div class="ui-modal__body">
           <div class="ui-result" role="status">
@@ -327,7 +184,7 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
         </div>
       </sc-if>
 
-      <!-- STEP 5 -->
+      <!-- STEP 5: FAILURE -->
       <sc-if value="{{ s5 }}" hint-placeholder-val="{{ false }}">
         <div class="ui-modal__body">
           <div class="ui-result" role="alert">
@@ -361,41 +218,39 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;step&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;1 Choose destination&quot;,&quot;2 Options&quot;,&quot;3 Exporting&quot;,&quot;4 Success&quot;,&quot;5 Failure&quot;],&quot;default&quot;:&quot;1 Choose destination&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Review&quot;},&quot;destination&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;reel&quot;,&quot;story&quot;,&quot;square&quot;,&quot;youtube&quot;,&quot;overlay&quot;,&quot;embed&quot;],&quot;default&quot;:&quot;reel&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Review&quot;},&quot;unsupported&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Review&quot;}}">
-const DEST = [
-  { id: 'reel', name: 'Reel', ratio: '9:16', ar: '9/16', fh: 64, icon: 'play', fmt: 'MP4', kind: 'mp4', use: 'Short vertical video for reels and shorts.', res: ['1080 × 1920', '720 × 1280', '2160 × 3840'], mb: 4.2, title: 'Your reel is ready' },
-  { id: 'story', name: 'Story', ratio: '9:16', ar: '9/16', fh: 64, icon: 'clock', fmt: 'MP4', kind: 'mp4', use: 'Full-screen frames that sit under app buttons.', res: ['1080 × 1920', '720 × 1280'], mb: 4.2, title: 'Your story is ready' },
-  { id: 'square', name: 'Square', ratio: '1:1', ar: '1/1', fh: 56, icon: 'grid', fmt: 'MP4', kind: 'mp4', use: 'Feed posts and ads that crop the same everywhere.', res: ['1080 × 1080', '720 × 720', '2160 × 2160'], mb: 2.9, title: 'Your square video is ready' },
-  { id: 'youtube', name: 'YouTube', ratio: '16:9', ar: '16/9', fh: 44, icon: 'image', fmt: 'MP4', kind: 'mp4', use: 'Intros, lower thirds and title cards.', res: ['1920 × 1080', '1280 × 720', '3840 × 2160'], mb: 4.8, title: 'Your video is ready' },
-  { id: 'overlay', name: 'Transparent overlay', ratio: 'Alpha', ar: '1/1', fh: 56, icon: 'layers', fmt: 'PNG · WebM', kind: 'alpha', use: 'Titles you lay over footage in another editor.', res: ['1080 × 1080', '2160 × 2160'], mb: 96, title: 'Your overlay is ready', checker: true },
-  { id: 'embed', name: 'Web embed', ratio: 'Responsive', ar: '16/9', fh: 44, icon: 'code', fmt: 'HTML + JS', kind: 'embed', use: 'Live, sharp text on your own site. No video file.', res: ['Any width'], mb: 0.038, title: 'Your embed is ready' },
+<script type="text/x-dc" data-dc-script data-props='{"step":{"editor":"enum","options":["1 Choose format","2 Options","3 Exporting","4 Success","5 Failure"],"default":"1 Choose format","tsType":"string","section":"Review"},"format":{"editor":"enum","options":["mp4","png","gif","webp"],"default":"mp4","tsType":"string","section":"Review"},"projectSize":{"editor":"enum","options":["1920 × 1080","1080 × 1080","1080 × 1920","1440 × 1080"],"default":"1920 × 1080","tsType":"string","section":"Review"}}'>
+const FORMATS = [
+  { id: 'mp4', name: 'MP4 video', lower: 'MP4 video', icon: 'play', meta: 'H.264 · solid background', use: 'Plays everywhere: social posts, slides and messages.', ext: 'mp4', mb: 4.8, enc: 'Encoding MP4 (H.264)' },
+  { id: 'png', name: 'PNG sequence', lower: 'PNG sequence', icon: 'layers', meta: 'ZIP of frames · transparency', use: 'Lossless frames for video editors and compositing.', ext: 'zip', mb: 120, enc: 'Packing ZIP' },
+  { id: 'gif', name: 'Animated GIF', lower: 'animated GIF', icon: 'grid', meta: '256 colours · loops', use: 'Loops in chats, docs and email.', ext: 'gif', mb: 9.5, enc: 'Encoding GIF' },
+  { id: 'webp', name: 'Animated WebP', lower: 'animated WebP', icon: 'image', meta: 'Full colour · transparency · loops', use: 'Smaller than GIF, for websites and apps.', ext: 'webp', mb: 3.6, enc: 'Encoding WebP' },
+  { id: 'webm', name: 'WebM with alpha', lower: 'WebM with alpha', icon: 'play', meta: 'VP9 · transparency', use: 'One small see-through video file.', limited: true, limitedReason: 'Not available in this version. Use PNG sequence or WebP for transparency.' },
 ];
-const BY = Object.fromEntries(DEST.map(d => [d.id, d]));
-const STEP_NAMES = ['1 Choose destination', '2 Options', '3 Exporting', '4 Success', '5 Failure'];
-const STEP_OPTS = [{ value: 1, label: '1 Destination' }, { value: 2, label: '2 Options' }, { value: 3, label: '3 Exporting' }, { value: 4, label: '4 Success' }, { value: 5, label: '5 Failure' }];
-const RESF = [1, 0.5, 3.2];
-const SCRIPT_TAG = '<' + 'script';
+const BY = Object.fromEntries(FORMATS.map(f => [f.id, f]));
+const STEP_NAMES = ['1 Choose format', '2 Options', '3 Exporting', '4 Success', '5 Failure'];
+const SCALES = [1, 0.5, 2];
 const pad = n => String(n).padStart(2, '0');
 const fsize = mb => mb < 1 ? `${Math.round(mb * 1000)} KB` : `${mb.toFixed(1)} MB`;
+const even = v => Math.max(2, Math.round(v / 2) * 2);
 
 class Component extends DCLogic {
   state = {
     step: Math.max(1, STEP_NAMES.indexOf(this.props.step) + 1),
-    dest: this.props.destination || 'reel',
-    unsupported: !!this.props.unsupported,
-    fmt: 'png', resIdx: {}, fps: 30, dur: 6, loop: true, audio: false, framing: 'fit',
-    embedSize: 'responsive', embedStart: 'visible', embedLoop: true,
-    frames: 112, running: false,
+    fmt: BY[this.props.format] && !BY[this.props.format].limited ? this.props.format : 'mp4',
+    scale: 1, frames: 112, running: false,
   };
   componentDidUpdate(pp) {
     const ch = {};
     if (pp.step !== this.props.step) Object.assign(ch, { step: Math.max(1, STEP_NAMES.indexOf(this.props.step) + 1), running: false, frames: 112 });
-    if (pp.destination !== this.props.destination) ch.dest = this.props.destination || 'reel';
-    if (pp.unsupported !== this.props.unsupported) ch.unsupported = !!this.props.unsupported;
+    if (pp.format !== this.props.format && BY[this.props.format]) ch.fmt = this.props.format;
     if (Object.keys(ch).length) this.setState(ch);
   }
   componentWillUnmount() { clearInterval(this._iv); }
-  total() { const d = BY[this.state.dest]; return d.kind === 'embed' ? 24 : Math.round(this.state.dur * this.state.fps); }
+  project() {
+    const [w, h] = String(this.props.projectSize || '1920 × 1080').split(' × ').map(Number);
+    return { w: w || 1920, h: h || 1080, fps: 30, dur: 6 };
+  }
+  total() { const p = this.project(); return Math.round(p.dur * p.fps); }
   startExport = () => {
     clearInterval(this._iv);
     this.setState({ step: 3, frames: 0, running: true });
@@ -408,22 +263,18 @@ class Component extends DCLogic {
   };
   renderVals() {
     const s = this.state;
-    const d = BY[s.dest];
-    const alphaFmt = s.unsupported ? 'png' : s.fmt;
-    const ri = Math.min(s.resIdx[d.id] || 0, d.res.length - 1);
-    const res = d.res[ri];
+    const P = this.project();
+    const f = BY[s.fmt];
+    const sizeAt = k => `${even(P.w * k)} × ${even(P.h * k)}`;
+    const resOpts = SCALES.slice().sort((a, b) => a - b).map(k => `${k}× · ${sizeAt(k)}`);
+    const res = `${s.scale}× · ${sizeAt(s.scale)}`;
     const total = this.total();
     const frames = s.step === 3 ? Math.min(s.frames, total) : total;
-    const fpsK = s.fps / 30, durK = s.dur / 6;
-    const mp4mb = d.mb * RESF[ri] * fpsK * durK;
-    const pngmb = 96 * RESF[ri] * fpsK * durK, webmmb = 3.1 * RESF[ri] * fpsK * durK;
-    const outMb = d.kind === 'mp4' ? mp4mb : d.kind === 'alpha' ? (alphaFmt === 'png' ? pngmb : webmmb) : d.mb;
-    const ext = d.kind === 'mp4' ? 'mp4' : d.kind === 'alpha' ? (alphaFmt === 'png' ? 'zip' : 'webm') : 'zip';
-    const fmtName = d.kind === 'mp4' ? 'MP4' : d.kind === 'alpha' ? (alphaFmt === 'png' ? 'PNG sequence' : 'WebM with alpha') : 'Web embed';
+    const outMb = f.mb * s.scale * s.scale;
     const pct = Math.round(frames / total * 100);
     const stepIdx = s.step;
     const crumbState = i => stepIdx === 4 ? 'done' : stepIdx === 5 ? (i < 2 ? 'done' : 'error') : (i + 1 < Math.min(stepIdx, 3) ? 'done' : i + 1 === Math.min(stepIdx, 3) ? 'current' : 'todo');
-    const crumbs = ['Destination', 'Options', 'Export'].map((label, i) => {
+    const crumbs = ['Format', 'Options', 'Export'].map((label, i) => {
       const st = crumbState(i);
       return {
         label, sep: i < 2, current: st === 'current' ? 'step' : 'false',
@@ -435,93 +286,52 @@ class Component extends DCLogic {
         numColor: st === 'done' ? 'var(--color-text-success)' : st === 'current' ? 'var(--color-text-accent-2)' : st === 'error' ? 'var(--color-text-error)' : 'var(--color-text-tertiary)',
       };
     });
-    const stepsFor = d.kind === 'embed' ? ['Loading fonts', 'Measuring text', 'Building script', 'Saving files']
-      : ['Loading fonts', `Rendering ${total} frames`, d.kind === 'mp4' ? 'Encoding MP4 (H.264)' : alphaFmt === 'png' ? 'Packing ZIP' : 'Encoding WebM (VP9 alpha)', 'Saving file'];
     const cur = frames >= total ? 3 : 1;
-    const exportSteps = stepsFor.map((label, i) => ({ label, cls: i < cur ? 'is-done' : i === cur ? 'is-current' : '', icon: i < cur ? 'success' : i === cur ? 'clock' : 'minus' }));
-    const tsec = Math.floor(frames / s.fps);
-    const words = ['Sale ', 'starts ', 'Friday'];
-    const h = React.createElement;
-    const embedPreview = h('div', { style: { display: 'grid', justifyItems: 'center', gap: 2 } },
-      h('span', { className: 'fx fx--rise is-playing', style: { fontWeight: 700, fontSize: 18, lineHeight: 1.1, letterSpacing: '-0.02em', color: '#fff', whiteSpace: 'nowrap' } },
-        ['Grand ', 'Opening'].map((w, i) => h('span', { key: i, style: { '--i': i, whiteSpace: 'pre' } }, w))),
-      h('span', { className: 'fx fx--rise is-playing', style: { fontWeight: 500, fontSize: 10, color: '#FFD27A', whiteSpace: 'nowrap' } },
-        words.map((w, i) => h('span', { key: i, style: { '--i': i + 2, whiteSpace: 'pre' } }, w))));
-    const code = `<div class="mt-embed"\n  data-project="grand-opening-teaser"\n  data-start="${s.embedStart}"\n  data-loop="${s.embedLoop}"${s.embedSize === 'fixed' ? '\n  style="width:640px;aspect-ratio:16/9"' : ''}>\n  <p>Grand Opening. Sale starts Friday. வணக்கம்</p>\n</div>\n${SCRIPT_TAG} src="https://embed.example.com/v1/player.js" defer></${'scr' + 'ipt'}>`;
-    const dims = res.split(' × ').map(Number);
-    const ratioW = dims[0] && dims[1] ? dims[0] / dims[1] : 1;
-    const thumbW = ratioW >= 1 ? '140px' : Math.round(200 * ratioW) + 'px';
-    const fill = s.framing === 'fill';
+    const exportSteps = ['Loading fonts', `Rendering ${total} frames`, f.enc, 'Saving file'].map((label, i) => ({ label, cls: i < cur ? 'is-done' : i === cur ? 'is-current' : '', icon: i < cur ? 'success' : i === cur ? 'clock' : 'minus' }));
+    const tsec = Math.floor(frames / P.fps);
+    const ratio = P.w / P.h;
+    const fpsText = `${P.fps} fps`, durText = `${P.dur.toFixed(2)} s`;
     const slug = 'grand-opening-teaser';
+    const lower = s.scale > SCALES.slice().sort((a, b) => a - b)[0] ? `${s.scale / 2}× · ${sizeAt(s.scale / 2)}` : null;
 
     return {
-      stepOpts: STEP_OPTS, stepVal: s.step,
-      onStep: v => { clearInterval(this._iv); this.setState({ step: Number(v), running: false, frames: 112 }); },
-      destOpts: DEST.map(x => ({ value: x.id, label: x.name })), dest: s.dest,
-      onDest: v => this.setState({ dest: v }),
-      unsupported: s.unsupported, onUnsupported: v => this.setState({ unsupported: v }),
       crumbs,
       s1: s.step === 1, s2: s.step === 2, s3: s.step === 3, s4: s.step === 4, s5: s.step === 5,
-      destCards: DEST.map(x => ({
-        id: x.id, name: x.name, ratio: x.ratio, ar: x.ar, fh: x.fh, icon: x.icon, use: x.use,
-        meta: `${x.res[0]} · ${x.fmt}`,
-        frameClass: 'ui-dest__frame' + (x.checker ? ' ui-checker' : ''),
-        checked: String(s.dest === x.id),
-        limited: x.kind === 'alpha' && s.unsupported,
-        aria: `${x.name}, ${x.ratio}, ${x.res[0]}, ${x.fmt}. ${x.use}`,
-        pick: () => this.setState({ dest: x.id }),
+      thumbAspect: `${P.w} / ${P.h}`,
+      destCards: FORMATS.map(x => ({
+        id: x.id, name: x.name, use: x.use, meta: x.meta, icon: x.icon,
+        checked: String(!x.limited && s.fmt === x.id),
+        limited: !!x.limited, limitedReason: x.limitedReason || '',
+        pick: () => { if (!x.limited) this.setState({ fmt: x.id }); },
       })),
       toOptions: () => this.setState({ step: 2 }),
       toDest: () => { clearInterval(this._iv); this.setState({ step: 1, running: false }); },
-      d: Object.assign({}, d, { nameLower: d.kind === 'embed' ? 'web embed' : d.kind === 'alpha' ? 'transparent overlay' : d.id === 'youtube' ? 'YouTube video' : d.name.toLowerCase() }),
-      isMp4: d.kind === 'mp4', isAlpha: d.kind === 'alpha', isEmbed: d.kind === 'embed',
-      res, resOpts: d.res, onRes: v => this.setState(st => ({ resIdx: { ...st.resIdx, [d.id]: d.res.indexOf(v) } })),
-      fpsOpts: [{ value: 24, label: '24' }, { value: 30, label: '30' }, { value: 60, label: '60' }], fps: s.fps, onFps: v => this.setState({ fps: Number(v) }),
-      dur: s.dur, onDur: v => this.setState({ dur: v }),
-      needsFraming: d.ratio !== '1:1', noFraming: d.ratio === '1:1',
-      framingOpts: [{ value: 'fit', label: 'Fit' }, { value: 'fill', label: 'Fill' }], framing: s.framing, onFraming: v => this.setState({ framing: v }),
-      framingHelp: fill ? `Crops your 1080 × 1080 stage to fill ${res}. Check your safe area.` : `Centres your 1080 × 1080 stage on a black ${res} frame.`,
-      stageInThumb: fill ? '100%' : (ratioW >= 1 ? Math.round(100 / ratioW) + '%' : '100%'),
-      thumbW,
-      loop: s.loop, onLoop: v => this.setState({ loop: v }),
-      loopHelp: s.dur > 6 ? (s.loop ? `Plays ${(s.dur / 6).toFixed(1)}× to fill ${s.dur.toFixed(2)} s.` : `Holds the last frame from 6.00 s to ${s.dur.toFixed(2)} s.`) : 'Repeats the animation if you set a longer duration.',
-      audio: s.audio, onAudio: v => this.setState({ audio: v }),
+      d: { id: f.id, name: f.name, nameLower: f.lower },
+      res, resOpts, onRes: v => { const k = parseFloat(String(v)); if (SCALES.includes(k)) this.setState({ scale: k }); },
+      fps: fpsText, dur: durText,
       frames: total,
-      pngChecked: String(alphaFmt === 'png'), webmChecked: String(alphaFmt === 'webm'),
-      pickPng: () => this.setState({ fmt: 'png' }), pickWebm: () => this.setState({ fmt: 'webm' }),
-      webmOk: !s.unsupported,
-      pngSize: '≈ ' + fsize(pngmb), webmSize: '≈ ' + fsize(webmmb),
-      sizeOpts: [{ value: 'responsive', label: 'Responsive' }, { value: 'fixed', label: 'Fixed 640 px' }], embedSize: s.embedSize, onEmbedSize: v => this.setState({ embedSize: v }),
-      startOpts: [{ value: 'visible', label: 'When scrolled into view' }, { value: 'load', label: 'On page load' }, { value: 'hover', label: 'On hover' }], embedStart: s.embedStart, onEmbedStart: v => this.setState({ embedStart: v }),
-      embedLoop: s.embedLoop, onEmbedLoop: v => this.setState({ embedLoop: v }),
-      embedW: s.embedSize === 'fixed' ? '72%' : '100%', embedTag: s.embedSize === 'fixed' ? '640 px' : '100%',
-      embedPreview, embedCode: code,
-      estimate: d.kind === 'embed' ? '≈ 38 KB script · no video file' : `≈ ${fsize(outMb)} · ${total} frames · ${fmtName}`,
-      exportLabel: d.kind === 'embed' ? 'Create embed' : 'Export',
+      thumbW: ratio >= 1 ? '140px' : Math.round(200 * ratio) + 'px',
+      stageInThumb: '100%',
+      estimate: `≈ ${fsize(outMb)} · ${total} frames · ${f.name}`,
+      exportLabel: 'Export',
       startExport: this.startExport,
       cancelExport: () => { clearInterval(this._iv); this.setState({ step: 2, running: false, frames: 112 }); },
       pct, pctText: `${pct}%`, framesText: `${frames} / ${total} frames`,
-      eta: frames >= total ? 'Finishing up' : `About ${Math.max(1, Math.ceil((total - frames) / 28))} s left`,
-      frameTc: `00:${pad(tsec % 60)}:${pad(frames % s.fps)}`,
-      outSummary: d.kind === 'embed' ? 'HTML + JS · responsive' : `${res} · ${s.fps} fps · ${s.dur.toFixed(2)} s · ${fmtName}`,
+      frameTc: `00:${pad(tsec % 60)}:${pad(frames % P.fps)}`,
+      outSummary: `${sizeAt(s.scale)} · ${fpsText} · ${durText} · ${f.name}`,
       exportSteps,
-      successTitle: d.title,
-      successText: d.kind === 'embed' ? 'Paste the code into your page, or download the files to host them yourself.' : 'Download it, or export another format for somewhere else.',
-      fileName: d.kind === 'embed' ? `${slug}-embed.zip` : `${slug}-${d.id}.${ext}`,
-      fileMeta: d.kind === 'embed' ? '38 KB · player.js + fonts' : `${fsize(outMb)} · ${res} · ${s.dur.toFixed(1)} s · ${s.fps} fps`,
-      fileIcon: d.kind === 'embed' ? 'code' : d.kind === 'alpha' && alphaFmt === 'png' ? 'image' : 'play',
+      successTitle: `Your ${f.lower} is ready`,
+      successText: 'Download it, or export another format for somewhere else.',
+      fileName: `${slug}.${f.ext}`,
+      fileMeta: `${fsize(outMb)} · ${sizeAt(s.scale)} · ${P.dur.toFixed(1)} s · ${fpsText}`,
+      fileIcon: f.icon,
       failText: `Your browser ran out of memory while encoding frame 112 of ${total}. Nothing was saved, and your project hasn’t changed.`,
       tryNext: [
-        (() => {
-          const px = r => r.split(' × ').reduce((a, b) => a * Number(b), 1);
-          const lower = d.res.filter(r => r.includes('×') && px(r) < px(res)).sort((a, b) => px(b) - px(a))[0];
-          const where = d.id === 'reel' || d.id === 'story' ? 'on phones' : d.id === 'square' ? 'in feeds' : 'at normal viewing size';
-          return lower ? { n: '1', title: `Lower the resolution to ${lower}`, text: `It needs much less memory and still looks sharp ${where}.` } : { n: '1', title: 'Reload the page, then retry', text: 'This frees memory held by earlier previews.' };
-        })(),
+        lower ? { n: '1', title: `Lower the size to ${lower}`, text: 'It needs much less memory and still looks sharp at normal viewing size.' } : { n: '1', title: 'Reload the page, then retry', text: 'This frees memory held by earlier previews.' },
         { n: '2', title: 'Close other tabs that play video', text: 'They share the same memory as this export.' },
-        d.kind === 'alpha' && alphaFmt === 'png' ? { n: '3', title: 'Lower the frame rate to 24 fps', text: 'Fewer frames to render and pack.' } : { n: '3', title: 'Try a PNG sequence', text: 'It renders one frame at a time, so it rarely runs out of memory.' },
+        f.id === 'png' ? { n: '3', title: 'Try MP4 or WebP', text: 'They write one compressed file instead of hundreds of frames.' } : { n: '3', title: 'Try a PNG sequence', text: 'It renders one frame at a time, so it rarely runs out of memory.' },
       ],
-      errCode: `ERR_ENCODER_OUT_OF_MEMORY · frame 112 · ${fmtName} · ${res}`,
+      errCode: `ERR_ENCODER_OUT_OF_MEMORY · frame 112 · ${f.name} · ${sizeAt(s.scale)}`,
     };
   }
 }

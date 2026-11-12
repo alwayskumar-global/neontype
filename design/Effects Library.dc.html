@@ -33,7 +33,7 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
 <div class="ui" style="position:fixed;inset:0;overflow:auto;background:var(--color-bg-app);color-scheme:dark"><div style="position:relative;min-width:1100px;height:100%;min-height:640px;overflow:hidden">
 
   <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none">
-    <dc-import name="Studio Editor" playing="{{ false }}" keyframe-editor="{{ false }}" warning="{{ false }}" hint-size="100%,100%"></dc-import>
+    <dc-import name="Studio Editor" playing="{{ false }}" hint-size="100%,100%"></dc-import>
   </div>
 
   <sc-if value="{{ open }}" hint-placeholder-val="{{ true }}">
@@ -43,13 +43,13 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
         <!-- Header -->
         <div style="display:flex;align-items:center;gap:12px;height:56px;padding:0 12px 0 20px;border-bottom:1px solid var(--color-border-subtle);flex:none">
           <h2 id="lib-title" style="margin:0;font-size:var(--text-title-lg-size);line-height:var(--text-title-lg-line);font-weight:600;letter-spacing:-0.01em">Effects library</h2>
-          <span class="ui-mono" style="font-size:12px;color:var(--color-text-tertiary)">12 effects</span>
+          <span class="ui-mono" style="font-size:12px;color:var(--color-text-tertiary)">{{ effectCount }}</span>
           <span style="flex:1"></span>
           <span style="font-size:12px;color:var(--color-text-secondary)">Applying to</span>
           <span class="ui-chip ui-chip--static" style="height:24px;gap:6px;color:var(--color-text-primary)">
             <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="text" size="{{ 14 }}" hint-size="14px,14px"></x-import>
-            Sale starts Friday
-            <span class="ui-mono" style="font-size:11px;color:var(--color-text-tertiary)">Layer 2</span>
+            {{ applyTarget }}
+            <span class="ui-mono" style="font-size:11px;color:var(--color-text-tertiary)">{{ applyTargetMeta }}</span>
           </span>
           <span style="width:1px;height:20px;background:var(--color-border-default)"></span>
           <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.IconButton" icon="close" label="Close library" shortcut="Esc" on-click="{{ close }}" hint-size="28px,28px"></x-import>
@@ -168,14 +168,11 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
                 <div style="flex:1;min-width:0">
                   <div class="ui-caption">{{ selCat }}</div>
                   <div style="font-size:var(--text-title-size);line-height:var(--text-title-line);font-weight:600">{{ selName }}</div>
+                  <div class="ui-mono" style="font-size:11px;color:var(--color-text-tertiary)">{{ selMeta }}</div>
                 </div>
                 <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.IconButton" icon="close" label="Close parameters" on-click="{{ deselect }}" hint-size="28px,28px"></x-import>
               </div>
               <div style="flex:1;min-height:0;overflow:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:16px">
-                <div style="display:grid;gap:6px">
-                  <div style="position:relative;display:grid;place-items:center;aspect-ratio:16/10;border-radius:var(--radius-md);background:var(--color-bg-stage);box-shadow:0 0 0 1px var(--color-border-default);overflow:hidden">{{ preview }}</div>
-                  <div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--color-text-tertiary)"><span>Preview on your layer</span><span class="ui-mono">{{ selMeta }}</span></div>
-                </div>
                 <div class="ui-formrow">
                   <span class="ui-label">Split by</span>
                   <sc-if value="{{ multiSplit }}" hint-placeholder-val="{{ true }}">
@@ -191,10 +188,12 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
                     <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Slider" label="{{ p.label }}" value="{{ p.val }}" min="{{ p.min }}" max="{{ p.max }}" step="{{ p.step }}" format="{{ p.fmt }}" on-change="{{ p.set }}" hint-size="100%,20px"></x-import>
                   </div>
                 </sc-for>
-                <div class="ui-formrow">
-                  <span class="ui-label">Easing</span>
-                  <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Select" label="Easing" options="{{ easeOpts }}" value="{{ ease }}" on-change="{{ onEase }}" hint-size="100%,28px"></x-import>
-                </div>
+                <sc-if value="{{ showEase }}" hint-placeholder-val="{{ true }}">
+                  <div class="ui-formrow">
+                    <span class="ui-label">Easing</span>
+                    <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Select" label="Easing" options="{{ easeOpts }}" value="{{ ease }}" on-change="{{ onEase }}" hint-size="100%,28px"></x-import>
+                  </div>
+                </sc-if>
               </div>
               <div style="display:grid;gap:8px;padding:14px 16px 16px;border-top:1px solid var(--color-border-subtle);flex:none">
                 <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" size="lg" icon="check" on-click="{{ applySel }}" dc-props="{{ fullWidth }}" hint-size="100%,36px">Apply to selected layer</x-import>
@@ -231,6 +230,8 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
 const GL = { char: 'Char', word: 'Word', line: 'Line' };
 const EASEV = { linear: 'linear', easeIn: 'var(--motion-easing-easeIn)', easeOut: 'var(--motion-easing-easeOut)', easeInOut: 'var(--motion-easing-easeInOut)' };
 const LAYER = 'Sale starts Friday';
+const LAYER_META = 'Layer 2';
+const NO_EASE = ['typewriter', 'neon', 'glitch', 'spot', 'bounce'];
 const FX = [
   { id: 'typewriter', name: 'Typewriter', cat: 'Entrance', gran: ['char'], sample: 'Hello', kf: 'mt-type', dur: 0.5, stag: 90, ease: 'linear', added: 1, extra: [['caret', 'Caret blink', 0.2, 2, 0.1, 's', 0.8]] },
   { id: 'fade', name: 'Fade & Slide', cat: 'Entrance', gran: ['word', 'line', 'char'], sample: 'Sale today', kf: 'fx-rise', dur: 0.6, stag: 150, ease: 'easeOut', added: 2, extra: [['dist', 'Distance', 0, 200, 1, 'px', 48]] },
@@ -248,7 +249,7 @@ const FX = [
 const BYID = Object.fromEntries(FX.map(f => [f.id, f]));
 const GRAN_CHIPS = [['char', 'Character'], ['word', 'Word'], ['line', 'Line']];
 const CATS = ['Entrance', 'Emphasis', 'Exit', 'Looping'];
-const SORTS = [{ value: 'popular', label: 'Most used' }, { value: 'az', label: 'Name A–Z' }, { value: 'new', label: 'Newest' }, { value: 'short', label: 'Shortest first' }];
+const SORTS = [{ value: 'catalog', label: 'Catalog order' }, { value: 'az', label: 'Name A to Z' }];
 const SKEL = Array.from({ length: 12 }, (_, i) => ({ d: (i % 4) * 0.12 + 's', w: [62, 48, 70, 54][i % 4] + '%' }));
 const segr = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
 const graphemes = s => segr ? Array.from(segr.segment(s), x => x.segment) : Array.from(s);
@@ -291,7 +292,7 @@ function renderFx(fx, p, size, text) {
 class Component extends DCLogic {
   gridRef = React.createRef();
   searchRef = React.createRef();
-  state = Object.assign({ sort: 'popular', hover: null, focusId: null, params: {}, applied: 'fade', toast: null }, VIEWS[this.props.view] || VIEWS['Selected + parameters'], this.props.toast ? { toast: { id: 'glitch', prev: 'fade' } } : {});
+  state = Object.assign({ sort: 'catalog', hover: null, focusId: null, params: {}, applied: 'fade', toast: null }, VIEWS[this.props.view] || VIEWS['Selected + parameters'], this.props.toast ? { toast: { id: 'glitch', prev: 'fade' } } : {});
 
   componentDidMount() {
     this._key = e => {
@@ -345,8 +346,6 @@ class Component extends DCLogic {
       (!s.grans.length || f.gran.some(g => s.grans.includes(g))) &&
       (!s.cats.length || s.cats.includes(f.cat)));
     if (s.sort === 'az') list = [...list].sort((a, b) => a.name.localeCompare(b.name));
-    if (s.sort === 'new') list = [...list].sort((a, b) => b.added - a.added);
-    if (s.sort === 'short') list = [...list].sort((a, b) => this.P(a).dur - this.P(b).dur);
     const tabId = s.focusId && list.some(f => f.id === s.focusId) ? s.focusId : s.sel && list.some(f => f.id === s.sel) ? s.sel : list[0] && list[0].id;
 
     const cards = list.map(f => {
@@ -360,7 +359,7 @@ class Component extends DCLogic {
         fast: hot, showApply: hot,
         applied: s.applied === f.id,
         aria: `${f.name}, ${f.cat}, splits by ${f.gran.map(g => GL[g]).join(', ')}${s.applied === f.id ? ', on selected layer' : ''}`,
-        applyLabel: `Apply ${f.name} to Sale starts Friday`,
+        applyLabel: `Apply ${f.name} to ${LAYER}`,
         select: () => this.setState({ sel: f.id }),
         enter: e => { this.speed(e.currentTarget, 2.5); this.setState({ hover: f.id }); },
         leave: e => { this.speed(e.currentTarget, 1); this.setState({ hover: null }); },
@@ -411,7 +410,9 @@ class Component extends DCLogic {
       hasSel: !!fx && !s.loading,
       deselect: () => this.setState({ sel: null }),
       selName: fx ? fx.name : '', selCat: fx ? fx.cat : '',
-      preview: fx ? renderFx(fx, p, 22, fx.id === 'wipe' ? 'Sale starts\nFriday' : LAYER) : null,
+      effectCount: `${FX.length} effects`,
+      applyTarget: LAYER, applyTargetMeta: LAYER_META,
+      showEase: !!fx && !NO_EASE.includes(fx.id),
       selMeta: fx ? `${GL[p.split]} · ${Number(p.dur).toFixed(2)} s · loop` : '',
       multiSplit: !!fx && fx.gran.length > 1, singleSplit: !!fx && fx.gran.length === 1,
       singleSplitText: fx ? `This effect always splits by ${GL[fx.gran[0]]}.` : '',
