@@ -1,4 +1,4 @@
-import { gotoStudio, previewCanvas, layerField, layersPanel } from "./helpers.js";
+import { gotoStudio, previewCanvas, layerField, layersPanel, seek } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 
 /**
@@ -21,11 +21,11 @@ async function nonBlankCanvas(page: import("@playwright/test").Page): Promise<bo
 
 test("demo loads on start with a non-blank canvas at a visible time", async ({ page }) => {
   await gotoStudio(page, true);
-  await page.getByLabel("Scrub").fill("3");
+  await seek(page, 3);
   await page.waitForTimeout(80);
   expect(await nonBlankCanvas(page)).toBe(true);
   // The Tamil layer uses Noto Sans Tamil (presence of the layer in the list).
-  await expect(layersPanel(page).getByRole("button", { name: "வணக்கம்" })).toBeVisible();
+  await expect(layersPanel(page).getByRole("button", { name: "வணக்கம்", exact: true })).toBeVisible();
 });
 
 test("save then reopen round-trips the project", async ({ page }) => {

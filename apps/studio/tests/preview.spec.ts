@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { gotoStudio, isOn, readReadout, setProjectDuration } from "./helpers.js";
+import { gotoStudio, isOn, readReadout, seek, setProjectDuration } from "./helpers.js";
 /**
  * Preview transport (Requirements 1.2-1.8): play advances, pause holds, loop wraps,
  * scrub clamps without starting playback, and the frame and time readout is
@@ -9,7 +9,7 @@ import { gotoStudio, isOn, readReadout, setProjectDuration } from "./helpers.js"
 const play = (page: import("@playwright/test").Page) => page.getByRole("button", { name: "Play" }).first();
 const pause = (page: import("@playwright/test").Page) => page.getByRole("button", { name: "Pause" }).first();
 const loop = (page: import("@playwright/test").Page) => page.getByLabel("Loop").first();
-const scrub = (page: import("@playwright/test").Page) => page.getByLabel("Scrub");
+const scrub = (page: import("@playwright/test").Page) => ({ fill: (seconds: string) => seek(page, Number(seconds)) });
 test("the readout shows the frame, the total frame count, and the time", async ({ page }) => {
   await gotoStudio(page, false);
   expect(await readReadout(page)).toEqual({ frame: 0, total: 150, time: 0 });

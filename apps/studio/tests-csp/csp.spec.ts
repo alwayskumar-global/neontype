@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { seek, settingsPanel } from "../tests/helpers.js";
 
 /**
  * CSP conformance (Requirement 11.2, 11.3) against the PRODUCTION preview build
@@ -78,10 +79,10 @@ test("a worker-path export with bundled fonts completes under the strict CSP", a
   await page.getByRole("button", { name: "Open the studio" }).first().click();
   await expect(page.locator("canvas.preview-canvas")).toBeVisible();
   // Keep the export small: 160x90, 0.5 s.
-  const nums = page.locator(".app-left .panel input[type='number']");
-  await nums.nth(0).fill("160");
-  await nums.nth(1).fill("90");
-  await nums.nth(3).fill("0.5");
+  const settings = settingsPanel(page);
+  await settings.getByLabel("Width").fill("160");
+  await settings.getByLabel("Height").fill("90");
+  await settings.getByLabel("Duration in seconds").fill("0.5");
   await page.getByRole("button", { name: "Export", exact: true }).click();
   await page.getByRole("button", { name: /Export png-sequence/ }).click();
   await expect(page.getByText(/^Done: frames\.zip/)).toBeVisible({ timeout: 30_000 });
@@ -115,7 +116,7 @@ test("canvas drag, nudge, timeline drag and undo add no CSP violations", async (
   await page.goto("/");
   await page.getByRole("button", { name: "Open the studio" }).first().click();
   await expect(page.locator("canvas.preview-canvas")).toBeVisible();
-  await page.getByLabel("Scrub").fill("3");
+  await seek(page, 3);
   await page.waitForTimeout(100);
 
   const rect = (await page.locator("canvas.preview-canvas").boundingBox())!;

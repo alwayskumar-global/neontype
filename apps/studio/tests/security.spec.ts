@@ -39,9 +39,9 @@ test("a project file whose text looks like markup loads as plain text", async ({
   await gotoStudio(page, false);
   const markup = '<img src=x onerror="window.__pwned=1"><script>window.__pwned=2</script>';
   await openFile(page, project(markup), "markup.json");
-  await expect(layersPanel(page).getByRole("button", { name: markup })).toBeVisible();
+  await expect(layersPanel(page).getByRole("button", { name: markup, exact: true })).toBeVisible();
   const state = await page.evaluate(() => ({
-    imgs: document.querySelectorAll("img").length,
+    imgs: document.querySelectorAll("img:not([alt=\"NeonType\"])").length,
     pwned: (window as unknown as { __pwned?: number }).__pwned ?? null,
   }));
   expect(state).toEqual({ imgs: 0, pwned: null });
@@ -50,13 +50,13 @@ test("an oversized file is rejected before it is read, and the project is unchan
   await gotoStudio(page, false);
   await openFile(page, 5 * 1024 * 1024 + 1, "huge.json");
   await expect(page.getByRole("alert")).toContainText(/could not open the project/i);
-  await expect(layersPanel(page).getByRole("button", { name: "Your Title" })).toBeVisible();
+  await expect(layersPanel(page).getByRole("button", { name: "Your Title", exact: true })).toBeVisible();
 });
 test("a file that is JSON but not a valid project is rejected, and the project is unchanged", async ({ page }) => {
   await gotoStudio(page, false);
   await openFile(page, JSON.stringify({ schemaVersion: 99, layers: "no" }), "wrong.json");
   await expect(page.getByRole("alert")).toContainText(/could not open the project/i);
-  await expect(layersPanel(page).getByRole("button", { name: "Your Title" })).toBeVisible();
+  await expect(layersPanel(page).getByRole("button", { name: "Your Title", exact: true })).toBeVisible();
 });
 test("a session makes no request off this origin", async ({ page }) => {
   const external: string[] = [];

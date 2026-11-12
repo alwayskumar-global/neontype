@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { frameFromTimecode, totalFrames } from "./timecode.js";
 /**
  * Shared studio helpers. Locators are role, label, and text only. The few
  * `page.evaluate` calls read document-wide state (canvas pixels).
@@ -30,24 +31,65 @@ export async function isOn(control: Locator): Promise<boolean> {
   if (pressed !== null) return pressed === "true";
   return await control.isChecked();
 }
-/** The project settings panel. */
+/** The project settings panel (the "PROJECT" region of the generated editor). */
 export function settingsPanel(page: Page): Locator {
-  return page.getByRole("region", { name: "Project settings" });
+  return page.getByRole("region", { name: "PROJECT" });
 }
-/** The layers panel. */
+/** The layers panel (the "LAYERS" region). */
 export function layersPanel(page: Page): Locator {
-  return page.getByRole("region", { name: "Layers" });
+  return page.getByRole("region", { name: "LAYERS" });
 }
-/** The effects panel. */
+/**
+ * The inspector: the right-hand column of the generated editor, which holds the selected layer's fields and
+ * its effects. It has no accessible name of its own, so it is found as the complementary landmark that
+ * carries the "no layer selected" text.
+ */
+export function inspectorPanel(page: Page): Locator {
+  return page.getByRole("complementary").filter({ hasText: "Pick a layer on the left" });
+}
+/** The effects of the selected layer live in the inspector (under the "EFFECTS ON THIS LAYER" heading). */
 export function effectsPanel(page: Page): Locator {
-  return page.getByRole("region", { name: "Effects" });
+  return inspectorPanel(page);
 }
-/** Parses the transport readout ("frame N / M - T.TTs") into numbers. */
+/** The project's frame rate and duration, read from the settings fields. */
+async function projectTiming(page: Page): Promise<{ fps: number; duration: number }> {
+  const fps = Number(await settingsPanel(page).getByLabel("Frame rate").inputValue());
+  const duration = Number(await settingsPanel(page).getByLabel("Duration in seconds").inputValue());
+  return { fps, duration };
+}
+/**
+ * Reads the playhead as { frame, total, time }. The frame comes from the "mm:ss:ff" timecode and the project's
+ * frame rate, the total from the project's duration and frame rate, and the time (seconds) from the timeline's
+ * Playhead slider, because a timecode only has frame resolution.
+ */
 export async function readReadout(page: Page): Promise<{ frame: number; total: number; time: number }> {
   const text = (await page.getByLabel("Timecode").innerText()).trim();
-  const m = /frame (\d+) \/ (\d+) - ([\d.]+)s/.exec(text);
-  if (!m) throw new Error(`unexpected readout text: ${text}`);
-  return { frame: Number(m[1]), total: Number(m[2]), time: Number(m[3]) };
+  const { fps, duration } = await projectTiming(page);
+  const total = totalFrames(duration, fps);
+  const time = Number((Number(await page.getByRole("slider", { name: "Playhead" }).getAttribute("aria-valuenow"))).toFixed(2));
+  return { frame: frameFromTimecode(text, fps, total), total, time };
+}
+/**
+ * Moves the playhead to `seconds` with the timeline ruler: a click at that point (then Arrow keys to land on the
+ * exact frame), or a drag past either end for a time outside the project, which the ruler clamps.
+ */
+export async function seek(page: Page, seconds: number): Promise<void> {
+  const ruler = page.getByRole("slider", { name: "Playhead" });
+  const box = (await ruler.boundingBox())!;
+  const { fps, duration } = await projectTiming(page);
+  const y = box.y + box.height / 2;
+  if (seconds <= 0 || seconds >= duration) {
+    await page.mouse.move(box.x + box.width / 2, y);
+    await page.mouse.down();
+    await page.mouse.move(seconds <= 0 ? box.x - 300 : box.x + box.width + 300, y, { steps: 4 });
+    await page.mouse.up();
+    return;
+  }
+  await page.mouse.click(box.x + (seconds / duration) * box.width, y);
+  const want = Math.round(seconds * fps);
+  const have = Math.round(Number(await ruler.getAttribute("aria-valuenow")) * fps);
+  const key = want > have ? "ArrowRight" : "ArrowLeft";
+  for (let i = 0; i < Math.abs(want - have); i++) await page.keyboard.press(key);
 }
 /**
  * Sets the project duration (seconds). The schema requires every layer to end at or
@@ -62,7 +104,7 @@ export async function setProjectDuration(page: Page, seconds: string): Promise<v
     await layerField(page, "Start (s)").fill("0");
     await layerField(page, "Duration (s)").fill(seconds);
   }
-  await settingsPanel(page).getByLabel("Duration (s)").fill(seconds);
+  await settingsPanel(page).getByLabel("Duration in seconds").fill(seconds);
 }
 /** Shrinks the canvas and sets the duration so an export finishes quickly. */
 export async function shrinkProject(page: Page, duration: string): Promise<void> {
@@ -71,14 +113,24 @@ export async function shrinkProject(page: Page, duration: string): Promise<void>
   await s.getByLabel("Height").fill("90");
   await setProjectDuration(page, duration);
 }
-/**
- * A field of the selected layer, found by its label within the layers panel. A label
- * that wraps a select has the option texts in its text ("AlignLeftCenterRight"), so the
- * label is matched at its start, followed by end of text or a capital letter.
- */
+/** The role and accessible name of the selected layer's fields in the generated editor, by the field's former label. */
+const LAYER_FIELDS: Readonly<Record<string, readonly [role: "textbox" | "combobox" | "spinbutton" | "radiogroup", name: string]>> = {
+  Text: ["textbox", "Text"],
+  Font: ["combobox", "Font"],
+  Weight: ["combobox", "Weight"],
+  Size: ["spinbutton", "Size in pixels"],
+  Colour: ["textbox", "Text colour"],
+  Align: ["radiogroup", "Align"],
+  X: ["spinbutton", "Anchor X"],
+  Y: ["spinbutton", "Anchor Y"],
+  "Start (s)": ["spinbutton", "Start in seconds"],
+  "Duration (s)": ["spinbutton", "Layer duration in seconds"],
+};
+/** A field of the selected layer, found by its role and accessible name in the inspector. */
 export function layerField(page: Page, label: string): Locator {
-  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return layersPanel(page).getByLabel(new RegExp(`^${escaped}(?![a-z])`));
+  const field = LAYER_FIELDS[label];
+  if (field === undefined) throw new Error(`unknown layer field: ${label}`);
+  return inspectorPanel(page).getByRole(field[0], { name: field[1], exact: true });
 }
 /**
  * The control that adds an effect to the selected layer. It is a combobox named

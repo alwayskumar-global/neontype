@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoStudio, previewCanvas } from "./helpers.js";
+import { gotoStudio, previewCanvas, seek } from "./helpers.js";
 
 /**
  * Canvas direct manipulation (Requirement 3.8-3.20, 16): click selects the topmost
@@ -11,12 +11,16 @@ import { gotoStudio, previewCanvas } from "./helpers.js";
 
 async function enterAtT3(page: Page): Promise<void> {
   await gotoStudio(page, true);
-  await page.getByLabel("Scrub").fill("3");
+  await seek(page, 3);
   await page.waitForTimeout(80);
 }
 
-const field = (page: Page, name: "X" | "Y") => page.getByLabel(name, { exact: true });
-const num = async (page: Page, name: "X" | "Y"): Promise<number> => Number(await field(page, name).inputValue());
+// The anchor fields show a fraction of the canvas; `num` converts back to canvas pixels.
+const field = (page: Page, name: "X" | "Y") => page.getByLabel(`Anchor ${name}`, { exact: true });
+const num = async (page: Page, name: "X" | "Y"): Promise<number> => {
+  const size = Number(await previewCanvas(page).getAttribute(name === "X" ? "width" : "height"));
+  return Math.round(Number(await field(page, name).inputValue()) * size);
+};
 
 interface Box { minX: number; maxX: number; minY: number; maxY: number }
 
@@ -126,8 +130,8 @@ test("arrow keys nudge the selected layer 1 px, Shift 10 px", async ({ page }) =
 
 test("clicking a layer selects it; clicking empty canvas leaves the selection", async ({ page }) => {
   await enterAtT3(page);
-  const titleBtn = page.getByRole("button", { name: "Motion Text" });
-  const subtitleBtn = page.getByRole("button", { name: "built in the browser" });
+  const titleBtn = page.getByRole("button", { name: "Motion Text", exact: true });
+  const subtitleBtn = page.getByRole("button", { name: "built in the browser", exact: true });
   await expect(titleBtn).toHaveAttribute("aria-pressed", "true");
   // Subtitle (near-white, y=520) is topmost where it is.
   const sub = await colorBBox(page, [0xe4, 0xe8, 0xee], 20);

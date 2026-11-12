@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoStudio, previewCanvas } from "./helpers.js";
+import { gotoStudio, previewCanvas, seek } from "./helpers.js";
 
 /**
  * Fonts loaded before layout (bug-fix regression). After opening the studio with
@@ -16,7 +16,7 @@ import { gotoStudio, previewCanvas } from "./helpers.js";
 
 async function enterAtT3(page: Page): Promise<void> {
   await gotoStudio(page, true);
-  await page.getByLabel("Scrub").fill("3");
+  await seek(page, 3);
   await page.waitForTimeout(80);
 }
 

@@ -1,4 +1,4 @@
-import { gotoStudio, canvasHash, layerField, layersPanel, applyPreset } from "./helpers.js";
+import { gotoStudio, canvasHash, layerField, layersPanel, applyPreset, seek } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 
 /**
@@ -12,8 +12,7 @@ test("add layer, edit text, change effect updates the preview", async ({ page })
   await gotoStudio(page, true);
 
   // Scrub to a time where effects have settled so content is visible.
-  const scrub = page.getByLabel("Scrub");
-  await scrub.fill("0.9");
+  await seek(page, 0.9);
   await page.waitForTimeout(80);
   const before = await canvasHash(page);
 

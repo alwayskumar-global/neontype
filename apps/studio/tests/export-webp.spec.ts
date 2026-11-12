@@ -77,7 +77,7 @@ test("exports a shortened demo as an animated WebP: header, animation flag, prog
 test("a transparent project exports a WebP with the VP8X alpha flag set", async ({ page }) => {
   await gotoStudio(page, true);
   await shrinkProject(page, "0.3");
-  await settingsPanel(page).getByLabel("Transparent").check();
+  await settingsPanel(page).getByRole("switch", { name: "Transparent" }).check();
   await openDialog(page);
   const dialog = page.getByRole("dialog", { name: "Export" });
   await dialog.getByRole("button", { name: /Export webp/ }).click();

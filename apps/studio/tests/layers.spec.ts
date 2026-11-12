@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { canvasHash, gotoStudio, layerField, layersPanel, previewCanvas } from "./helpers.js";
+import { canvasHash, gotoStudio, inspectorPanel, layerField, layersPanel, previewCanvas, seek } from "./helpers.js";
 /**
  * Layers panel (Requirement 3): add, edit text, delete, reorder (draw order follows
  * list order), per-layer fields, invalid edits rejected, and user text rendered as
@@ -26,33 +26,33 @@ test("add, edit the text, and delete a layer", async ({ page }) => {
   await expect(rows(page)).toHaveCount(2);
   await selectRow(page, 1);
   await layerField(page, "Text").fill("Second line");
-  await expect(rows(page).nth(1).getByRole("button", { name: "Second line" })).toBeVisible();
-  await rows(page).nth(1).getByRole("button", { name: "Delete layer" }).click();
+  await expect(rows(page).nth(1).getByRole("button", { name: "Second line", exact: true })).toBeVisible();
+  await rows(page).nth(1).getByRole("button", { name: /^Delete / }).click();
   await expect(rows(page)).toHaveCount(1);
-  await expect(layersPanel(page).getByRole("button", { name: "Second line" })).toHaveCount(0);
+  await expect(layersPanel(page).getByRole("button", { name: "Second line", exact: true })).toHaveCount(0);
 });
 test("per-layer fields are written and read back", async ({ page }) => {
   await gotoStudio(page, false);
   const fonts = layerField(page, "Font").getByRole("option");
   expect((await fonts.allInnerTexts()).sort()).toEqual(["Noto Sans", "Noto Sans Tamil"]);
-  await page.getByLabel("Scrub").fill("1.5");
+  await seek(page, 1.5);
   const before = await canvasHash(page);
   await layerField(page, "Font").selectOption("Noto Sans Tamil");
   await layerField(page, "Weight").selectOption("400");
   await layerField(page, "Size").fill("90");
   await layerField(page, "Colour").fill("#00ff00");
-  await layerField(page, "Align").selectOption("right");
-  await layerField(page, "X").fill("300");
-  await layerField(page, "Y").fill("200");
+  await inspectorPanel(page).getByRole("radio", { name: "Right" }).click();
+  await layerField(page, "X").fill(String(300 / 1280));
+  await layerField(page, "Y").fill(String(200 / 720));
   await layerField(page, "Start (s)").fill("0.5");
   await layerField(page, "Duration (s)").fill("2");
   await expect(layerField(page, "Font")).toHaveValue("Noto Sans Tamil");
   await expect(layerField(page, "Weight")).toHaveValue("400");
   await expect(layerField(page, "Size")).toHaveValue("90");
   await expect(layerField(page, "Colour")).toHaveValue("#00ff00");
-  await expect(layerField(page, "Align")).toHaveValue("right");
-  await expect(layerField(page, "X")).toHaveValue("300");
-  await expect(layerField(page, "Y")).toHaveValue("200");
+  await expect(inspectorPanel(page).getByRole("radio", { name: "Right" })).toBeChecked();
+  await expect(layerField(page, "X")).toHaveValue(String(Number((300 / 1280).toFixed(4))));
+  await expect(layerField(page, "Y")).toHaveValue(String(Number((200 / 720).toFixed(4))));
   await expect(layerField(page, "Start (s)")).toHaveValue("0.5");
   await expect(layerField(page, "Duration (s)")).toHaveValue("2");
   await expect.poll(async () => (await canvasHash(page)) === before).toBe(false);
@@ -78,9 +78,9 @@ test("draw order follows the list order", async ({ page }) => {
     await layerField(page, "Text").fill("W");
     await layerField(page, "Size").fill("400");
     await layerField(page, "Colour").fill(color);
-    await layerField(page, "Align").selectOption("center");
-    await layerField(page, "X").fill("640");
-    await layerField(page, "Y").fill("360");
+    await inspectorPanel(page).getByRole("radio", { name: "Center" }).click();
+    await layerField(page, "X").fill("0.5");
+    await layerField(page, "Y").fill("0.5");
     await layerField(page, "Start (s)").fill("0");
     await layerField(page, "Duration (s)").fill("5");
   };
@@ -88,26 +88,26 @@ test("draw order follows the list order", async ({ page }) => {
   await layersPanel(page).getByRole("button", { name: "Add layer" }).click();
   await setup(1, "#0000ff");
   // Scrub to a settled time, past every effect.
-  await page.getByLabel("Scrub").fill("4");
+  await seek(page, 4);
   await expect.poll(() => countColor(page, BLUE)).toBeGreaterThan(500);
   const blueOnTop = { red: await countColor(page, RED), blue: await countColor(page, BLUE) };
   expect(blueOnTop.blue, "the later layer draws on top").toBeGreaterThan(blueOnTop.red);
   // Move the blue layer up: the red layer is now later in the list, so it draws on top.
-  await rows(page).nth(1).getByRole("button", { name: "Move up" }).click();
+  await rows(page).nth(1).getByRole("button", { name: /^Move .* up$/ }).click();
   await expect.poll(() => countColor(page, RED)).toBeGreaterThan(500);
   const redOnTop = { red: await countColor(page, RED), blue: await countColor(page, BLUE) };
   expect(redOnTop.red, "after reordering, the red layer draws on top").toBeGreaterThan(redOnTop.blue);
   // The first row's Move up and the last row's Move down are disabled.
-  await expect(rows(page).first().getByRole("button", { name: "Move up" })).toBeDisabled();
-  await expect(rows(page).last().getByRole("button", { name: "Move down" })).toBeDisabled();
+  await expect(rows(page).first().getByRole("button", { name: /^Move .* up$/ })).toBeDisabled();
+  await expect(rows(page).last().getByRole("button", { name: /^Move .* down$/ })).toBeDisabled();
 });
 test("layer text that looks like markup is rendered as text", async ({ page }) => {
   await gotoStudio(page, false);
   const markup = '<img src=x onerror="window.__pwned=1"><script>window.__pwned=2</script>';
   await layerField(page, "Text").fill(markup);
-  await expect(layersPanel(page).getByRole("button", { name: markup })).toBeVisible();
+  await expect(layersPanel(page).getByRole("button", { name: markup, exact: true })).toBeVisible();
   const state = await page.evaluate(() => ({
-    imgs: document.querySelectorAll("img").length,
+    imgs: document.querySelectorAll("img:not([alt=\"NeonType\"])").length,
     pwned: (window as unknown as { __pwned?: number }).__pwned ?? null,
   }));
   expect(state).toEqual({ imgs: 0, pwned: null });

@@ -7,7 +7,8 @@ import { effectsPanel, gotoStudio } from "./helpers.js";
 const openButton = (page: Page) => effectsPanel(page).getByRole("button", { name: "Add effect" });
 const library = (page: Page) => page.getByRole("dialog", { name: "Effects library" });
 const cards = (page: Page) => library(page).getByRole("listbox", { name: "Effects" }).getByRole("option");
-const effectRows = (page: Page) => effectsPanel(page).getByRole("listitem");
+// The generated editor has no list for a layer's effects; each effect has exactly one "Split by" select.
+const effectRows = (page: Page) => effectsPanel(page).getByRole("combobox", { name: "Split by" });
 async function open(page: Page): Promise<void> {
   await gotoStudio(page, false);
   await openButton(page).click();
@@ -53,7 +54,7 @@ test("applying adds the effect with the staged split, as one undo step", async (
   await expect(library(page).getByText(/Applied Blur In/)).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(effectRows(page)).toHaveCount(before + 1);
-  await expect(effectRows(page).last().getByLabel("Granularity")).toHaveValue("word");
+  await expect(effectRows(page).last()).toHaveValue("word");
   // One Ctrl/Cmd+Z removes it again (one gesture, one undo step).
   await page.keyboard.press("ControlOrMeta+z");
   await expect(effectRows(page)).toHaveCount(before);
@@ -88,5 +89,5 @@ test("applying an effect the layer already has updates it instead of adding a se
   }
   await page.keyboard.press("Escape");
   await expect(effectRows(page)).toHaveCount(before + 1);
-  await expect(effectRows(page).last().getByLabel("Granularity")).toHaveValue("line");
+  await expect(effectRows(page).last()).toHaveValue("line");
 });

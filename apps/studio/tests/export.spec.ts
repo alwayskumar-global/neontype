@@ -108,7 +108,7 @@ test("progress advances while an export runs", async ({ page }) => {
 test("a transparent project shows the mp4-no-transparency note before and after exporting", async ({ page }) => {
   await gotoStudio(page, true);
   await shrink(page, "0.3");
-  await page.getByLabel("Transparent").check();
+  await page.getByRole("switch", { name: "Transparent" }).check();
   await openDialog(page);
   const dialog = page.getByRole("dialog", { name: "Export" });
   await expect(dialog.getByText(/MP4 has no transparency/)).toBeVisible();
@@ -119,8 +119,8 @@ test("a transparent project shows the mp4-no-transparency note before and after 
 test("a failed export shows the message mapped from its ErrorCode", async ({ page }) => {
   await gotoStudio(page, true);
   // 120 fps for 600 s is 72000 frames, over the exporters' frame limit.
-  await page.getByRole("region", { name: "Project settings" }).getByLabel("FPS").fill("120");
-  await page.getByRole("region", { name: "Project settings" }).getByLabel("Duration (s)").fill("600");
+  await page.getByRole("region", { name: "PROJECT" }).getByLabel("Frame rate").fill("120");
+  await page.getByRole("region", { name: "PROJECT" }).getByLabel("Duration in seconds").fill("600");
   await openDialog(page);
   await page.getByRole("button", { name: /Export gif/ }).click();
   const alert = page.getByRole("dialog", { name: "Export" }).getByRole("alert");
@@ -131,8 +131,8 @@ test("a failed export shows the message mapped from its ErrorCode", async ({ pag
 // Back (after a failure or a cancel) and "Export again" (after a success) return to the format step, and a second export runs.
 test("Back after a failed export returns to the format choices", async ({ page }) => {
   await gotoStudio(page, true);
-  await page.getByRole("region", { name: "Project settings" }).getByLabel("FPS").fill("120");
-  await page.getByRole("region", { name: "Project settings" }).getByLabel("Duration (s)").fill("600");
+  await page.getByRole("region", { name: "PROJECT" }).getByLabel("Frame rate").fill("120");
+  await page.getByRole("region", { name: "PROJECT" }).getByLabel("Duration in seconds").fill("600");
   await openDialog(page);
   await page.getByRole("button", { name: /Export gif/ }).click();
   const dialog = page.getByRole("dialog", { name: "Export" });

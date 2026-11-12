@@ -1,0 +1,23 @@
+/*
+ * Host styles for the generated Studio Editor (unlayered, so they win over both cascade layers).
+ * The screen's `stage` slot is an absolutely-positioned box that already has the project's aspect
+ * ratio; the preview canvas fills it. Values come from the design-system tokens.
+ */
+.seh-stage { position: absolute; inset: 0; }
+.seh-stage .preview-stage { position: relative; display: block; width: 100%; height: 100%; padding: 0; background: transparent; }
+.seh-stage .preview-canvas { display: block; width: 100%; height: 100%; max-width: none; max-height: none; box-shadow: none; }
+/* The design's Transparency toggle shows a checkerboard behind the canvas. */
+.seh-stage[data-checker="true"] {
+  background-image:
+    linear-gradient(45deg, var(--color-bg-control) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--color-bg-control) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--color-bg-control) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--color-bg-control) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+.seh-alert {
+  position: fixed; left: 50%; top: var(--space-3); transform: translateX(-50%); z-index: 900;
+  margin: 0; padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-panel); color: var(--color-text); border: 1px solid var(--color-border-default); border-radius: var(--radius-sm);
+}

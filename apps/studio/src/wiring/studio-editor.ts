@@ -200,8 +200,8 @@ export function adaptStudioEditor(state: StudioEditorState, d: StudioEditorDispa
         if (layer) d.setAlign(layer.id, value);
       },
     })),
-    anchorX: layer ? round(layer.anchor.x / width, 3) : "",
-    anchorY: layer ? round(layer.anchor.y / height, 3) : "",
+    anchorX: layer ? round(layer.anchor.x / width, 4) : "",
+    anchorY: layer ? round(layer.anchor.y / height, 4) : "",
     background: transparent ? "#101018" : project.background,
     canUndo: state.canUndo,
     canvasHeight: height,
