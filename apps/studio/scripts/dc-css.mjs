@@ -194,7 +194,7 @@ export function specificity(selector) {
   s = s.replace(/\.[\w-]+/g, () => (b++, ""));
   s = s.replace(/::[\w-]+/g, () => (c++, ""));
   s = s.replace(/:(?!:)[\w-]+(\([^)]*\))?/g, () => (b++, ""));
-  s = s.replace(/(^|[\s>+~(,])([A-Za-z][\w-]*)/g, () => (c++, ""));
+  s.replace(/(^|[\s>+~(,])([A-Za-z][\w-]*)/g, () => (c++, ""));
   return [a, b, c];
 }
 

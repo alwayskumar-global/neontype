@@ -46,7 +46,6 @@ export const DS_COMPONENTS = Object.keys(XI).sort();
 const XI_CLASSNAME = new Set(["Button", "Icon", "IconButton"]);
 
 const jsonStr = (s) => JSON.stringify(s).replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
-const esc = (s) => s;
 
 /** A JSX attribute string value: plain quotes when safe, else an expression container. */
 function attrString(value) {
@@ -97,7 +96,7 @@ export function emitJsx(root, { file, slug, styles, assets }) {
   };
 
   // ---------------------------------------------------------------- attribute values
-  const stringValue = (whole, ctx, required, line, attr) => {
+  const stringValue = (whole, ctx, required) => {
     if (whole.static !== undefined) return attrString(whole.static);
     const b = whole.binding;
     if (b.kind === "literal") return `{${jsonStr(String(b.value))}}`;
@@ -140,7 +139,7 @@ export function emitJsx(root, { file, slug, styles, assets }) {
   };
 
   // ---------------------------------------------------------------- style / class
-  const styleParts = (el, ctx) => {
+  const styleParts = (el) => {
     const get1 = (n) => el.attrs.find((a) => a.name === n);
     const style = get1("style"), hover = get1("style-hover"), focus = get1("style-focus"), active = get1("style-active");
     if (!style && !hover && !focus && !active) return null;
@@ -157,7 +156,7 @@ export function emitJsx(root, { file, slug, styles, assets }) {
     const props = [];
     const classParts = []; // JSX-ready pieces: string literals or expressions
     let refExpr = null;
-    const sp = styleParts(el, ctx);
+    const sp = styleParts(el);
     if (sp) classParts.push({ lit: sp.className });
     const hasOnChange = el.attrs.some((a) => a.name === "onChange");
     const isInput = el.tag === "input";
@@ -191,7 +190,7 @@ export function emitJsx(root, { file, slug, styles, assets }) {
       const out = RENAME[name] ?? name;
       if (name === "value" && isInput) {
         const whole = parseWholeValue(a.value, file, line, name);
-        props.push(`value=${stringValue(whole, ctx, true, line, name)}`);
+        props.push(`value=${stringValue(whole, ctx, true)}`);
         if (!hasOnChange) props.push("readOnly");
         continue;
       }
@@ -212,16 +211,16 @@ export function emitJsx(root, { file, slug, styles, assets }) {
             const fn = ARIA_TRISTATE.has(name) ? "asTristate" : name === "aria-current" ? "asCurrent" : "asBooleanish";
             props.push(`${name}={${rt(fn)}(${getExpr(pathOnly(whole, line, name), ctx)})}`);
           }
-        } else if (ARIA_STRING.has(name)) props.push(`${name}=${stringValue(whole, ctx, false, line, name)}`);
+        } else if (ARIA_STRING.has(name)) props.push(`${name}=${stringValue(whole, ctx, false)}`);
         else fail(`unsupported attribute "${name}"`, line);
         continue;
       }
       if (name.startsWith("data-")) {
-        props.push(`${name}=${stringValue(parseWholeValue(a.value, file, line, name), ctx, false, line, name)}`);
+        props.push(`${name}=${stringValue(parseWholeValue(a.value, file, line, name), ctx, false)}`);
         continue;
       }
       if (PLAIN_ATTRS.has(out)) {
-        props.push(`${out}=${stringValue(parseWholeValue(a.value, file, line, name), ctx, false, line, name)}`);
+        props.push(`${out}=${stringValue(parseWholeValue(a.value, file, line, name), ctx, false)}`);
         continue;
       }
       fail(`unsupported attribute "${name}" on <${el.tag}>`, line);
@@ -271,8 +270,8 @@ export function emitJsx(root, { file, slug, styles, assets }) {
       const whole = parseWholeValue(a.value, file, a.line, n);
       let v;
       switch (kind) {
-        case "string": v = stringValue(whole, ctx, false, a.line, n); break;
-        case "requiredString": v = stringValue(whole, ctx, true, a.line, n); break;
+        case "string": v = stringValue(whole, ctx, false); break;
+        case "requiredString": v = stringValue(whole, ctx, true); break;
         case "number": v = numberValue(whole, ctx, a.line, n); break;
         case "boolean": v = boolValue(whole, ctx, a.line, n); break;
         case "handler": v = handlerValue(whole, ctx, a.line, n, false); break;
@@ -364,7 +363,6 @@ export function emitJsx(root, { file, slug, styles, assets }) {
         if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(asAttr.value) || asAttr.value === "$index") fail(`invalid sc-for variable "${asAttr.value}"`, asAttr.line);
         const b = pathOnly(parseWholeValue(l.value, file, l.line, "list"), l.line, "list");
         const d = ctx.depth + 1;
-        const inner = ctx.depth + 1;
         const child = { scope: `s${d}`, depth: d, loopVars: new Set([...ctx.loopVars, asAttr.value]) };
         const body = children(el.children, child, ind + 3);
         if (body.length === 0) return [];

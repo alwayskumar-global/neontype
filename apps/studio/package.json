@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src",
+    "lint": "eslint src scripts",
     "test": "vitest run",
     "dc:convert": "node scripts/dc-convert.mjs",
     "test:dc": "playwright test --config playwright.dc.config.ts"
