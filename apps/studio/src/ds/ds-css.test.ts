@@ -116,32 +116,58 @@ describe("no collision between ds.css and the studio's other stylesheets (Requir
     expect(dsKeyframes.size).toBeGreaterThan(5);
   });
 
+  /**
+   * The ONLY design-system classes a wiring host stylesheet may reference (never declare): the generated screen's
+   * root class and the preset card, used as context. The list is exact; any other ui-, fx-, ds-, or t- class
+   * referenced under src/wiring/hosts/ fails, and no other directory has an allowance.
+   */
+  const HOST_REFERENCE_ALLOWLIST = ["ds-root", "ui-preset"] as const;
+  const NAMESPACE = /^(ui|fx|ds)(-|$)|^t-/;
+  /** Class names in a stylesheet's selectors, ignoring :where(...) (it only excludes subtrees; it declares nothing). */
+  function selectorClasses(rs: ReturnType<typeof parseCss>, keyframes: string[] = []): Set<string> {
+    const classes = new Set<string>();
+    const walk = (list: ReturnType<typeof parseCss>): void => {
+      for (const r of list) {
+        if (r.prelude.startsWith("@keyframes")) keyframes.push(r.prelude.replace("@keyframes", "").trim());
+        else if (r.children.length) walk(r.children);
+        else if (!r.prelude.startsWith("@")) {
+          for (const sel of splitSelectors(r.prelude.replace(/:where\([^)]*\)/g, ""))) for (const m of sel.matchAll(/\.([A-Za-z_][\w-]*)/g)) if (m[1]) classes.add(m[1]);
+        }
+      }
+    };
+    walk(rs);
+    return classes;
+  }
+  /** The classes in ds.css's namespace that this file may NOT use. */
+  function clashingClasses(path: string, classes: Set<string>): string[] {
+    const allowed: readonly string[] = path.startsWith("src/wiring/hosts/") ? HOST_REFERENCE_ALLOWLIST : [];
+    return [...classes].filter((c) => NAMESPACE.test(c) && !allowed.includes(c));
+  }
   for (const path of others) {
     it(`${path} declares no .ui / .fx / .ds- / .t- class and no keyframes name that ds.css declares`, () => {
-      const parsed = parseCss(readStudioText(path));
-      const classes = new Set<string>();
       const keyframes: string[] = [];
-      const walk = (rs: ReturnType<typeof parseCss>): void => {
-        for (const r of rs) {
-          if (r.prelude.startsWith("@keyframes")) keyframes.push(r.prelude.replace("@keyframes", "").trim());
-          else if (r.children.length) walk(r.children);
-          else if (!r.prelude.startsWith("@")) {
-            // `:where(.ds-root *)` only EXCLUDES design-system subtrees from a hand-written rule (design, "ds.css and
-            // tokens.css coexistence"); it declares nothing, so it is not read as a class in ds.css's namespace.
-            for (const sel of splitSelectors(r.prelude.replace(/:where\([^)]*\)/g, ""))) for (const m of sel.matchAll(/\.([A-Za-z_][\w-]*)/g)) if (m[1]) classes.add(m[1]);
-          }
-        }
-      };
-      walk(parsed);
-      // The wiring hosts style the generated screen they mount: they REFERENCE (never declare) the screen root's
-      // `ds-root` class and the design system's `ui-preset` card as context.
-      const referenced = path.startsWith("src/wiring/hosts/") ? ["ds-root", "ui-preset"] : [];
-      const clashing = [...classes].filter((c) => /^(ui|fx|ds)(-|$)|^t-/.test(c) && !referenced.includes(c));
-      expect(clashing, "classes in ds.css's namespace").toEqual([]);
+      const classes = selectorClasses(parseCss(readStudioText(path)), keyframes);
+      expect(clashingClasses(path, classes), "classes in ds.css's namespace").toEqual([]);
       expect(keyframes.filter((k) => dsKeyframes.has(k)), "keyframes also declared by ds.css").toEqual([]);
     });
   }
-
+  it("the wiring-host allowlist is exactly ds-root and ui-preset, and applies only under src/wiring/hosts/", () => {
+    expect([...HOST_REFERENCE_ALLOWLIST]).toEqual(["ds-root", "ui-preset"]);
+    const css = ".lib-host > .ds-root.dc-x { z-index: 1 } .ui-preset:hover .lib-fx > span { opacity: 1 }";
+    expect(clashingClasses("src/wiring/hosts/x.css", selectorClasses(parseCss(css)))).toEqual([]);
+    expect(clashingClasses("src/shell/layout.css", selectorClasses(parseCss(css))).sort()).toEqual(["ds-root", "ui-preset"]);
+    expect(clashingClasses("src/wiring/other/x.css", selectorClasses(parseCss(css))).sort()).toEqual(["ds-root", "ui-preset"]);
+  });
+  it("any other design-system class referenced under src/wiring/hosts/ fails", () => {
+    for (const bad of [".ui-btn", ".ui-preset__thumb", ".ds-w", ".fx--rise", ".fx", ".t-body", ".ds-root-x", ".ui-presets"]) {
+      const classes = selectorClasses(parseCss(`.ds-root ${bad} { color: red }`));
+      expect(clashingClasses("src/wiring/hosts/x.css", classes), bad).toEqual([bad.slice(1)]);
+    }
+  });
+  it(":where(...) is ignored, so excluding a design-system subtree declares nothing", () => {
+    const classes = selectorClasses(parseCss("button:not(:where(.ds-root *)) { color: red }"));
+    expect(clashingClasses("src/shell/layout.css", classes)).toEqual([]);
+  });
   it("the check detects a clash (guard against a vacuous test)", () => {
     const sample = parseCss(".ui-btn{color:red}@keyframes fx-rise{from{opacity:0}}");
     const classes = sample.flatMap((r) => (r.prelude.startsWith("@") ? [] : splitSelectors(r.prelude).flatMap((s) => [...s.matchAll(/\.([\w-]+)/g)].map((m) => m[1] ?? ""))));
