@@ -92,7 +92,7 @@ apps/studio/
     dc-convert.mjs                    CLI: convertAll() then write files; npm script `dc:convert`
     dc-convert.config.json            per-file omitIf / replaceText / forbid, and the fixed screen order
   src/
-    main.tsx                          also imports ./ds/ds.css (scoped under .ds-root, restyles nothing)
+    main.tsx                          does NOT import ./ds/ds.css (kept out of the live app until screens are wired)
     ds/
       ds.css                          hand-copied tokens (scoped .ds-root) + ui.css + 2 font families
       index.tsx                       the 12 ported components (+ one private Tooltip helper)
@@ -1507,9 +1507,10 @@ sketch, and the added rule is item 5. The twelve-hex values are the first 12 hex
 file at port time (the bundle's own `sourceHashes` cover only the `.jsx`
 components, not the CSS). The `Export id` and namespace lines are required by
 Requirement 18.1. The header sits inside a CSS comment, which the production
-minifier strips. `ds.css` is part of the production bundle because `src/main.tsx`
-imports it as a plain CSS import; being scoped under `.ds-root`, it restyles nothing
-(the `dist-scan` test still finds none of its forbidden patterns).
+minifier strips. `ds.css` is NOT part of the default-route production bundle: `src/main.tsx`
+does not import it, because nothing on the live routes uses it yet (it would add about
+71 KB of unused CSS). A `dist-scan` test asserts that the emitted CSS contains no `.ui-`
+and no `.ds-root` selector. Importing it is a task for the future "wire generated screens" spec.
 
 #### Fonts
 
@@ -1853,11 +1854,11 @@ never references it), and is not part of `dist/`. Its output goes to
   `allowsEval` probe (the same assertion as `tests-csp`: a single event whose
   `violatedDirective` is `script-src` and `blockedURI` is `eval`), with no other
   violation.
-- **Default studio route.** `src/main.tsx` imports `./ds/ds.css` as a plain CSS
-  import. It is scoped under `.ds-root`, so it restyles nothing. The probe
+- **Default studio route.** `src/main.tsx` does NOT import `ds.css`. The probe
   `window.__studioExportParity` is installed by `App.tsx` only in DEV, so the
-  checkpoint runs it against the dev server (`pnpm dev`, port 5273, started by the
-  owner or the Playwright web server) with `ds.css` loaded and expects exactly 0. As built, the probe reports exactly 0
+  checkpoint may still run it against the dev server (`pnpm dev`, port 5273) and
+  expects exactly 0 without `ds.css`. Parity with `ds.css` loaded is checked on the
+  harness build. As built, the probe reports exactly 0
 at t = 1, 3, and 5.5 on the default route (dev) and in the harness build.
 
 ## Correctness Properties

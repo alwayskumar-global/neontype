@@ -50,6 +50,15 @@ function scan(files: { fileName: string; text: string }[]): string[] {
   return hits;
 }
 
+/** Selectors that only ds.css introduces: the `.ui-` component classes and the `.ds-root` token scope. */
+function dsCssHits(css: { fileName: string; text: string }[]): string[] {
+  const hits: string[] = [];
+  for (const f of css) {
+    if (/\.ui-/.test(f.text)) hits.push(`${f.fileName}: .ui- selector`);
+    if (/\.ds-root/.test(f.text)) hits.push(`${f.fileName}: .ds-root selector`);
+  }
+  return hits;
+}
 describe("builds contain nothing from design/", () => {
   it("the production build", async () => {
     const files = await emitted("vite.config.ts");
@@ -57,6 +66,17 @@ describe("builds contain nothing from design/", () => {
     expect(files.some((f) => f.fileName === "index.html")).toBe(true);
     expect(files.some((f) => f.fileName.endsWith(".js") && f.text.length > 100_000)).toBe(true);
     expect(scan(files)).toEqual([]);
+  }, 120_000);
+  it("the production build ships no design-system CSS (ds.css is not imported by the live app)", async () => {
+    const files = await emitted("vite.config.ts");
+    const css = files.filter((f) => f.fileName.endsWith(".css"));
+    expect(css.length).toBeGreaterThanOrEqual(1); // non-vacuity: the app's own CSS is there
+    expect(css.some((f) => f.text.includes("--"))).toBe(true);
+    expect(dsCssHits(css)).toEqual([]);
+  }, 120_000);
+  it("the harness build DOES carry the design-system CSS, so the CSS check can fail", async () => {
+    const files = await emitted("vite.dc-harness.config.ts");
+    expect(dsCssHits(files.filter((f) => f.fileName.endsWith(".css"))).length).toBeGreaterThanOrEqual(1);
   }, 120_000);
 
   it("the dc-harness build (which bundles the generated screens)", async () => {

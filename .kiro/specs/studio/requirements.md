@@ -802,9 +802,10 @@ Library, Export Flow, Error States, Landing Page) as input only.
        most the one allowed Zod `allowsEval` probe violation is tolerated there
        (the same assertion as `tests-csp`). With `ds.css` loaded,
        `window.__studioExportParity(t)` SHALL be exactly 0 for t = 1, 3, and 5.5.
-    Export parity SHALL also be exactly 0 at those times on the default studio
-    route, where the app entry imports `ds.css` as a plain CSS import (it is
-    scoped under `.ds-root`, so it restyles nothing).
+    The live app entry SHALL NOT import `ds.css` until generated screens are
+    wired in; a production-build test SHALL assert that the default-route CSS
+    contains no `.ui-` and no `.ds-root` selector. Importing `ds.css` into the
+    live app is a task for the future "wire generated screens" spec.
     A unit test SHALL build the production app in memory with Vite
     `build({ write: false })` and scan the output paths and text for the
     patterns `design/` (word-boundary guarded), `_ds/`, `_ds_bundle`,
@@ -893,10 +894,10 @@ have accessible, CSP-safe building blocks that do not restyle the live studio.
    declared family names are disjoint, and that `ds.css` has no `local(`.
    *(unit)*
 10. WHEN `ds.css` is loaded, THE export parity probe `window.__studioExportParity(t)`
-    SHALL return exactly 0 for t = 1, 3, and 5.5, both on the default studio route
-    (a DEV build, where the probe is installed and the app entry imports `ds.css`
-    as a plain CSS import) and in the
-    smoke-harness `parity.html` build (Requirement 17.10). *(Playwright)*
+    SHALL return exactly 0 for t = 1, 3, and 5.5 in the smoke-harness `parity.html`
+    build (Requirement 17.10), which loads `ds.css`. THE default studio route SHALL
+    NOT load `ds.css`, and its parity at those times stays exactly 0 without it.
+    *(Playwright)*
 
 ---
 
