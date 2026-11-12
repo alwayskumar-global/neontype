@@ -65,8 +65,8 @@ reported). They are planning estimates, not budgets.
 
 ## Tasks
 
-- [ ] 1. Group 1: Scaffold + pure model layer  *(est. ~14 credits)*
-  - [ ] 1.1 Scaffold `apps/studio` (Vite + React + strict TS) and resolve dependencies
+- [x] 1. Group 1: Scaffold + pure model layer  *(est. ~14 credits)*
+  - [x] 1.1 Scaffold `apps/studio` (Vite + React + strict TS) and resolve dependencies
     - Create `apps/studio/package.json` (`name: "@studio/app"`, `"private": true`, `"type": "module"`), scripts `dev`/`build`/`preview`/`lint`/`test`. Resolve each dependency against the npm registry with `npm view` and EXACT-pin: runtime `@studio/engine` (`workspace:*`), `@studio/exporters` (`workspace:*`), `react`, `react-dom`; dev `@vitejs/plugin-react` (compatible with the repo's Vite major), `@types/react`, `@types/react-dom`, and the repo tooling (`typescript`, `vitest`, `@playwright/test`, `eslint`, `typescript-eslint`, `vite`, `zod` as already present). Write a `docs/dependencies.md` row for each NEW package (name, exact version, license, publish date, reason); report any deviation from the requirements Approved-dependencies table.
     - Create `apps/studio/tsconfig.json` (strict, React JSX, bundler resolution) — NO tsconfig change outside `apps/studio`. `pnpm-workspace.yaml` already globs `apps/*`.
     - Create `apps/studio/vite.config.ts` with `@vitejs/plugin-react`, `root` scoped to the app, static build output, and the entry `index.html`.
@@ -74,43 +74,43 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 14.1, 14.2, 14.3, 14.5, 14.6; Design "Overview", "Architecture"
     - **Completion:** `pnpm install` succeeds; `apps/studio` resolves as a workspace member; `pnpm --filter @studio/app exec tsc --noEmit` passes on an empty app; `docs/dependencies.md` has a row per new package with the ACTUAL resolved versions.
 
-  - [ ] 1.2 Strict CSP, Vercel headers, and the design-token sheet
+  - [x] 1.2 Strict CSP, Vercel headers, and the design-token sheet
     - Create `apps/studio/index.html` with the module entry as an external `<script type="module" src>` (no inline script), a `<meta http-equiv="Content-Security-Policy">` mirroring the production CSP, and NO `<style>` element or `style="..."` attribute.
     - Create `apps/studio/vercel.json` setting the SAME CSP as an HTTP header and configuring static output (the built `dist` as the served root). CSP: `default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' blob:; worker-src 'self' blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`.
     - Create `apps/studio/src/tokens.css` with design tokens (colours, type scale, spacing, radii, shadows) EXTRACTED from `design/` — values only, no copied markup/scripts.
     - **Covers:** Requirement 11.2; Design "CSP and security"
     - **Completion:** `index.html` and `vercel.json` carry the identical CSP string with no `'unsafe-inline'`; a grep over `index.html` finds no inline `<script>`, `<style>`, or `style=` attribute.
 
-  - [ ] 1.3 ESLint flat config, Vitest/Playwright config, and the purity guard
+  - [x] 1.3 ESLint flat config, Vitest/Playwright config, and the purity guard
     - Create `apps/studio/eslint.config.js` (ESLint flat, `typescript-eslint`) with `no-restricted-properties` banning `Math.random`, `Date.now`, `performance.now` in `src/**`, and an override allowing them ONLY in `src/playback/**` (the clock). Add `no-restricted-imports` or a build check banning imports from `design/` and `support.js`.
     - Create `apps/studio/vitest.config.ts` (`environment: "node"` for model tests; `include: ["src/**/*.test.ts","src/**/*.test.tsx"]`) and `apps/studio/playwright.config.ts` (localhost web server via `vite`, bundled Chromium, `testDir: tests/`).
     - Create `apps/studio/src/__tests__/purity.test.ts` asserting the three bans fire outside `src/playback/`.
     - **Covers:** Requirement 10.4, 11.5, 14.2; Design "Module layout", Execution rules
     - **Completion:** `pnpm --filter @studio/app lint` passes on the scaffold; the purity guard test passes; a probe import from `design/` fails lint.
 
-  - [ ] 1.4 Pure model: Project factory, actions, transitions, selectors
+  - [x] 1.4 Pure model: Project factory, actions, transitions, selectors
     - Create `apps/studio/src/model/project.ts` (new-project factory producing the accepted default: 1280×720, 30 fps, 5 s, opaque `#101018`, one `fade-slide` starter layer — Open Question 1), `actions.ts` (discriminated-union `Action` for settings edits, layer add/edit/delete/reorder, effect add/param/remove, timeline move/trim), `transitions.ts` (pure `(Project, Action) => Project`, rejecting schema-invalid results by returning the input unchanged), and `selectors.ts` (`frameCountFor`, layer-by-id, active layers at `t`, etc.). No DOM, no clock.
     - Create `apps/studio/src/model/timemap.ts` (pure `timeToX`/`xToTime`).
     - **Covers:** Requirement 2.1–2.5, 3.1–3.7, 4.2–4.6, 10.1, 10.2, 10.3, 10.5; Design "Data Models / State"
     - **Completion:** `pnpm --filter @studio/app exec vitest run src/model` passes; transitions never return a schema-invalid project.
 
-  - [ ] 1.5 Property tests for the model (Properties 1, 2)
+  - [x] 1.5 Property tests for the model (Properties 1, 2)
     - In `apps/studio/src/model/transitions.test.ts` add a fast-check test tagged `// Feature: studio, Property 1: Schema-preserving transitions` asserting that for any `ProjectSchema`-valid project (local arbitrary) and any `Action`, the result is schema-valid OR the unchanged input. In `apps/studio/src/model/timemap.test.ts` add `// Feature: studio, Property 2: Time-pixel round-trip` asserting `xToTime(timeToX(t)) ~= t` within one pixel and the integer-x inverse. Each >= 100 iterations. On any counterexample, STOP and show it.
     - **Covers:** Requirement 5.3, 10.3; Design Properties 1, 2
     - **Completion:** `pnpm --filter @studio/app exec vitest run src/model` passes; both properties run >= 100 iterations with no counterexample (run 3x).
 
-  - [ ] 1.6 Checkpoint — Group 1
+  - [x] 1.6 Checkpoint — Group 1
     - Run `pnpm --filter @studio/app exec tsc --noEmit`, `pnpm --filter @studio/app lint`, `pnpm --filter @studio/app exec vitest run`.
     - **Completion:** all three exit 0 with zero failures.
     - Commit: `feat(studio): scaffold app, strict CSP, and pure model layer`
 
 - [ ] 2. Group 2: Fonts, preview pipeline, playback, transport, parity  *(est. ~16 credits)*
-  - [ ] 2.1 Bundle fonts and the readiness gate
+  - [x] 2.1 Bundle fonts and the readiness gate
     - Bundle four self-hosted woff2 into `apps/studio/src/fonts/` (or `public/fonts/`): weights 400 and 700 for BOTH families — `noto-sans-latin-400-normal.woff2`, `noto-sans-latin-700-normal.woff2` (family "Noto Sans", OFL-1.1) and `noto-sans-tamil-tamil-400-normal.woff2`, `noto-sans-tamil-tamil-700-normal.woff2` (family "Noto Sans Tamil", OFL-1.1); include each family's OFL-1.1 licence file. Create `fonts.css` (`@font-face` for each family/weight, self-hosted, no network) and `fonts/fonts.ts` exposing `whenFontsReady()` that loads the `FontFace`s, adds them to `document.fonts`, awaits `document.fonts.ready`, and maps a load timeout to `font-not-ready` and a decode failure to `font-decode-failed`. The layer `fontWeight` control selects 400 or 700.
     - **Covers:** Requirement 6.1–6.5; Design "Fonts"
     - **Completion:** `whenFontsReady()` resolves ready after the fonts load; a forced failure resolves the mapped error; `docs/dependencies.md` font licences noted if not already.
 
-  - [ ] 2.2 Playback clock and performance instrument
+  - [x] 2.2 Playback clock and performance instrument
     - Create `apps/studio/src/playback/clock.ts` — the rAF loop that owns `requestAnimationFrame`, derives current time from elapsed real time, supports play/pause/loop/scrub, and emits the current `t`. Create `playback/perf.ts` — the frame-interval instrument (mean + p95) reading rAF timestamps. These are the ONLY files permitted the wall-clock.
     - **Covers:** Requirement 1.2, 1.3, 1.4, 1.7, 13.2a; Design "Architecture / playback"
     - **Completion:** unit tests for loop-wrap math and scrub clamping pass; the purity guard still passes (bans allowed only here).
@@ -125,7 +125,7 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 1.2, 1.3, 1.4, 1.5, 1.6, 1.8; Design "Components / Preview pipeline"
     - **Completion:** `tests/preview.spec.ts` passes (play advances, pause holds, loop wraps, scrub clamps, readout correct).
 
-  - [ ] 2.5 Preview/export parity test
+  - [x] 2.5 Preview/export parity test
     - Create `apps/studio/tests/parity.spec.ts` rendering a fixed project at a fixed frame index via the preview path and via the exporter's `FrameRenderer`, compositing both over the same opaque background, asserting diffRatio <= 0.01 at 24/255 per channel, each with its own `CanvasMetricsProvider` and no shared cache.
     - **Covers:** Requirement 9.1, 9.2, 9.3, 9.4; Design "Preview pipeline — parity test design"
     - **Completion:** `pnpm --filter @studio/app exec playwright test tests/parity.spec.ts` passes.
@@ -151,7 +151,7 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 4.1–4.6; Design "Components / panels"
     - **Completion:** `tests/effects.spec.ts` passes (picker lists 12 from the catalog, no hardcoded list).
 
-  - [ ] 3.4 Export dialog state machine + error map
+  - [x] 3.4 Export dialog state machine + error map
     - Create `apps/studio/src/export/machine.ts` (pure state machine: idle → configuring → running → done/failed/cancelled) and `export/errors.ts` (exhaustive `Record<ErrorCode, string>` over all 12 codes). `machine.ts` has no DOM/clock.
     - **Covers:** Requirement 8.5, 8.6; Design "Export dialog state machine", "Error Handling"
     - **Completion:** unit tests for every state transition pass; the error map compiles exhaustively.
@@ -162,12 +162,12 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 8.1, 8.2, 8.3, 8.4, 8.7, 8.8, 8.9; Design "Export dialog state machine"
     - **Completion:** `tests/export.spec.ts` passes (format set, gating, progress, cancel, success download, note, error mapping).
 
-  - [ ] 3.6 Property test for the error map (Property 5) + app shell wiring
+  - [x] 3.6 Property test for the error map (Property 5) + app shell wiring
     - Add `// Feature: studio, Property 5: ErrorCode map total` asserting every `ErrorCode` (iterating the exporters' `ERROR_CODES`) maps to a non-empty message. Create `apps/studio/src/shell/App.tsx` + `store.ts` composing preview + panels + export into a demoable layout following `design/` as a visual reference only.
     - **Covers:** Requirement 8.6, 10.2; Design Property 5, "Components / shell"
     - **Completion:** the property passes (>= 100 iterations, 3x); the app runs end to end (type → effect → preview → export) in `tests/export.spec.ts`.
 
-  - [ ] 3.7 Minimal root README
+  - [x] 3.7 Minimal root README
     - Create a minimal repository root `README.md`: what the project is (the browser-only, client-side motion-text studio — no legacy name/assets), prerequisites, the install / dev / test / build commands, the workspace layout, and one line pointing at `docs/dependencies.md`. Group 7 expands this to the full Requirement 15 README (disclosure, "Built with Kiro", Vercel deploy).
     - **Covers:** Requirement 15.1, 15.2, 15.3, 15.4 (minimal; full in Task 7.1)
     - **Completion:** root `README.md` exists with those sections and the `docs/dependencies.md` pointer.
@@ -241,25 +241,25 @@ reported). They are planning estimates, not budgets.
     - **Completion:** all commands exit 0; the parity probe is exactly 0; `git diff` shows no change under `packages/`.
     - Commit: `feat(studio): canvas drag and timeline editing`
 
-- [ ] 5. Group 5: Save/load + built-in demo project  *(est. ~10 credits)*
-  - [ ] 5.1 Save and load
+- [x] 5. Group 5: Save/load + built-in demo project  *(est. ~10 credits)*
+  - [x] 5.1 Save and load
     - Create `apps/studio/src/io/save.ts` (`serializeProject` → Blob download, named JSON) and `io/load.ts` (file input → `parseProject` → typed result; on `ParseError` show a specific message and leave the project unchanged; on success replace the store project and reset UI selection/playhead). No network; file validated before any field is read.
     - Done: downloads (project save and export) go through one `downloadBlob` helper that revokes the object URL after 60 s, not synchronously. _Requirements: 7.1, 8.8_
     - Done: opening a project file rejects files over 5 MiB by `file.size` before reading them. _Requirements: 7.1–7.6, 11.4_
     - **Covers:** Requirement 7.1–7.6, 10.5, 11.4; Design "Save / load"
     - **Completion:** `tests/saveload.spec.ts` passes (round-trip, invalid-file error, valid-replace).
 
-  - [ ] 5.2 Save/load round-trip property (Property 4)
+  - [x] 5.2 Save/load round-trip property (Property 4)
     - Add `// Feature: studio, Property 4: Save/load round-trip` asserting `parseProject(serializeProject(p))` deep-equals `p`, carries `schemaVersion`, and leaks no UI state. On counterexample, STOP and show.
     - **Covers:** Requirement 7.1, 7.2, 10.5; Design Property 4
     - **Completion:** the property passes (>= 100 iterations, 3x).
 
-  - [ ] 5.3 Built-in demo project
+  - [x] 5.3 Built-in demo project
     - Create `apps/studio/src/model/demo.ts`: a schema-valid showcase project with several layers exercising a range of the 12 effects AND at least one Tamil-text layer (family "Noto Sans Tamil"), loaded by default on first open for the demo video. It is a `Project` value only (no UI state).
     - **Covers:** Requirement 6.2 (Tamil), 3.x, 4.x; Design "Fonts", Open Question 1
     - **Completion:** `demo.ts` passes `ProjectSchema.safeParse`; a Playwright check loads it by default and renders Tamil glyphs.
 
-  - [ ] 5.4 Checkpoint — Group 5
+  - [x] 5.4 Checkpoint — Group 5
     - Run typecheck, lint, Vitest, and `playwright test tests/saveload.spec.ts`.
     - **Completion:** all pass.
     - Commit: `feat(studio): save/load and built-in demo project`
@@ -276,7 +276,7 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 13.1, 13.2, 13.2a, 13.3; Design "Performance measurement"
     - **Completion:** `tests/perf.spec.ts` runs and reports numbers; indicative on CI, authoritative manually.
 
-  - [ ] 6.3 CSP-violation spec
+  - [x] 6.3 CSP-violation spec
     - Create `apps/studio/tests/csp.spec.ts` listening for `securitypolicyviolation` events and CSP console errors across a representative session (edit, preview, open dialog, export), asserting ZERO violations. Also assert no `style`/`script` markup injection path is exercised.
     - Done: a production-build Playwright test runs a worker-path export under the strict CSP. _Requirements: 11.2, 11.3_
     - **Covers:** Requirement 11.2, 11.3; Design "CSP and security", risk 2
@@ -288,7 +288,7 @@ reported). They are planning estimates, not budgets.
     - Commit: `feat(studio): accessibility, performance, and CSP verification`
 
 - [ ] 7. Group 7: Repository readiness + final checkpoint  *(est. ~10 credits)*
-  - [ ] 7.1 Root README and deploy docs
+  - [x] 7.1 Root README and deploy docs
     - Create/finalize the repository root `README.md` per Requirement 15: product summary (no legacy name/assets); prerequisites (the required Node and the repo's pnpm version); install/dev/test/build commands (incl. the `apps/studio` dev + build commands); workspace layout (`packages/engine`, `packages/exporters`, `apps/studio`, `docs/`, `.kiro/`); a "Built with Kiro" section (specs, steering, hooks, property-based testing); a third-party & disclosure section (planning + visual design produced OUTSIDE Kiro with Claude and Claude Design, all code written in Kiro) linking to `docs/dependencies.md`; and a Vercel static-output deploy section (build command, output dir, the CSP headers via `vercel.json`).
     - Finalize `apps/studio/README.md` (usage + the design-as-reference rule) and verify `docs/dependencies.md` lists the studio deps with exact versions/licences/reasons and the publish dates recorded at install.
     - **Covers:** Requirement 15.1–15.6; Design "Overview"
