@@ -13,6 +13,6 @@ export default defineConfig({
     emptyOutDir: true,
     modulePreload: { polyfill: false },
     assetsInlineLimit: 0,
-    rollupOptions: { input: { index: "index.html", parity: "parity.html" } },
+    rollupOptions: { input: { index: "index.html", parity: "parity.html", screens: "screens.html" } },
   },
 });

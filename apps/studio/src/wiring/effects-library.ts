@@ -2,7 +2,7 @@
  * Adapter for the generated Effects Library screen (Requirement 19.2). Pure: store snapshot plus the
  * host's library view state in, the screen's `data` out. The catalog comes from the engine's
  * `presetCatalog`; categories and slider ranges from `tables.ts`. Binding kinds are listed in the design
- * ("Binding tables"); the one inert binding is `preview`.
+ * ("Binding tables"). Every binding is backed (the revised design has no preview slot).
  */
 import { presetCatalog, type Granularity, type PresetCatalogEntry, type Project } from "@studio/engine";
 import type { DcProps, DcValue } from "../ds/dc-runtime.js";
@@ -57,8 +57,8 @@ export interface EffectsLibraryDispatchers {
   searchRef: DcValue;
   gridRef: DcValue;
 }
-/** Binding keys that have no backing behaviour in v1 (design table, kind I). */
-export const INERT_BINDINGS: readonly string[] = ["preview"];
+/** Binding keys that have no backing behaviour in v1: none. */
+export const INERT_BINDINGS: readonly string[] = [];
 export const EASE_OPTIONS: readonly string[] = ["linear", "easeIn", "easeOut", "easeInOut"];
 const GRAN_LABEL: Record<Granularity, string> = { character: "Character", word: "Word", line: "Line" };
 const GRAN_ORDER: Granularity[] = ["character", "word", "line"];
@@ -84,6 +84,10 @@ export function visibleEntries(view: EffectsLibraryView): PresetCatalogEntry[] {
 function effective(entry: PresetCatalogEntry, staged: Staged | undefined): { split: Granularity; ease: string } {
   const defEase = typeof entry.defaultParams["easing"] === "string" ? entry.defaultParams["easing"] : "linear";
   return { split: staged?.split ?? entry.supportedGranularities[0] ?? "character", ease: staged?.ease ?? defEase };
+}
+/** The first line of a layer's text, or a placeholder for an empty one (matches the Studio Editor layer list). */
+function firstLine(text: string): string {
+  return text.split("\n")[0] || "Empty text";
 }
 export function adaptEffectsLibrary(state: EffectsLibraryState, d: EffectsLibraryDispatchers): DcProps {
   const { project, selectedLayerId, view } = state;
@@ -152,6 +156,9 @@ export function adaptEffectsLibrary(state: EffectsLibraryState, d: EffectsLibrar
     sort: view.sort,
     onSort: (v: string) => d.setSort(v),
     countText: `${list.length} of ${presetCatalog.length}`,
+    effectCount: `${presetCatalog.length} effects`,
+    applyTarget: layer ? firstLine(layer.text) : "No layer selected",
+    applyTargetMeta: layer ? `Layer ${project.layers.indexOf(layer) + 1}` : "",
     anyFilter: q !== "" || view.grans.length > 0 || view.cats.length > 0,
     clearAll: () => d.clearFilters(),
     loading: false,
@@ -167,7 +174,6 @@ export function adaptEffectsLibrary(state: EffectsLibraryState, d: EffectsLibrar
     selName: selEntry?.displayName ?? "",
     selCat: selEntry ? categoryOf(selEntry) : "",
     selMeta: selEntry && eff ? `${GRAN_LABEL[eff.split]}${typeof selEntry.defaultParams["durationSeconds"] === "number" ? ` · ${withUnit(Number(view.staged[selEntry.id]?.params?.["durationSeconds"] ?? selEntry.defaultParams["durationSeconds"]), 0.05, "s")}` : ""}${selEntry.loop ? " · loop" : ""}` : "",
-    preview: null,
     multiSplit: (selEntry?.supportedGranularities.length ?? 0) > 1,
     singleSplit: selEntry !== undefined && selEntry.supportedGranularities.length === 1,
     singleSplitText: selEntry && selEntry.supportedGranularities.length === 1 ? `This effect always splits by ${GRAN_LABEL[selEntry.supportedGranularities[0] ?? "character"]}.` : "",
@@ -191,6 +197,7 @@ export function adaptEffectsLibrary(state: EffectsLibraryState, d: EffectsLibrar
           };
         })
       : [],
+    showEase: selEntry !== undefined && typeof selEntry.defaultParams["easing"] === "string",
     easeOpts: [...EASE_OPTIONS],
     ease: eff?.ease ?? "linear",
     onEase: (v: string) => {

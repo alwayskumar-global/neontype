@@ -26,6 +26,10 @@ interface Screen {
   builds: () => Built[];
   /** Nested function paths that are pure formatters, not handlers. */
   pure: RegExp;
+  /** Fewest distinct live handler paths the screen has (a floor, so the walk cannot go vacuous). */
+  minHandlers: number;
+  /** A better argument than the generic event for a handler that takes a specific value. */
+  argFor?: (path: string, data: DcProps["data"]) => unknown;
 }
 const projects = [newProject(), demoProject()];
 const SCREENS: Screen[] = [
@@ -34,6 +38,7 @@ const SCREENS: Screen[] = [
     bindings: EFFECTS_LIBRARY_BINDINGS,
     inert: LIB_INERT,
     pure: /\.fmt$/,
+    minHandlers: 7,
     builds: () =>
       projects.flatMap((p) =>
         [
@@ -52,6 +57,8 @@ const SCREENS: Screen[] = [
     bindings: EXPORT_FLOW_BINDINGS,
     inert: EXP_INERT,
     pure: /\.$/,
+    minHandlers: 6,
+    argFor: (path, data) => (path === "onRes" ? (data["resOpts"] as string[])[0] : undefined),
     builds: () =>
       projects.flatMap((p) =>
         exportRuns().flatMap((run) =>
@@ -97,7 +104,7 @@ describe.each(SCREENS)("$name adapter", (screen) => {
         if (screen.pure.test(path)) continue;
         const general = path.replace(/\[\d+\]/g, "[]");
         const before = b.calls.length;
-        fn(eventArg());
+        fn(screen.argFor?.(path, b.props.data) ?? eventArg());
         const called = b.calls.length - before;
         if (fn === INERT) {
           expect(screen.inert, `${path} is INERT but not listed`).toContain(topKey(path));
@@ -108,7 +115,7 @@ describe.each(SCREENS)("$name adapter", (screen) => {
         }
       }
     }
-    expect(everCalled.size).toBeGreaterThanOrEqual(7);
+    expect(everCalled.size).toBeGreaterThanOrEqual(screen.minHandlers);
     const dead = [...everCalled].filter(([, ok]) => !ok).map(([p]) => p);
     expect(dead, "handlers that never call a dispatcher and are not listed inert").toEqual([]);
   });
@@ -122,17 +129,42 @@ describe.each(SCREENS)("$name adapter", (screen) => {
   });
 });
 describe("the inert counts match the design tables", () => {
-  it("Export Flow lists 27 and Effects Library lists 1", () => {
-    expect(EXP_INERT.length).toBe(27);
-    expect(LIB_INERT.length).toBe(1);
+  it("Export Flow and Effects Library list no inert binding", () => {
+    expect(EXP_INERT.length).toBe(0);
+    expect(LIB_INERT.length).toBe(0);
   });
-  it("Frame rate and Duration are read-only: their handlers are inert and never edit the project", () => {
+  it("Frame rate and Duration are text read from the project; there is no handler to edit them", () => {
     const s = exportSpy();
     const { data } = adaptExportFlow(exportState(projects[0]!, exportRuns()[1]!, EXPORT_VIEWS[1]!), s.d);
-    expect(data["onFps"]).toBe(INERT);
-    expect(data["onDur"]).toBe(INERT);
-    expect(data["fps"]).toBe(projects[0]!.canvas.fps);
-    expect(data["dur"]).toBe(projects[0]!.canvas.durationSeconds);
+    expect(data["fps"]).toBe(`${projects[0]!.canvas.fps} fps`);
+    expect(data["dur"]).toBe(`${projects[0]!.canvas.durationSeconds.toFixed(2)} s`);
+    expect(data).not.toHaveProperty("onFps");
+    expect(data).not.toHaveProperty("onDur");
+  });
+  it("thumbAspect comes from the canvas, not a constant", () => {
+    for (const p of projects) {
+      const { data } = adaptExportFlow(exportState(p, exportRuns()[1]!, EXPORT_VIEWS[0]!), exportSpy().d);
+      expect(data["thumbAspect"]).toBe(`${p.canvas.width} / ${p.canvas.height}`);
+    }
+    const tall = { ...projects[0]!, canvas: { ...projects[0]!.canvas, width: 1080, height: 1920 } };
+    expect(adaptExportFlow(exportState(tall, exportRuns()[1]!, EXPORT_VIEWS[0]!), exportSpy().d).data["thumbAspect"]).toBe("1080 / 1920");
+  });
+  it("WebM with alpha is a limited card with a reason, and picking it calls nothing", () => {
+    const s = exportSpy();
+    const { data } = adaptExportFlow(exportState(projects[0]!, exportRuns()[1]!, EXPORT_VIEWS[0]!), s.d);
+    const webm = (data["destCards"] as { id: string; limited: boolean; limitedReason: string; pick: () => void }[]).find((c) => c.id === "webm")!;
+    expect(webm.limited).toBe(true);
+    expect(webm.limitedReason).not.toBe("");
+    webm.pick();
+    expect(s.calls).toEqual([]);
+  });
+  it("the size options are scales of the project and onRes maps a label back to its size", () => {
+    const s = exportSpy();
+    const { data } = adaptExportFlow(exportState(projects[1]!, exportRuns()[1]!, EXPORT_VIEWS[0]!), s.d);
+    expect(data["resOpts"]).toEqual(["0.5× · 640 × 360", "1× · 1280 × 720", "2× · 2560 × 1440"]);
+    expect(data["res"]).toBe("1× · 1280 × 720");
+    (data["onRes"] as (v: string) => void)("2× · 2560 × 1440");
+    expect(s.calls).toEqual(["setResolution"]);
   });
   it("every ErrorCode has at least one suggestion", () => {
     for (const code of ALL_ERROR_CODES) expect(TRY_NEXT[code].length, code).toBeGreaterThan(0);

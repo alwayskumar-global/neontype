@@ -105,9 +105,9 @@ describe("fail loud: helmet CSS", () => {
     fails(() => convert("<div></div>", "@font-face{font-family:x}"), /unsupported at-rule @font-face/);
     fails(() => convert("<div></div>", "@import url(x.css);a{b:c}"), /unexpected text|unsupported at-rule/);
   });
-  it("a selector at or above (0,2,0)", () => {
-    fails(() => convert("<div></div>", ".a.b{color:red}"), /specificity.*\(0,2,0\)/);
-    fails(() => convert("<div></div>", "#id{color:red}"), /specificity/);
+  it("!important in an inline style (fails closed)", () => {
+    fails(() => convert('<p style="color:red !important">x</p>'), /"!important" in an inline style/);
+    fails(() => convert('<p style="color:red!important">x</p>'), /"!important" in an inline style/);
   });
   it("html/body/:root used as more than a whole selector", () => {
     fails(() => convert("<div></div>", "body > div{color:red}"), /more than a whole selector/);
@@ -506,5 +506,44 @@ describe("boolean attributes are valid only on their hosts", () => {
     expect(tsx(convert("<input readonly>"))).toContain("readOnly={true}");
     // A textarea gets readOnly from having no handler, not from a source attribute.
     fails(() => convert("<textarea readonly value=\"{{ t }}\"></textarea>"), /attribute "readonly" is not supported on <textarea>/, 5);
+  });
+});
+
+describe("cascade layers", () => {
+  const layered = (r: ReturnType<typeof convert>): { before: string; layer: string; after: string } => {
+    const text = css(r);
+    const i = text.indexOf("@layer screen {");
+    expect(i, "an @layer screen block").toBeGreaterThan(-1);
+    let depth = 0;
+    let end = -1;
+    for (let k = text.indexOf("{", i); k < text.length; k++) {
+      if (text[k] === "{") depth++;
+      else if (text[k] === "}" && --depth === 0) {
+        end = k;
+        break;
+      }
+    }
+    return { before: text.slice(0, i), layer: text.slice(i, end + 1), after: text.slice(end + 1) };
+  };
+  it("wraps all helmet rules in exactly one top-level @layer screen block", () => {
+    const r = convert("<p>x</p>", ".a:hover:not(:disabled){color:red} @media (min-width:1px){.b{color:blue}} @keyframes k{from{opacity:0}to{opacity:1}} p{color:green}");
+    expect(css(r).match(/@layer screen \{/g)).toHaveLength(1);
+    const { before, layer, after } = layered(r);
+    expect(before.replace(/\/\*[\s\S]*?\*\//g, "").trim()).toBe("");
+    for (const frag of [".a:hover:not(:disabled)", ".b", "@keyframes", "p {"]) expect(layer).toContain(frag);
+    expect(after).not.toMatch(/:hover:not|@media|@keyframes/);
+  });
+  it("emits no layer block for an empty helmet", () => {
+    expect(css(convert("<p>x</p>"))).not.toContain("@layer");
+  });
+  it("keeps converted inline-style classes outside any @layer", () => {
+    const r = convert('<p style="color:blue">x</p>', ".x:hover:not(:disabled){color:red}");
+    const { layer, after } = layered(r);
+    expect(layer).not.toContain("color: blue");
+    expect(after).toContain("color: blue");
+    expect(after).not.toContain("@layer");
+  });
+  it("accepts a high-specificity helmet selector next to an inline style", () => {
+    expect(() => convert('<p class="x" style="color:blue">x</p>', ".x:hover:not(:disabled){color:red} #id.a.b{color:red}")).not.toThrow();
   });
 });

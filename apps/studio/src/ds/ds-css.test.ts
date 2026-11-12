@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { listStudioFiles, readStudioText } from "../../scripts/dc-io.mjs";
-import { leafRules, parseCss, splitSelectors, stripComments } from "../__tests__/dc/css-util.js";
+import { leafRules, parseCss, splitSelectors, stripComments, unwrapDsLayer } from "../__tests__/dc/css-util.js";
 
 const dsCss = readStudioText("src/ds/ds.css");
 const studioTokens = readStudioText("src/tokens.css");
 const studioFonts = readStudioText("src/fonts/fonts.css");
-const rules = parseCss(dsCss);
+const rules = parseCss(unwrapDsLayer(dsCss));
 
 const declaredFamilies = (css: string): string[] =>
   [...stripComments(css).matchAll(/@font-face\s*\{[^}]*font-family\s*:\s*["']?([^"';}]+?)["']?\s*[;}]/g)].map((m) => (m[1] ?? "").trim());
@@ -18,6 +18,19 @@ describe("ds.css assembly (Requirement 18.1, 18.7-18.10)", () => {
     expect(dsCss).toContain("MotionTextStudioDesignSystem_f5b901");
   });
 
+  it("declares the layer order once, at the top, and keeps the whole file inside @layer ds", () => {
+    expect(bare.trimStart().startsWith("@layer ds, screen;")).toBe(true);
+    expect(bare.match(/@layer\s+ds\s*,\s*screen\s*;/g)).toHaveLength(1);
+    expect(bare.match(/@layer\b/g)).toHaveLength(2);
+    expect(() => unwrapDsLayer(dsCss)).not.toThrow();
+  });
+  it("leaves tokens.css unlayered and made of custom properties only", () => {
+    const tk = stripComments(studioTokens);
+    expect(tk).not.toContain("@layer");
+    expect(tk).not.toContain("@font-face");
+    const decls = [...tk.matchAll(/\{([^{}]*)\}/g)].flatMap((m) => (m[1] ?? "").split(";").map((d) => d.trim()).filter(Boolean));
+    expect(decls.filter((d) => !d.startsWith("--"))).toEqual([]);
+  });
   it("scopes tokens under .ds-root: no :root, no @import", () => {
     expect(bare).not.toContain(":root");
     expect(bare).not.toContain("@import");

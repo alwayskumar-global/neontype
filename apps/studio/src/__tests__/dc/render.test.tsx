@@ -52,14 +52,11 @@ describe("Studio Editor with the harness fixture", () => {
     expect(missing).toEqual([]);
   });
   it("binds text and values from the data", () => {
-    expect(out).toContain('aria-label="Project name"');
-    expect(out).toContain('value="Grand opening - teaser"');
     expect(out).toContain("00:01:07");
-    // posY / opacity / scale are text bindings; opacityPct is only a CSS custom property (set client-side).
-    expect(out).toContain(">564<");
-    expect(out).toContain(">68<");
-    expect(out).toContain(">98.7<");
-    expect(out).not.toContain("68.0%");
+    expect(out).toContain('aria-label="Width in pixels"');
+    expect(out).toContain('value="1280"');
+    expect(out).toContain('value="#FFCC00"');
+    expect(out).toContain("1280 × 720");
   });
   it("sc-if renders the paused branch only", () => {
     expect(out).toContain('aria-label="Play"');
@@ -69,10 +66,11 @@ describe("Studio Editor with the harness fixture", () => {
     expect(playing).not.toContain('aria-label="Play"');
   });
   it("sc-for renders one element per item with the item's text", () => {
-    for (const word of ["Sale ", "starts ", "Friday"]) expect(out).toContain(word);
-    expect(out).toContain("ENTRANCES");
-    expect(out).toContain("Typewriter");
-    expect(out).toContain("Fade-slide, split by Word, applied to selected layer");
+    for (const word of ["Motion Text", "Subtitle", "Kinetic pop", "Overshoot"]) expect(out).toContain(word);
+    expect(out).toContain('aria-label="Move Subtitle up"');
+    expect(out).toContain('aria-label="Delete Motion Text"');
+    expect(out).toContain('aria-label="Remove Kinetic pop"');
+    expect(out.match(/<option /g)?.length).toBeGreaterThanOrEqual(8);
   });
   it("aria narrowing: aria-checked comes from string data", () => {
     expect(out).toContain('aria-checked="false"');

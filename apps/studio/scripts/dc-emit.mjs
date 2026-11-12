@@ -34,6 +34,8 @@ const PLAIN_ATTRS = new Set([
   "d", "x", "y", "cx", "cy", "r", "rx", "width", "height", "fill", "stroke", "viewBox", "preserveAspectRatio",
   "strokeWidth", "strokeLinecap", "strokeLinejoin", "strokeDasharray",
 ]);
+/** Range attributes: valid on <input> only (type=number / range). Passed through as strings. */
+const INPUT_RANGE_ATTRS = new Set(["min", "max", "step"]);
 const RENAME = {
   class: "className", for: "htmlFor", tabindex: "tabIndex", readonly: "readOnly", autofocus: "autoFocus", maxlength: "maxLength",
   "stroke-width": "strokeWidth", "stroke-linecap": "strokeLinecap", "stroke-linejoin": "strokeLinejoin", "stroke-dasharray": "strokeDasharray",
@@ -118,6 +120,17 @@ export function emitJsx(root, { file, slug, styles, assets }) {
     const b = whole.binding;
     if (b.kind === "literal") return `{${jsonStr(String(b.value))}}`;
     return `{${rt(required ? "asString" : "asText")}(${getExpr(b, ctx)})}`;
+  };
+  /** `aria-label="Move {{ l.name }} up"`: static text around bindings becomes one template literal of asString() parts. */
+  const interpolatedLabel = (value, ctx, line) => {
+    const segs = parseBindings(value, file, line);
+    const esc = (t) => t.replace(/[\\`]/g, "\\  const numberValue = (whole, ctx, line, attr) => {").replace(/\$\{/g, "\\${").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+    const parts = segs.map((seg) => {
+      if (seg.static !== undefined) return esc(seg.static);
+      const b = seg.binding;
+      return b.kind === "literal" ? esc(String(b.value)) : "${" + rt("asString") + "(" + getExpr(b, ctx) + ")}";
+    });
+    return "{`" + parts.join("") + "`}";
   };
   const numberValue = (whole, ctx, line, attr) => {
     if (whole.static !== undefined) {
@@ -236,6 +249,10 @@ export function emitJsx(root, { file, slug, styles, assets }) {
         props.push(`tabIndex=${numberValue(parseWholeValue(a.value, file, line, name), ctx, line, name)}`);
         continue;
       }
+      if (name === "aria-label" && parseBindings(a.value, file, line).length > 1) {
+        props.push(`aria-label=${interpolatedLabel(a.value, ctx, line)}`);
+        continue;
+      }
       if (name.startsWith("aria-")) {
         const whole = parseWholeValue(a.value, file, line, name);
         if (ARIA_NUMBER.has(name)) props.push(`${name}=${numberValue(whole, ctx, line, name)}`);
@@ -251,6 +268,11 @@ export function emitJsx(root, { file, slug, styles, assets }) {
       }
       if (name.startsWith("data-")) {
         props.push(`${name}=${stringValue(parseWholeValue(a.value, file, line, name), ctx, false)}`);
+        continue;
+      }
+      if (INPUT_RANGE_ATTRS.has(out)) {
+        if (!isInput) fail(`attribute "${name}" is only valid on <input>`, line);
+        props.push(`${out}=${stringValue(parseWholeValue(a.value, file, line, name), ctx, false)}`);
         continue;
       }
       if (PLAIN_ATTRS.has(out)) {

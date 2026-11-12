@@ -32,8 +32,8 @@ export function exportSpy(): Spy<ExportFlowDispatchers> {
     calls.push(name);
   };
   const d: ExportFlowDispatchers = {
-    toOptions: rec("toOptions"), toDest: rec("toDest"), pickDestination: rec("pickDestination"),
-    setResolution: rec("setResolution"), pickPng: rec("pickPng"), startExport: rec("startExport"), cancelExport: rec("cancelExport"),
+    toOptions: rec("toOptions"), toDest: rec("toDest"), pickFormat: rec("pickFormat"),
+    setResolution: rec("setResolution"), startExport: rec("startExport"), cancelExport: rec("cancelExport"),
   };
   return { d, calls };
 }
@@ -59,9 +59,9 @@ export function doneResult(name: string): Extract<ExportResult, { ok: true }> {
   };
 }
 export const EXPORT_VIEWS: ExportFlowView[] = [
-  { step: 1, destination: "overlay", resolution: null },
-  { step: 2, destination: "youtube", resolution: "640 × 360" },
-  { step: 2, destination: "square", resolution: "no-such-size" },
+  { step: 1, format: "png", resolution: null },
+  { step: 2, format: "gif", resolution: "640 × 360" },
+  { step: 2, format: "webm", resolution: "no-such-size" },
 ];
 export function exportRuns(code: ErrorCode = "out-of-memory"): ExportState[] {
   const base = { capabilities: SUPPORTED_CAPS, format: "mp4" as const };

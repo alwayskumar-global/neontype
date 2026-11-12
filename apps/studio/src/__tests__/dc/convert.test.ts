@@ -149,9 +149,6 @@ describe("per-file config rules (Requirement 17.4, owner-approved)", () => {
     expect(tsx).not.toContain("Studio Editor.dc.html");
     expect(byslug["landing-page"]?.bindings).toContain("onOpenStudio");
   });
-  it("Export Flow: the Review bar is omitted", () => {
-    expect(text("export-flow", ".tsx")).not.toContain("Review bar");
-  });
   it("Error States: icon colour comes from a class per variant, no object-valued style", () => {
     const tsx = text("error-states", ".tsx");
     const css = text("error-states", ".css");
@@ -163,7 +160,7 @@ describe("per-file config rules (Requirement 17.4, owner-approved)", () => {
   it("the config file lists exactly the approved rules", () => {
     const cfg = loadConfig();
     const rules = Object.fromEntries(cfg.files.map((f) => [f.source, f]));
-    expect(rules["Export Flow.dc.html"]?.omitIf).toEqual([{ attr: { "data-screen-label": "Review bar" } }]);
+    expect(rules["Export Flow.dc.html"]?.omitIf).toEqual([]); // the revised design no longer has the Review bar
     expect(rules["Landing Page.dc.html"]?.replaceText).toHaveLength(1);
     expect(rules["Landing Page.dc.html"]?.replaceText[0]?.expect).toBe(4);
     expect(rules["Error States.dc.html"]?.replaceText).toHaveLength(2);

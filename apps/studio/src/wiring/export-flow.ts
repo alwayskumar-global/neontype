@@ -1,12 +1,10 @@
 /**
  * Adapter for the generated Export Flow screen (Requirement 19.2). Pure: store snapshot, the export
- * machine state, and the host's wizard state in; the screen's `data` out. Binding kinds are listed in the
- * design ("Binding tables"). Owner decisions applied here: Frame rate and Duration are READ-ONLY displays
- * of the project (their handlers are inert and never edit it); the Web embed destination is omitted; WebM
- * stays unsupported; there is no framing, loop, or audio.
- *
- * The screen's keys are still those of the CURRENT design. The owner is revising it (gap D-4); when the
- * re-export lands, `wiring.test.ts` fails until this adapter follows the new `EXPORT_FLOW_BINDINGS`.
+ * machine state, and the host's wizard state in; the screen's `data` out. Matches the REVISED design (37
+ * bindings): the first step picks a FORMAT (MP4, PNG sequence, GIF, WebP, WebM with alpha), the size is a
+ * scale of the project (`0.5×`, `1×`, `2×`), and Frame rate and Duration are plain text read from the
+ * project. Every binding is backed. The screen's Close, Cancel, Download and Done controls have no
+ * handler yet; `onClose` and `onDownload` follow the owner's next re-export as a small delta.
  */
 import type { ErrorCode } from "@studio/exporters";
 import type { Project } from "@studio/engine";
@@ -15,52 +13,52 @@ import { frameCountFor } from "../model/selectors.js";
 import { messageFor } from "../export/errors.js";
 import type { ExportFormatId, ExportState } from "../export/machine.js";
 import { timecode } from "./format.js";
-import { INERT, type Data } from "./types.js";
-/** A destination card: a name for a format plus the aspect it expects. */
-export interface Destination {
+import type { Data } from "./types.js";
+/** A format card on step 1. `id` is the design's id (`png` is the machine's `png-sequence`). */
+export interface FormatCard {
   readonly id: string;
   readonly name: string;
   readonly nameLower: string;
-  readonly ratio: string;
-  readonly ar: string;
-  /** width / height the destination expects. */
-  readonly aspect: number;
-  readonly fh: number;
   readonly icon: string;
+  readonly meta: string;
   readonly use: string;
+  /** The machine's format; null for a format this release cannot export (WebM with alpha). */
+  readonly format: ExportFormatId | null;
   readonly title: string;
-  readonly format: ExportFormatId;
-  readonly alpha: boolean;
 }
-/** Destinations the exporters can honour. Web embed is omitted: there is no embed package. */
-export const DESTINATIONS: readonly Destination[] = [
-  { id: "reel", name: "Reel", nameLower: "reel", ratio: "9:16", ar: "9/16", aspect: 9 / 16, fh: 64, icon: "play", use: "Short vertical video for reels and shorts.", title: "Your reel is ready", format: "mp4", alpha: false },
-  { id: "story", name: "Story", nameLower: "story", ratio: "9:16", ar: "9/16", aspect: 9 / 16, fh: 64, icon: "clock", use: "Full-screen frames that sit under app buttons.", title: "Your story is ready", format: "mp4", alpha: false },
-  { id: "square", name: "Square", nameLower: "square video", ratio: "1:1", ar: "1/1", aspect: 1, fh: 56, icon: "grid", use: "Feed posts and ads that crop the same everywhere.", title: "Your square video is ready", format: "mp4", alpha: false },
-  { id: "youtube", name: "YouTube", nameLower: "YouTube video", ratio: "16:9", ar: "16/9", aspect: 16 / 9, fh: 44, icon: "image", use: "Intros, lower thirds and title cards.", title: "Your video is ready", format: "mp4", alpha: false },
-  { id: "overlay", name: "Transparent overlay", nameLower: "transparent overlay", ratio: "Alpha", ar: "1/1", aspect: 0, fh: 56, icon: "layers", use: "Titles you lay over footage in another editor.", title: "Your overlay is ready", format: "png-sequence", alpha: true },
+export const FORMAT_CARDS: readonly FormatCard[] = [
+  { id: "mp4", name: "MP4 video", nameLower: "MP4 video", icon: "play", meta: "H.264 · solid background", use: "Plays everywhere: social posts, slides and messages.", format: "mp4", title: "Your MP4 video is ready" },
+  { id: "png", name: "PNG sequence", nameLower: "PNG sequence", icon: "layers", meta: "ZIP of frames · transparency", use: "Lossless frames for video editors and compositing.", format: "png-sequence", title: "Your PNG sequence is ready" },
+  { id: "gif", name: "Animated GIF", nameLower: "animated GIF", icon: "grid", meta: "256 colours · loops", use: "Loops in chats, docs and email.", format: "gif", title: "Your animated GIF is ready" },
+  { id: "webp", name: "Animated WebP", nameLower: "animated WebP", icon: "image", meta: "Full colour · transparency · loops", use: "Smaller than GIF, for websites and apps.", format: "webp", title: "Your animated WebP is ready" },
+  { id: "webm", name: "WebM with alpha", nameLower: "WebM with alpha", icon: "play", meta: "VP9 · transparency", use: "One small see-through video file.", format: null, title: "Your WebM with alpha is ready" },
 ];
-export const DEFAULT_DESTINATION = "overlay";
-/** Output sizes (as "W × H") the exporters accept for this project: its own aspect, scaled uniformly. */
-export function outputSizes(project: Project): string[] {
+export const DEFAULT_FORMAT = "mp4";
+const WEBM_REASON = "Not available in this version. Use PNG sequence or WebP for transparency.";
+/** The capability key for each machine format. */
+const CAP_KEY = { mp4: "mp4", "png-sequence": "pngSequence", gif: "gif", webp: "webp" } as const;
+/** A scale of the project and the output size it gives ("W × H"), smallest first. Sizes keep the project's aspect. */
+export interface OutputSize {
+  readonly scale: number;
+  readonly size: string;
+  readonly label: string;
+}
+export function outputSizes(project: Project): OutputSize[] {
   const { width: w, height: h } = project.canvas;
-  const out: string[] = [];
-  for (const k of [1, 0.5, 2]) {
+  const out: OutputSize[] = [];
+  for (const k of [0.5, 1, 2]) {
     const ow = Math.round(w * k);
     const oh = Math.round(h * k);
-    if (ow >= 1 && oh >= 1 && Math.abs(ow / oh - w / h) * oh <= 1) out.push(`${ow} × ${oh}`);
+    if (ow >= 1 && oh >= 1 && Math.abs(ow / oh - w / h) * oh <= 1) out.push({ scale: k, size: `${ow} × ${oh}`, label: `${k}× · ${ow} × ${oh}` });
   }
   return out;
-}
-/** Destinations offered for this project: those whose aspect matches, plus the alpha overlay. */
-export function offeredDestinations(project: Project): Destination[] {
-  const ar = project.canvas.width / project.canvas.height;
-  return DESTINATIONS.filter((x) => x.alpha || Math.abs(x.aspect - ar) / ar < 0.01);
 }
 /** Wizard state held by the host. */
 export interface ExportFlowView {
   step: 1 | 2;
-  destination: string;
+  /** The selected format card id. */
+  format: string;
+  /** The chosen output size ("W × H"), or null for the project's own. */
   resolution: string | null;
 }
 export interface ExportFlowState {
@@ -71,18 +69,15 @@ export interface ExportFlowState {
 export interface ExportFlowDispatchers {
   toOptions(): void;
   toDest(): void;
-  pickDestination(id: string): void;
-  setResolution(res: string): void;
-  pickPng(): void;
+  /** `format` is the machine format of the picked card (never WebM, which cannot be picked). */
+  pickFormat(format: ExportFormatId): void;
+  /** `size` is "W × H", one of `outputSizes(project)`. */
+  setResolution(size: string): void;
   startExport(): void;
   cancelExport(): void;
 }
-/** Binding keys without backing behaviour in v1 (design table, kind I). */
-export const INERT_BINDINGS: readonly string[] = [
-  "audio", "embedCode", "embedLoop", "embedPreview", "embedSize", "embedStart", "embedTag", "embedW", "eta",
-  "framing", "framingHelp", "framingOpts", "loop", "loopHelp", "onAudio", "onDur", "onEmbedLoop", "onEmbedSize",
-  "onEmbedStart", "onFps", "onFraming", "onLoop", "pickWebm", "pngSize", "sizeOpts", "startOpts", "webmSize",
-];
+/** Binding keys without backing behaviour in v1: none. */
+export const INERT_BINDINGS: readonly string[] = [];
 /** What to try next, per error code (new copy; exhaustive over the exporters' ErrorCode union). */
 export const TRY_NEXT: Record<ErrorCode, readonly { title: string; text: string }[]> = {
   "browser-unsupported": [{ title: "Try a PNG sequence", text: "It needs the fewest browser features." }, { title: "Update your browser", text: "Newer versions support more export formats." }],
@@ -112,10 +107,18 @@ export function currentStep(run: ExportState, view: ExportFlowView): 1 | 2 | 3 |
 }
 export function adaptExportFlow(state: ExportFlowState, d: ExportFlowDispatchers): DcProps {
   const { project, run, view } = state;
-  const offered = offeredDestinations(project);
-  const dest = offered.find((x) => x.id === view.destination) ?? offered[offered.length - 1] ?? (DESTINATIONS[DESTINATIONS.length - 1] as Destination);
+  const caps = run.status === "idle" ? null : run.capabilities;
+  const reasonFor = (c: FormatCard): string => {
+    if (c.format === null) return WEBM_REASON;
+    const cap = caps?.[CAP_KEY[c.format]];
+    return cap !== undefined && cap.status === "unsupported" ? (cap.reason ?? "Not available in this browser.") : "";
+  };
+  const selectable = FORMAT_CARDS.filter((c) => reasonFor(c) === "");
+  const card = selectable.find((c) => c.id === view.format) ?? selectable[0] ?? (FORMAT_CARDS[0] as FormatCard);
   const sizes = outputSizes(project);
-  const res = view.resolution !== null && sizes.includes(view.resolution) ? view.resolution : (sizes[0] ?? `${project.canvas.width} × ${project.canvas.height}`);
+  const chosen = sizes.find((x) => x.size === view.resolution) ?? sizes.find((x) => x.scale === 1) ?? sizes[0];
+  const res = chosen?.label ?? `1× · ${project.canvas.width} × ${project.canvas.height}`;
+  const resSize = chosen?.size ?? `${project.canvas.width} × ${project.canvas.height}`;
   const step = currentStep(run, view);
   const total = frameCountFor(project);
   const fps = project.canvas.fps;
@@ -123,13 +126,12 @@ export function adaptExportFlow(state: ExportFlowState, d: ExportFlowDispatchers
   const fraction = run.status === "running" ? run.fraction : run.status === "done" ? 1 : 0;
   const done = Math.min(total, Math.round(fraction * total));
   const pct = Math.round(fraction * 100);
-  const format: ExportFormatId = run.status === "running" ? run.format : dest.format;
+  const format: ExportFormatId = run.status === "running" ? run.format : (card.format ?? "mp4");
   const fmtName = FORMAT_NAME[format];
-  const dims = res.split(" × ").map(Number);
-  const ratioW = dims[0] && dims[1] ? dims[0] / dims[1] : 1;
+  const dims = project.canvas.width / project.canvas.height;
   const crumbState = (i: number): "done" | "current" | "todo" | "error" =>
     step === 4 ? "done" : step === 5 ? (i < 2 ? "done" : "error") : i + 1 < Math.min(step, 3) ? "done" : i + 1 === Math.min(step, 3) ? "current" : "todo";
-  const crumbs: DcValue[] = ["Destination", "Options", "Export"].map((label, i) => {
+  const crumbs: DcValue[] = ["Format", "Options", "Export"].map((label, i) => {
     const st = crumbState(i);
     return {
       label,
@@ -149,99 +151,68 @@ export function adaptExportFlow(state: ExportFlowState, d: ExportFlowDispatchers
     cls: i < cur ? "is-done" : i === cur ? "is-current" : "",
     icon: i < cur ? "success" : i === cur ? "clock" : "minus",
   }));
-  const destCards: DcValue[] = offered.map((x) => ({
-    id: x.id,
-    name: x.name,
-    ratio: x.ratio,
-    ar: x.ar,
-    fh: x.fh,
-    icon: x.icon,
-    use: x.use,
-    meta: `${sizes[0] ?? res} · ${x.alpha ? "PNG" : "MP4"}`,
-    frameClass: `ui-dest__frame${x.alpha ? " ui-checker" : ""}`,
-    checked: String(dest.id === x.id),
-    limited: false,
-    aria: `${x.name}, ${x.ratio}, ${sizes[0] ?? res}, ${x.alpha ? "PNG" : "MP4"}. ${x.use}`,
-    pick: () => d.pickDestination(x.id),
-  }));
-  const webmUnsupported = run.status === "configuring" ? run.capabilities.webmAlpha.status === "unsupported" : true;
+  const destCards: DcValue[] = FORMAT_CARDS.map((c) => {
+    const reason = reasonFor(c);
+    const machine = c.format;
+    return {
+      id: c.id,
+      name: c.name,
+      use: c.use,
+      meta: c.meta,
+      icon: c.icon,
+      checked: String(reason === "" && card.id === c.id),
+      limited: reason !== "",
+      limitedReason: reason,
+      pick: () => {
+        if (reason === "" && machine !== null) d.pickFormat(machine);
+      },
+    };
+  });
   const errorCode: ErrorCode | null = run.status === "failed" ? run.error.code : null;
   const result = run.status === "done" ? run.result : null;
+  const fpsText = `${fps} fps`;
+  const durText = `${duration.toFixed(2)} s`;
   const data: Data = {
-    audio: false,
     cancelExport: () => d.cancelExport(),
     crumbs,
-    d: { name: dest.name, nameLower: dest.nameLower, ratio: dest.ratio, ar: dest.ar },
+    d: { id: card.id, name: card.name, nameLower: card.nameLower },
     destCards,
-    dur: duration,
-    embedCode: "",
-    embedLoop: false,
-    embedPreview: null,
-    embedSize: "responsive",
-    embedStart: "visible",
-    embedTag: "",
-    embedW: "100%",
+    dur: durText,
     errCode: errorCode === null ? "" : `ERR_${errorCode.toUpperCase().replace(/-/g, "_")}`,
     estimate: `${total} frames · ${fmtName}`,
-    eta: "",
     exportLabel: "Export",
     exportSteps,
     failText: errorCode === null ? "" : messageFor(errorCode),
-    fileIcon: dest.alpha ? "image" : "play",
+    fileIcon: card.icon,
     fileMeta: result ? `${fileSize(result.summary.byteSize)} · ${result.summary.width} × ${result.summary.height} · ${duration.toFixed(1)} s · ${result.summary.fps} fps` : "",
     fileName: result?.fileName ?? "",
-    fps,
-    fpsOpts: [{ value: fps, label: String(fps) }],
+    fps: fpsText,
     frameTc: timecode(done / fps, fps),
     frames: total,
     framesText: `${done} / ${total} frames`,
-    framing: "fit",
-    framingHelp: "",
-    framingOpts: [],
-    isAlpha: dest.alpha,
-    isEmbed: false,
-    isMp4: dest.format === "mp4",
-    loop: false,
-    loopHelp: "",
-    needsFraming: false,
-    noFraming: true,
-    onAudio: INERT,
-    onDur: INERT,
-    onEmbedLoop: INERT,
-    onEmbedSize: INERT,
-    onEmbedStart: INERT,
-    onFps: INERT,
-    onFraming: INERT,
-    onLoop: INERT,
-    onRes: (v: string) => d.setResolution(v),
-    outSummary: `${res} · ${fps} fps · ${duration.toFixed(2)} s · ${fmtName}`,
+    onRes: (v: string) => {
+      const picked = outputSizes(project).find((x) => x.label === String(v));
+      if (picked) d.setResolution(picked.size);
+    },
+    outSummary: `${resSize} · ${fpsText} · ${durText} · ${fmtName}`,
     pct,
     pctText: `${pct}%`,
-    pickPng: () => d.pickPng(),
-    pickWebm: INERT,
-    pngChecked: "true",
-    pngSize: "",
     res,
-    resOpts: sizes.length > 0 ? sizes : [res],
+    resOpts: (sizes.length > 0 ? sizes.map((x) => x.label) : [res]),
     s1: step === 1,
     s2: step === 2,
     s3: step === 3,
     s4: step === 4,
     s5: step === 5,
-    sizeOpts: [],
     stageInThumb: "100%",
     startExport: () => d.startExport(),
-    startOpts: [],
     successText: "Download it, or export another format for somewhere else.",
-    successTitle: dest.title,
-    thumbW: ratioW >= 1 ? "140px" : `${Math.round(200 * ratioW)}px`,
+    successTitle: card.title,
+    thumbAspect: `${project.canvas.width} / ${project.canvas.height}`,
+    thumbW: dims >= 1 ? "140px" : `${Math.round(200 * dims)}px`,
     toDest: () => d.toDest(),
     toOptions: () => d.toOptions(),
     tryNext: (errorCode === null ? [] : TRY_NEXT[errorCode]).map((t, i) => ({ n: String(i + 1), title: t.title, text: t.text })),
-    unsupported: webmUnsupported,
-    webmChecked: "false",
-    webmOk: !webmUnsupported,
-    webmSize: "",
   };
   return { data };
 }

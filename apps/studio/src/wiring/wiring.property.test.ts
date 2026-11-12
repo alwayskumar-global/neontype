@@ -5,7 +5,7 @@ import { arbProject } from "../model/__testing/arb-project.js";
 import { EFFECTS_LIBRARY_BINDINGS } from "../generated/effects-library/EffectsLibrary.js";
 import { EXPORT_FLOW_BINDINGS } from "../generated/export-flow/ExportFlow.js";
 import { adaptEffectsLibrary, type EffectsLibraryView } from "./effects-library.js";
-import { adaptExportFlow, DESTINATIONS, type ExportFlowView } from "./export-flow.js";
+import { adaptExportFlow, FORMAT_CARDS, type ExportFlowView } from "./export-flow.js";
 import { ALL_ERROR_CODES, effectsSpy, exportRuns, exportSpy, exportState, libraryState } from "./fixtures.js";
 import { CATEGORIES } from "./tables.js";
 import type { DcData } from "../ds/dc-runtime.js";
@@ -36,7 +36,7 @@ const arbLibraryView: fc.Arbitrary<EffectsLibraryView> = fc.record({
 });
 const arbExportView: fc.Arbitrary<ExportFlowView> = fc.record({
   step: fc.constantFrom(1 as const, 2 as const),
-  destination: fc.constantFrom(...DESTINATIONS.map((d) => d.id), "gone"),
+  format: fc.constantFrom(...FORMAT_CARDS.map((c) => c.id), "gone"),
   resolution: fc.option(fc.constantFrom("640 × 360", "1280 × 720", "nonsense"), { nil: null }),
 });
 const arbRun = fc.constantFrom(...ALL_ERROR_CODES).chain((code) => fc.constantFrom(...exportRuns(code)));

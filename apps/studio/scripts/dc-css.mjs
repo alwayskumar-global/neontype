@@ -6,7 +6,9 @@
  *      element sets from a ref callback through setCssVars (CSSOM; CSP-safe). Nothing is ever
  *      written to a DOM `style` attribute.
  *  (f) Helmet CSS is scoped under `:where(.dc-<slug>)` (zero specificity), so each rule keeps its
- *      source specificity; html/body/:root map to the root class. Keyframes names are prefixed.
+ *      source specificity; html/body/:root map to the root class. Keyframes names are prefixed. The whole
+ *      block is wrapped in `@layer screen`; converted inline-style classes stay UNLAYERED, so an
+ *      inline style beats every helmet rule whatever its specificity (as the source's style attribute did).
  *
  * Node built-ins only. Deterministic: class names come from a hash of the compiled text.
  */
@@ -114,6 +116,9 @@ export function compileDeclarations(value, { file, line, keyframeMap, allowBindi
     const prop = piece.slice(0, colon).trim().toLowerCase();
     let val = collapseWs(piece.slice(colon + 1));
     if (!prop || !val) throw new DcConvertError(`malformed declaration "${collapseWs(piece)}" in style`, file, line);
+    if (/!\s*important\s*$/i.test(val)) {
+      throw new DcConvertError(`"!important" in an inline style (${prop}) is not supported: the converted class is unlayered and could not reproduce its priority`, file, line);
+    }
     val = rewriteAnimationNames(prop, val, keyframeMap);
     decls.push([prop, val]);
   }
@@ -200,19 +205,6 @@ export function findKeyframeNames(css) {
   return [...new Set(names)].sort();
 }
 
-/** Specificity [a, b, c] of one selector (no :where contents, :not counts its argument). */
-export function specificity(selector) {
-  let s = selector.replace(/"[^"]*"|'[^']*'/g, "").replace(/:where\([^)]*\)/g, "");
-  let a = 0, b = 0, c = 0;
-  s = s.replace(/#[\w-]+/g, () => (a++, ""));
-  s = s.replace(/\[[^\]]*\]/g, () => (b++, ""));
-  s = s.replace(/\.[\w-]+/g, () => (b++, ""));
-  s = s.replace(/::[\w-]+/g, () => (c++, ""));
-  s = s.replace(/:(?!:)[\w-]+(\([^)]*\))?/g, () => (b++, ""));
-  s.replace(/(^|[\s>+~(,])([A-Za-z][\w-]*)/g, () => (c++, ""));
-  return [a, b, c];
-}
-
 /** Scans a block starting at css[i] === "{"; returns the index of the matching "}". */
 function matchBrace(css, i, file) {
   let depth = 0;
@@ -241,10 +233,6 @@ function scopeSelector(sel, root, file) {
     throw new DcConvertError(`selector "${s}" uses html/body/:root as more than a whole selector`, file, 1);
   }
   if (s === "*") return { out: `:where(.${root}), :where(.${root}) *`, root: false };
-  const [a, b] = specificity(s);
-  if (a > 0 || b >= 2) {
-    throw new DcConvertError(`helmet selector "${s}" has specificity (${a},${b},*), at or above (0,2,0); it could override a converted inline style that the source would have won`, file, 1);
-  }
   return { out: `:where(.${root}) ${s}`, root: false };
 }
 
@@ -308,5 +296,6 @@ export function scopeCss(helmetCss, slug, file) {
   const root = `dc-${slug}`;
   const css = stripComments(helmetCss);
   const keyframeMap = new Map(findKeyframeNames(css).map((n) => [n, `${root}-${n}`]));
-  return { css: scopeRules(css, { root, keyframeMap }, file, 0), keyframeMap };
+  const rules = scopeRules(css, { root, keyframeMap }, file, 1);
+  return { css: rules === "" ? "" : `@layer screen {\n${rules}\n}`, keyframeMap };
 }

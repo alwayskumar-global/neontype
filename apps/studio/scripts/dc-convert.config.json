@@ -14,7 +14,7 @@
     { "source": "Effects Library.dc.html", "omitIf": [], "replaceText": [], "forbid": [] },
     {
       "source": "Export Flow.dc.html",
-      "omitIf": [{ "attr": { "data-screen-label": "Review bar" } }],
+      "omitIf": [],
       "replaceText": [],
       "forbid": []
     },
