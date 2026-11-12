@@ -18,6 +18,8 @@ export class DcConvertError extends Error {
 
 export const VOID_ELEMENTS = new Set(["meta", "link", "img", "input", "br", "hr"]);
 const RAW_ELEMENTS = new Set(["style", "script"]);
+/** HTML boolean attributes that may appear without a value (emitted as `attr={true}`). */
+const BOOLEAN_ATTRS = new Set(["disabled", "checked", "readonly", "required", "hidden", "selected", "multiple", "autofocus"]);
 export const ALLOWED_ELEMENTS = new Set([
   "html", "head", "body", "x-dc", "helmet", "meta", "title", "link", "style", "script",
   "div", "span", "p", "a", "ul", "ol", "li", "section", "aside", "header", "nav", "main", "footer",
@@ -112,12 +114,20 @@ export function parseHtml(text, file) {
             attrs.push({ name: an[0], value: "", line: attrLine });
             continue;
           }
-          fail(`attribute "${an[0]}" has no value (valueless attributes are not supported)`, attrLine);
+          // Standard HTML boolean attributes may be written without a value; they mean "true". Anything else fails closed.
+          if (BOOLEAN_ATTRS.has(an[0].toLowerCase())) {
+            attrs.push({ name: an[0].toLowerCase(), value: "true", line: attrLine });
+            continue;
+          }
+          fail(`attribute "${an[0]}" has no value (valueless attributes are not supported, except the HTML booleans ${[...BOOLEAN_ATTRS].join(", ")})`, attrLine);
         }
         advance(1);
-        if (text[i] !== '"') fail(`attribute "${an[0]}" must use a double-quoted value`, attrLine);
+        // The design tool writes the data <script>'s metadata (data-props) with single quotes. That tag is skipped, so it
+        // is the one place a single-quoted value is read; everywhere else it still fails closed.
+        const quote = text[i] === "'" && tag === "script" ? "'" : '"';
+        if (text[i] !== quote) fail(`attribute "${an[0]}" must use a double-quoted value`, attrLine);
         advance(1);
-        const end = text.indexOf('"', i);
+        const end = text.indexOf(quote, i);
         if (end < 0) fail(`unterminated value of attribute "${an[0]}"`, attrLine);
         const raw = text.slice(i, end);
         advance(end + 1 - i);

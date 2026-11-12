@@ -11,14 +11,14 @@ import { DcConvertError, parseBindings, parseWholeValue } from "./dc-parse.mjs";
 export const DS_NAMESPACE = "MotionTextStudioDesignSystem_f5b901";
 
 const EVENT_ATTRS = new Set(["onClick", "onChange", "onInput", "onKeyDown", "onPointerDown", "onMouseEnter", "onMouseLeave", "onFocus", "onBlur"]);
-const BOOL_ATTRS = new Set(["disabled", "checked", "hidden", "readOnly", "required"]);
+const BOOL_ATTRS = new Set(["disabled", "checked", "hidden", "readOnly", "required", "selected", "multiple", "autoFocus"]);
 const PLAIN_ATTRS = new Set([
   "id", "htmlFor", "role", "title", "alt", "href", "type", "name", "placeholder", "rel", "value",
   "d", "x", "y", "cx", "cy", "r", "rx", "width", "height", "fill", "stroke", "viewBox", "preserveAspectRatio",
   "strokeWidth", "strokeLinecap", "strokeLinejoin", "strokeDasharray",
 ]);
 const RENAME = {
-  class: "className", for: "htmlFor", tabindex: "tabIndex",
+  class: "className", for: "htmlFor", tabindex: "tabIndex", readonly: "readOnly", autofocus: "autoFocus",
   "stroke-width": "strokeWidth", "stroke-linecap": "strokeLinecap", "stroke-linejoin": "strokeLinejoin", "stroke-dasharray": "strokeDasharray",
 };
 const ARIA_TRISTATE = new Set(["aria-checked", "aria-pressed"]);

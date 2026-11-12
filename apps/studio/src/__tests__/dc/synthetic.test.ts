@@ -40,7 +40,7 @@ describe("fail loud: tokenizer and structure", () => {
   it("unknown element", () => fails(() => convert("<blink>x</blink>"), /unsupported element <blink>/, 5));
   it("unsupported attribute", () => fails(() => convert('<div foo="x"></div>'), /unsupported attribute "foo"/, 5));
   it("single-quoted attribute", () => fails(() => convert("<div class='a'></div>"), /double-quoted/, 5));
-  it("valueless attribute outside a script", () => fails(() => convert("<div hidden></div>"), /no value/, 5));
+  it("valueless attribute outside a script (not an HTML boolean)", () => fails(() => convert("<div inert></div>"), /no value/, 5));
   it("self-closing syntax", () => fails(() => convert("<div />"), /self-closing/, 5));
   it("unterminated comment", () => fails(() => convert("<!-- never closed <div></div>"), /unterminated comment/, 5));
   it("mismatched end tag names the open tag's line", () => fails(() => convert("<div>\n<span>\n</div>"), /unexpected <\/div>.*open <span>.*line 6/, 7));
@@ -388,5 +388,50 @@ describe("root-rule scoping (finding C-1)", () => {
   it("a root with no style produces no root rule", () => {
     const out = css(convertRaw("<div><span>x</span></div>"));
     expect(out).not.toMatch(/^\.dc-t\.dc-t-s/m);
+  });
+});
+describe("boolean attributes and design-time props (owner-approved, narrow)", () => {
+  it("each allowlisted valueless boolean is emitted as attr={true}", () => {
+    const cases: [string, string][] = [
+      ["<button disabled>x</button>", "disabled={true}"],
+      ["<input type=\"checkbox\" checked>", "checked={true}"],
+      ["<input readonly>", "readOnly={true}"],
+      ["<input required>", "required={true}"],
+      ["<div hidden>x</div>", "hidden={true}"],
+      ["<input type=\"file\" multiple>", "multiple={true}"],
+      ["<input autofocus>", "autoFocus={true}"],
+      ["<input selected>", "selected={true}"],
+    ];
+    for (const [body, want] of cases) expect(tsx(convert(body)), body).toContain(want);
+  });
+  it("is case-insensitive in the source and equals the valued form", () => {
+    expect(tsx(convert("<button DISABLED>x</button>"))).toContain("disabled={true}");
+    // The header carries the source hash, which differs; the code below it must not.
+    const body = (s: string): string => s.replace(/^\/\/ sha256:.*$/m, "");
+    const bare = body(tsx(convert("<button disabled>x</button>")));
+    const valued = body(tsx(convert('<button disabled="true">x</button>')));
+    expect(bare).toBe(valued);
+  });
+  it("a valueless attribute that is not an allowlisted boolean still fails closed", () => {
+    for (const bad of ["inert", "download", "open", "async", "draggable", "contenteditable"]) {
+      fails(() => convert(`<div ${bad}></div>`), /has no value/, 5);
+    }
+  });
+  it("a valueless boolean on a bound value is still a normal error (disabled=\"{{ x }}\" works, disabled=\"maybe\" fails)", () => {
+    expect(tsx(convert('<button disabled="{{ off }}">x</button>'))).toContain("disabled={asBool(");
+    fails(() => convert('<button disabled="maybe">x</button>'), /must be true or false/, 5);
+  });
+  it("a single-quoted data-props on the design-time data script is accepted and dropped", () => {
+    const withProps = doc(
+      "<div>x</div>",
+    ).replace("</x-dc>", `<script type="text/x-dc" data-dc-script data-props='{"step":{"default":"a \\"b\\"","options":["x"]}}'>class Component extends DCLogic {}</script>\n</x-dc>`);
+    const out = convertDc(withProps, { fileName: "T.dc.html" });
+    expect(out.files.find((f) => f.path.endsWith(".tsx"))?.content).not.toContain("data-props");
+  });
+  it("a single-quoted value anywhere else still fails closed", () => {
+    fails(() => convert("<div class='a'></div>"), /double-quoted/, 5);
+    fails(() => convert("<span aria-label='x'>y</span>"), /double-quoted/, 5);
+    const onOtherScript = doc("<div>x</div>").replace("</x-dc>", "<style data-x='1'>a{}</style>\n</x-dc>");
+    expect(() => convertDc(onOtherScript, { fileName: "T.dc.html" })).toThrow(/double-quoted/);
   });
 });
