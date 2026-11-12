@@ -404,8 +404,10 @@ file to share.
 
 #### Acceptance criteria
 
-1. THE export dialog SHALL offer exactly MP4, PNG sequence (ZIP), and GIF; it
-   SHALL NOT offer WebM-with-alpha or WebP. *(unit, Playwright)*
+1. THE export dialog SHALL offer exactly MP4, PNG sequence (ZIP), GIF, and animated
+   WebP; WebP is gated on the exporters capability result like the others (disabled
+   with its reason when unsupported). It SHALL NOT offer WebM-with-alpha (deferred by
+   owner decision). *(unit, Playwright)*
 2. THE dialog SHALL call `detectCapabilities` and SHALL disable (with a reason) a
    format reported `unsupported`, enabling only `supported`/`unknown` formats.
    *(unit, Playwright)*
@@ -987,7 +989,7 @@ design while rendering, export, and schema logic stay where they are today.
 - Redo (undo is covered by Requirement 16).
 - Multi-select, rotate/scale handles, resizing text by dragging, canvas
   zoom/pan, and snapping to other layers.
-- Lottie export; WebM-with-alpha export; animated WebP export.
+- Lottie export; WebM-with-alpha export (deferred by owner decision).
 - The `<motion-text>` embed web component (a separate later spec).
 - Templates/presets gallery, sample-project library.
 - Collaboration, sharing links, cloud storage, accounts — any backend or network
@@ -1021,7 +1023,7 @@ package is installed during the requirements phase.
 | Package | Type | Version | License | Reason |
 | --- | --- | --- | --- | --- |
 | `@studio/engine` | runtime | workspace:* | — (internal) | Pure render path + `Project` schema; the only source of pixels and the data model. |
-| `@studio/exporters` | runtime | workspace:* | — (internal) | MP4 / PNG-sequence / GIF export and `detectCapabilities`. |
+| `@studio/exporters` | runtime | workspace:* | — (internal) | MP4 / PNG-sequence / GIF / WebP export and `detectCapabilities`. |
 | `react` | runtime | 19.2.0 | MIT | UI framework mandated by repo steering (Vite + React). |
 | `react-dom` | runtime | 19.2.0 | MIT | React DOM renderer for the app shell. |
 | `@vitejs/plugin-react` | dev | 6.0.1 | MIT | Vite plugin for React (JSX/Fast Refresh); Vite 8 compatible. |

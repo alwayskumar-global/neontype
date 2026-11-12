@@ -1,5 +1,5 @@
 /**
- * Export dialog (Requirement 8). Offers MP4 / PNG sequence / GIF only; gates by
+ * Export dialog (Requirement 8). Offers MP4 / PNG sequence / GIF / animated WebP; gates by
  * detectCapabilities; shows per-format options, progress, cancel (AbortSignal),
  * the mp4-no-transparency note, and ErrorCode-mapped messages. Downloads the
  * result via a Blob URL revoked after use. Checks font readiness before export.
@@ -10,6 +10,7 @@ import {
   exportMp4,
   exportPngSequence,
   exportGif,
+  exportWebp,
   type CapabilityReport,
   type ExportResult,
   type FontSource,
@@ -23,12 +24,16 @@ import { useStoreState } from "../shell/useStore.js";
 import { prepareExportFonts } from "./prepare.js";
 import { downloadBlob } from "../io/download.js";
 
+type ExportResultFormat = Extract<ExportResult, { ok: true }>["format"];
 const CAP_KEY: Record<ExportFormatId, keyof CapabilityReport> = {
   mp4: "mp4",
   "png-sequence": "pngSequence",
   gif: "gif",
+  webp: "webp",
 };
 
+/** How a finished export names its format in the summary line ("WebP · 1 file"). */
+const FORMAT_LABEL: Record<ExportResultFormat, string> = { mp4: "MP4", "png-sequence": "PNG sequence", "webm-alpha": "WebM", gif: "GIF", webp: "WebP" };
 function runExport(
   format: ExportFormatId,
   project: Project,
@@ -41,6 +46,7 @@ function runExport(
   const base = { onProgress: (p: { fraction: number }) => onProgress(p.fraction), signal, fonts };
   if (format === "mp4") return exportMp4(project, { ...base, videoBitrate: opts.videoBitrate, backgroundFallback: opts.backgroundFallback });
   if (format === "png-sequence") return exportPngSequence(project, base);
+  if (format === "webp") return exportWebp(project, base);
   return exportGif(project, base);
 }
 
@@ -136,7 +142,7 @@ export function ExportDialog({ store, onClose }: { store: Store; onClose: () => 
     );
     if (result.ok) {
       if (import.meta.env.DEV) {
-        const head = new Uint8Array(await result.file.slice(0, 8).arrayBuffer());
+        const head = new Uint8Array(await result.file.slice(0, 32).arrayBuffer());
         (window as unknown as { __lastExport?: { fileName: string; size: number; head: number[] } }).__lastExport = {
           fileName: result.fileName,
           size: result.summary.byteSize,
@@ -182,7 +188,7 @@ export function ExportDialog({ store, onClose }: { store: Store; onClose: () => 
                 onChange={(e) => setBitrate(Number(e.target.value))} />
             </div>
             <div className="format-buttons">
-              {(["mp4", "png-sequence", "gif"] as ExportFormatId[]).map((f) => {
+              {(["mp4", "png-sequence", "gif", "webp"] as ExportFormatId[]).map((f) => {
                 const cap = state.capabilities[CAP_KEY[f]];
                 const disabled = cap.status === "unsupported";
                 return (
@@ -208,6 +214,7 @@ export function ExportDialog({ store, onClose }: { store: Store; onClose: () => 
         {state.status === "done" && (
           <div className="export-done">
             <p>Done: {state.result.fileName} ({state.result.summary.byteSize} bytes)</p>
+            <p className="muted">{FORMAT_LABEL[state.result.format]} · 1 file</p>
             {state.result.summary.notes.includes("mp4-no-transparency") && (
               <p className="note">Exported without transparency (mp4-no-transparency).</p>
             )}

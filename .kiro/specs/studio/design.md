@@ -666,7 +666,7 @@ idle ──open──▶ configuring ──start──▶ running ──success�
 ```
 
 - **configuring**: the dialog has a `CapabilityReport` from `detectCapabilities()`
-  (called once on open). Formats offered are exactly MP4, PNG sequence, GIF
+  (called once on open). Formats offered are exactly MP4, PNG sequence, GIF, animated WebP
   (Requirement 8.1); a format whose `CapabilityResult.status === "unsupported"`
   is disabled with its `reason`. Per-format option fields are seeded from the
   project (MP4: `videoBitrate`, `backgroundFallback`, output size; PNG/GIF: output

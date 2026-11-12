@@ -5,7 +5,7 @@
  */
 import type { ExportResult, ExportError, CapabilityReport } from "@studio/exporters";
 
-export type ExportFormatId = "mp4" | "png-sequence" | "gif";
+export type ExportFormatId = "mp4" | "png-sequence" | "gif" | "webp";
 
 /**
  * Every state after `open` carries the detected capabilities and the chosen format, so a terminal state can

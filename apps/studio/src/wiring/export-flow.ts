@@ -98,8 +98,8 @@ export const TRY_NEXT: Record<ErrorCode, readonly { title: string; text: string 
   "muxer-failure": [{ title: "Try again, or pick another format", text: "Writing the file failed." }],
   "project-invalid": [{ title: "Fix the project", text: "Open a saved copy or start a new project." }],
 };
-const FORMAT_NAME: Record<ExportFormatId, string> = { mp4: "MP4", "png-sequence": "PNG sequence", gif: "GIF" };
-const ENCODE_STEP: Record<ExportFormatId, string> = { mp4: "Encoding MP4 (H.264)", "png-sequence": "Packing ZIP", gif: "Encoding GIF" };
+const FORMAT_NAME: Record<ExportFormatId, string> = { mp4: "MP4", "png-sequence": "PNG sequence", gif: "GIF", webp: "WebP" };
+const ENCODE_STEP: Record<ExportFormatId, string> = { mp4: "Encoding MP4 (H.264)", "png-sequence": "Packing ZIP", gif: "Encoding GIF", webp: "Encoding WebP" };
 function fileSize(bytes: number): string {
   return bytes < 1_000_000 ? `${Math.max(1, Math.round(bytes / 1000))} KB` : `${(bytes / 1_000_000).toFixed(1)} MB`;
 }
