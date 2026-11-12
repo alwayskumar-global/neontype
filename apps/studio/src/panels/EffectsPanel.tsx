@@ -1,13 +1,14 @@
 /**
- * Effect picker (Requirement 4): lists exactly the engine presetCatalog (12
- * effects) with no hardcoded list; applies with catalog defaults + the first
- * supported granularity; edits params (input type inferred from the default
+ * Effects panel (Requirement 4): the preset picker is the Effects Library dialog (opened by
+ * "Add effect"; it lists exactly the engine presetCatalog and applies with catalog defaults + the
+ * first supported granularity); this panel edits the selected layer's effects: params (input type inferred from the default
  * value, with selects for known enum params) and granularity; removes effects.
  * Invalid param edits are rejected by the model (dispatchGuarded).
  */
 import { useState } from "react";
 import { presetCatalog, type Granularity } from "@studio/engine";
 import type { Store } from "../shell/store.js";
+import { EffectsLibraryHost } from "../wiring/hosts/effects-library-host.js";
 import { useStoreState } from "../shell/useStore.js";
 
 /** Known enum options for string params (kept minimal; others use a text box). */
@@ -22,6 +23,7 @@ export function EffectsPanel({ store }: { store: Store }) {
   const project = useStoreState(store, (s) => s.project);
   const selectedId = useStoreState(store, (s) => s.ui.selectedLayerId);
   const [err, setErr] = useState<string | null>(null);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const layer = project.layers.find((l) => l.id === selectedId);
 
   if (!layer) {
@@ -37,14 +39,9 @@ export function EffectsPanel({ store }: { store: Store }) {
     <section className="panel" aria-label="Effects">
       <div className="panel-head">
         <h2 className="panel-title">Effects</h2>
-        <select aria-label="Add effect" value=""
-          onChange={(e) => {
-            if (e.target.value) store.dispatch({ type: "add-effect", layerId: layer.id, effectId: e.target.value });
-          }}>
-          <option value="">Add effect...</option>
-          {presetCatalog.map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}
-        </select>
+        <button type="button" onClick={() => setLibraryOpen(true)}>Add effect</button>
       </div>
+      {libraryOpen && <EffectsLibraryHost store={store} onClose={() => setLibraryOpen(false)} />}
 
       <ul className="effect-list">
         {layer.effectInstances.map((inst, index) => {

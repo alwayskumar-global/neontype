@@ -126,12 +126,17 @@ describe("no collision between ds.css and the studio's other stylesheets (Requir
           if (r.prelude.startsWith("@keyframes")) keyframes.push(r.prelude.replace("@keyframes", "").trim());
           else if (r.children.length) walk(r.children);
           else if (!r.prelude.startsWith("@")) {
-            for (const sel of splitSelectors(r.prelude)) for (const m of sel.matchAll(/\.([A-Za-z_][\w-]*)/g)) if (m[1]) classes.add(m[1]);
+            // `:where(.ds-root *)` only EXCLUDES design-system subtrees from a hand-written rule (design, "ds.css and
+            // tokens.css coexistence"); it declares nothing, so it is not read as a class in ds.css's namespace.
+            for (const sel of splitSelectors(r.prelude.replace(/:where\([^)]*\)/g, ""))) for (const m of sel.matchAll(/\.([A-Za-z_][\w-]*)/g)) if (m[1]) classes.add(m[1]);
           }
         }
       };
       walk(parsed);
-      const clashing = [...classes].filter((c) => /^(ui|fx|ds)(-|$)|^t-/.test(c));
+      // The wiring hosts style the generated screen they mount: they REFERENCE (never declare) the screen root's
+      // `ds-root` class and the design system's `ui-preset` card as context.
+      const referenced = path.startsWith("src/wiring/hosts/") ? ["ds-root", "ui-preset"] : [];
+      const clashing = [...classes].filter((c) => /^(ui|fx|ds)(-|$)|^t-/.test(c) && !referenced.includes(c));
       expect(clashing, "classes in ds.css's namespace").toEqual([]);
       expect(keyframes.filter((k) => dsKeyframes.has(k)), "keyframes also declared by ds.css").toEqual([]);
     });

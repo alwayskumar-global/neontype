@@ -74,24 +74,30 @@ describe("builds contain nothing from design/", () => {
     expect(files.some((f) => f.fileName.endsWith(".js") && f.text.length > 100_000)).toBe(true);
     expect(scan(files)).toEqual([]);
   }, 120_000);
-  it("the production build ships no design-system CSS (ds.css is not imported by the live app)", async () => {
+  it("the production build ships the design-system CSS (the live app wires the Effects Library; Requirement 19.5)", async () => {
     const files = await emitted("vite.config.ts");
     const css = files.filter((f) => f.fileName.endsWith(".css"));
-    expect(css.length).toBeGreaterThanOrEqual(1); // non-vacuity: the app's own CSS is there
-    expect(css.some((f) => f.text.includes("--"))).toBe(true);
-    expect(dsCssHits(css)).toEqual([]);
+    expect(css.length).toBeGreaterThanOrEqual(1);
+    expect(css.some((f) => f.text.includes("--"))).toBe(true); // non-vacuity: the app's own CSS is there
+    const hits = dsCssHits(css);
+    expect(hits.some((h) => h.endsWith(".ui- selector")), "a .ui- selector").toBe(true);
+    expect(hits.some((h) => h.endsWith(".ds-root selector")), "the .ds-root selector").toBe(true);
   }, 120_000);
   it("the harness build DOES carry the design-system CSS, so the CSS check can fail", async () => {
     const files = await emitted("vite.dc-harness.config.ts");
     expect(dsCssHits(files.filter((f) => f.fileName.endsWith(".css"))).length).toBeGreaterThanOrEqual(1);
   }, 120_000);
 
-  it("the default-route dist (as written, including public/) has no DMMono or InstrumentSans file", async () => {
+  it("the default-route dist (as written, including public/) contains all six DMMono and InstrumentSans files", async () => {
     const files = await writtenFiles("vite.config.ts");
     // Non-vacuity: the written dist includes the public/ copy (Noto fonts) and the app's own assets.
     expect(files.some((p) => /fonts\/noto-sans-latin-400-normal\.woff2$/.test(p))).toBe(true);
     expect(files.some((p) => p.endsWith("index.html"))).toBe(true);
-    expect(files.filter((p) => DS_FONT.test(p))).toEqual([]);
+    const ds = files.filter((p) => DS_FONT.test(p));
+    expect(ds.filter((p) => /DMMono/.test(p)).length).toBe(4);
+    expect(ds.filter((p) => /InstrumentSans/.test(p)).length).toBe(2);
+    // They come from the bundle (hashed assets), not from public/.
+    expect(ds.every((p) => p.startsWith("assets/"))).toBe(true);
   }, 120_000);
 
   it("the harness dist DOES contain all six DMMono / InstrumentSans files", async () => {

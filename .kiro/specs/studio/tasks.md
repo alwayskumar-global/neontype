@@ -430,20 +430,23 @@ reported). They are planning estimates, not budgets.
     - Create `wiring/hosts/export-flow-host.tsx`. Keep the modal behaviour of `ExportDialog` (focus trap, Escape, focus restore, abort on close, undo guard). Destinations: Reel, Story, Square, YouTube, Overlay; Frame rate and Duration are read-only displays (the export step never dispatches `set-fps` or `set-duration`); the Loop and Audio rows are gone from the design; the Web embed card is omitted and WebM stays unsupported. Before deleting `export/dialog.tsx`, check overlay stacking over the hand-written editor (risk 28).
     - **Covers:** Requirement 19.1, 19.3, 19.4, 19.6
     - **Completion:** `export.spec.ts` (including the 10.1 additions) passes unchanged against the generated flow; MP4 and GIF exports still produce valid headers; the CSP spec is clean; `export/dialog.tsx` is deleted only after this passes.
-  - [ ] 10.5 Landing, effects library and error states
+  - [x] 10.5 Landing, effects library and error states
     - Effects Library: create `wiring/hosts/effects-library-host.tsx` for the preset picker; apply uses the gesture API so one apply is one undo step; the toast Undo calls `store.undo()`. `effects.spec.ts` passes unchanged (12 catalog presets listed).
     - Landing Page and Error States: NOT wired (owner decision, Requirement 19.1). Nothing to do for them in this sub-task.
     - Add the category table and the numeric param-range table to `wiring/tables.ts` with their drift tests (gaps D-5, D-6), and delete `panels/EffectsPanel.tsx`'s preset-picker part only after `effects.spec.ts` passes against the new UI. Wiring pulls `ds.css` and the DS fonts into the default dist, so the 10.7 dist-scan inversion lands in the same commit.
     - **Covers:** Requirement 19.1, 19.3, 19.6
     - **Completion:** the Effects Library host passes the 10.1 specs unchanged; `landing.spec.ts` is untouched and green.
+    - **Outcome.** Done for the Effects Library: `wiring/hosts/effects-library-host.tsx` and `effect-thumb.tsx`, the old `<select>` picker removed from `panels/EffectsPanel.tsx` ("Add effect" now opens the library), `shell/layout.css` element rules no longer apply inside `.ds-root`, `tests/effects-library.spec.ts` (7 specs), and the 10.1 `effects.spec.ts` passes unchanged. The tables and their drift tests landed in 10.2. Escape closes the dialog (the design's "Escape deselects first" is not used, so one Escape closes). Findings: converter C-1 and design gaps D-8 and D-10 in the design section.
   - [ ] 10.6 Delete the old UI
     - Delete the files in the design table "Files to remove" whose replacement has passed, and nothing else. Remove dead CSS with them. Do not add a feature flag. Report the deleted files and the remaining hand-written routes.
     - **Covers:** Requirement 19.7
     - **Completion:** `git diff --stat` lists only the planned deletions and import edits; tsc, lint, and the 10.1 specs pass; there is no dual UI for any wired route.
-  - [ ] 10.7 Invert dist-scan
+    - **Progress.** Only the preset-picker `<select>` is deleted so far (task 10.5). `export/dialog.tsx` waits for task 10.4, and `SettingsPanel`, `LayersPanel`, `Transport`, and `StudioView` wait for task 10.3; both are blocked on the owner's design revision.
+  - [x] 10.7 Invert dist-scan
     - In `__tests__/dc/dist-scan.test.ts` invert the two assertions from commits 63b3a32 and b9318aa: the default-route dist HAS `.ds-root`, a `.ui-` selector, and all six DS fonts. Add `import "./ds/ds.css"` to `main.tsx` (Requirement 19.5). Keep the harness assertions. Update the Requirement 18.10 and design lines that say the live app does not import `ds.css`.
     - **Covers:** Requirement 19.5
     - **Completion:** the inverted tests pass and fail when the import and the screens are removed (mutation check, then restore).
+    - **Outcome.** Done in the same commit as 10.5 (wiring the Effects Library pulls `ds.css` and the six DS fonts into the default dist). The harness assertions are kept.
   - [ ] 10.8 Checkpoint — Group 10
     - Run `pnpm --filter @studio/app exec tsc --noEmit`, `pnpm --filter @studio/app lint`, `pnpm --filter @studio/app exec vitest run`, the FULL studio Playwright suite including every 10.1 spec unchanged, the CSP spec, `pnpm --filter @studio/app run test:dc`, and root `pnpm test`. Confirm export parity is exactly 0 at t = 1, 3, 5.5 on the default route, `git diff --stat -- packages/` is empty, `src/generated` has no hand edit, and the Task 7.2 no-drift check passes.
     - **Closes when done:** task 7.2 (then Group 7).

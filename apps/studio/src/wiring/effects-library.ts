@@ -62,20 +62,23 @@ export const INERT_BINDINGS: readonly string[] = ["preview"];
 export const EASE_OPTIONS: readonly string[] = ["linear", "easeIn", "easeOut", "easeInOut"];
 const GRAN_LABEL: Record<Granularity, string> = { character: "Character", word: "Word", line: "Line" };
 const GRAN_ORDER: Granularity[] = ["character", "word", "line"];
-/** The only sort the adapter can honour (gap D-5): "Most used", "Newest" and "Shortest" have no data. */
-export const SORT_OPTIONS = [{ value: "az", label: "Name A–Z" }] as const;
+/** The sorts the adapter can honour (gap D-5): "Most used", "Newest" and "Shortest" have no data. */
+export const SORT_OPTIONS = [
+  { value: "catalog", label: "Catalog order" },
+  { value: "az", label: "Name A–Z" },
+] as const;
 const entryOf = (id: string | null): PresetCatalogEntry | undefined => (id === null ? undefined : presetCatalog.find((p) => p.id === id));
-/** The catalog entries the filters and the query keep, in display order (Name A to Z). */
+/** The catalog entries the filters and the query keep, in catalog order or Name A to Z. */
 export function visibleEntries(view: EffectsLibraryView): PresetCatalogEntry[] {
   const q = view.query.trim().toLowerCase();
-  return presetCatalog
+  const kept = presetCatalog
     .filter(
       (p) =>
         (q === "" || p.displayName.toLowerCase().includes(q) || categoryOf(p).toLowerCase().includes(q)) &&
         (view.grans.length === 0 || p.supportedGranularities.some((g) => view.grans.includes(g))) &&
         (view.cats.length === 0 || view.cats.includes(categoryOf(p))),
-    )
-    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+    );
+  return view.sort === "az" ? kept.sort((a, b) => a.displayName.localeCompare(b.displayName)) : kept;
 }
 /** The granularity and easing the library would apply for `entry`, staged value first. */
 function effective(entry: PresetCatalogEntry, staged: Staged | undefined): { split: Granularity; ease: string } {
@@ -121,7 +124,10 @@ export function adaptEffectsLibrary(state: EffectsLibraryState, d: EffectsLibrar
       enter: () => d.setHover(p.id),
       leave: () => d.setHover(null),
       focus: () => d.setFocus(p.id),
-      blur: () => d.setFocus(null),
+      // Focus moving to the card's own Apply button is not leaving the card.
+      blur: (e: { currentTarget?: { contains?: (n: unknown) => boolean }; relatedTarget?: unknown }) => {
+        if (!e.currentTarget?.contains?.(e.relatedTarget)) d.setFocus(null);
+      },
       apply: () => d.applyEffect(p.id),
     };
   });
