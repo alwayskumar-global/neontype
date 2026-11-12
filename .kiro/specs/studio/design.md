@@ -2498,6 +2498,9 @@ function value is compared by `typeof` and by the dispatcher it calls when invok
 with a fixed argument. Constructing the data calls no dispatcher (all spies stay at
 zero calls), reads no clock, and does not mutate `state`.
 **Validates: Requirements 19.2, 19.3**
+### Property 15: Invalid effect params are never committed
+For any valid project with effect instances and any sequence of `set-effect-param` actions with arbitrary values, every instance's params pass its effect's param schema (the engine's `paramSchema`), and an edit that the schema rejects returns the SAME project reference, so the store and the undo history are unchanged.
+**Validates: Requirements 4.5**
 
 
 ## Error Handling

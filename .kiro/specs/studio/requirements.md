@@ -1090,6 +1090,8 @@ They are recorded here as decisions.
     adapter's data keys equal its screen's `*_BINDINGS` exactly.
   - Property 14, adapter purity (Req 19.2, 19.3): same inputs give structurally
     equal data, and constructing the data calls no dispatcher.
+  - Property 15, invalid effect params are never committed (Req 4.5): a rejected param
+    edit returns the same project reference and every instance stays schema-valid.
 - **Playwright** (bundled Chromium, localhost): preview playback/scrub, settings,
   layer and effect editing, timeline drags, font readiness, save/load, the export
   dialog end-to-end, preview/export parity, no-network session, and accessibility

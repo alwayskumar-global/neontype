@@ -9,7 +9,7 @@
  * for any action (Property 1).
  */
 
-import { ProjectSchema, type Project, type TextLayer } from "@studio/engine";
+import { builtinRegistry, ProjectSchema, type Project, type TextLayer } from "@studio/engine";
 
 import type { Action } from "./actions.js";
 import { deepEqualJson } from "./json-equal.js";
@@ -35,6 +35,22 @@ export function commit(project: Project, candidate: Project): Project {
   return deepEqualJson(next, project) ? project : next;
 }
 
+/**
+ * Whether a param edit is acceptable (Requirement 4.5). The edited key must already exist on the instance, and
+ * the effect's own param schema (the engine's `paramSchema`, through the public registry) must not report an
+ * issue caused by the edit: one on the edited key, or a whole-object issue when the params were valid before.
+ * An issue on ANOTHER key, which the edit did not cause, does not block it. An effect the registry does not
+ * know is not checked here (the engine reports it at render time).
+ */
+export function paramEditAllowed(effectId: string, prev: Record<string, unknown>, key: string, value: unknown): boolean {
+  if (!Object.hasOwn(prev, key)) return false;
+  const def = builtinRegistry.get(effectId);
+  if (!def) return true;
+  const result = def.paramSchema.safeParse({ ...prev, [key]: value });
+  if (result.success) return true;
+  const prevOk = def.paramSchema.safeParse(prev).success;
+  return !result.error.issues.some((i) => (i.path.length === 0 ? prevOk : i.path[0] === key));
+}
 /** Replaces the layer with `id` via `fn`; no-op if the id is absent. */
 function mapLayer(project: Project, id: string, fn: (l: TextLayer) => TextLayer): Project {
   let found = false;
@@ -113,13 +129,17 @@ export function applyAction(project: Project, action: Action): Project {
         ...l,
         effectInstances: l.effectInstances.map((e, i) => (i === action.index ? { ...e, granularity: action.granularity } : e)),
       })));
-    case "set-effect-param":
+    case "set-effect-param": {
+      const inst = project.layers.find((l) => l.id === action.layerId)?.effectInstances[action.index];
+      // A rejected edit returns the SAME reference, like a project-schema rejection, so history is untouched.
+      if (inst && !paramEditAllowed(inst.effectId, inst.params, action.key, action.value)) return project;
       return commit(project, mapLayer(project, action.layerId, (l) => ({
         ...l,
         effectInstances: l.effectInstances.map((e, i) =>
           i === action.index ? { ...e, params: { ...e.params, [action.key]: action.value } } : e,
         ),
       })));
+    }
     case "remove-effect":
       return commit(project, mapLayer(project, action.layerId, (l) => ({
         ...l,

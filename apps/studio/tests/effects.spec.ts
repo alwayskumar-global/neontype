@@ -44,11 +44,8 @@ test("granularity and params can be edited and the preview follows", async ({ pa
   await param(row, "direction").selectOption("backward");
   await expect(param(row, "direction")).toHaveValue("backward");
 });
-// Requirement 4.5: a param edit that fails the effect's schema is rejected with an inline
-// message and never written. NOT IMPLEMENTED YET: the model validates only the project
-// schema, whose effect params are an open record, so a negative delayPerCharacter is accepted
-// (the engine then reports InvalidEffectParams at render time). Un-fixme when it is.
-test.fixme("a param edit that fails the effect schema is rejected inline (Requirement 4.5)", async ({ page }) => {
+// Requirement 4.5: a param edit that fails the effect's schema is rejected inline and never written.
+test("a param edit that fails the effect schema is rejected inline (Requirement 4.5)", async ({ page }) => {
   await gotoStudio(page, false);
   await applyPreset(page, "Typewriter");
   const row = effectRows(page).last();

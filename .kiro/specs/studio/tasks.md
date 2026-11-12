@@ -139,7 +139,7 @@ reported). They are planning estimates, not budgets.
     - **Completion:** all pass.
     - Commit: `feat(studio): fonts, preview pipeline, playback, and parity`
 
-- [ ] 3. Group 3: Editing panels + export dialog (demoable end to end)  *(est. ~18 credits)*
+- [x] 3. Group 3: Editing panels + export dialog (demoable end to end)  *(est. ~18 credits)*
   - [x] 3.1 Settings panel
     - Create `apps/studio/src/panels/SettingsPanel.tsx`: canvas width/height with presets (1920×1080, 1280×720, 1080×1080, 1080×1920) and custom integer entry within engine bounds; fps (1–120) and duration (0.1–600) inputs; background colour + transparent toggle. Out-of-bound entries are rejected/clamped with an inline message and never written invalid. All edits dispatch model transitions; preview updates live.
     - **Covers:** Requirement 2.1–2.7; Design "Components / panels"
@@ -150,7 +150,7 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 3.1–3.7; Design "Components / panels"
     - **Completion:** `tests/layers.spec.ts` passes (incl. draw-order-follows-order and no-innerHTML check).
 
-  - [ ] 3.3 Effect picker
+  - [x] 3.3 Effect picker
     - Create `apps/studio/src/panels/EffectsPanel.tsx`: list exactly the engine `presetCatalog` (12 presets) by id/displayName; applying adds an `EffectInstance` with the catalog `defaultParams` and the first `supportedGranularity` (Open Question 3), with a dropdown to change granularity among supported ones; param editors seeded from defaults; invalid params rejected inline; remove effect. Preview updates live.
     - **Covers:** Requirement 4.1–4.6; Design "Components / panels"
     - **Completion:** `tests/effects.spec.ts` passes (picker lists 12 from the catalog, no hardcoded list).
@@ -176,7 +176,7 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 15.1, 15.2, 15.3, 15.4 (minimal; full in Task 7.1)
     - **Completion:** root `README.md` exists with those sections and the `docs/dependencies.md` pointer.
 
-  - [ ] 3.8 Checkpoint — Group 3
+  - [x] 3.8 Checkpoint — Group 3
     - Run typecheck, lint, Vitest, and `playwright test tests/settings.spec.ts tests/layers.spec.ts tests/effects.spec.ts tests/export.spec.ts`.
     - **Completion:** all pass; a demoable studio exists.
     - Commit: `feat(studio): editing panels and export dialog`
@@ -413,7 +413,7 @@ reported). They are planning estimates, not budgets.
     - **Closes when done:** tasks 2.3, 2.4, 2.6, 3.1, 3.2, 3.3, 3.5, 3.8, 6.1, 6.2, and 6.4 (then Groups 2, 3, and 6).
     - **Covers:** Requirement 19.6; Requirements 1, 2, 3, 4, 8, 9, 11, 12, 13
     - **Completion:** every new and migrated spec passes against the CURRENT UI, 3 runs in a row; the full Playwright suite is green; no assertion in an existing spec changed; `perf.spec.ts` reports mean and p95; the provider test passes.
-    - **Outcome.** Groups 2 and 6 are closed. Tasks 3.3 and 3.8 stay open, so Group 3 stays open: Requirement 4.5 (reject a param edit that fails the effect's schema) is not implemented, because the model validates only the project schema and effect params are an open record. The check is `test.fixme` in `effects.spec.ts`. Also found and left as `test.fixme` in `export.spec.ts`: Back (after a failure or a cancel) and Export again return the dialog to idle without re-detecting capabilities, so it stays on "Detecting capabilities...". One selector remains outside role, label, and text: the selection outline in `canvas-drag.spec.ts` (`.selection-outline`, an `aria-hidden` element inside the hosted preview, which no swap changes).
+    - **Outcome.** Groups 2 and 6 are closed. Tasks 3.3 and 3.8 stayed open until Requirement 4.5 (reject a param edit that fails the effect's schema) was implemented in `model/transitions.ts`; they are closed, and so is Group 3. Also found and left as `test.fixme` in `export.spec.ts`: Back (after a failure or a cancel) and Export again return the dialog to idle without re-detecting capabilities, so it stays on "Detecting capabilities...". One selector remains outside role, label, and text: the selection outline in `canvas-drag.spec.ts` (`.selection-outline`, an `aria-hidden` element inside the hosted preview, which no swap changes).
   - [ ] 10.2 Adapters and binding-coverage tests
     - Create `apps/studio/src/wiring/{types,format,tables}.ts` and the adapters `export-flow.ts`, `effects-library.ts`, `studio-editor.ts`, each exporting `INERT_BINDINGS`. Classify every key exactly as the design tables do. Add `UiState.playing` (T-1) to the store and have the preview wiring set it; a test asserts `serializeProject` output and undo history are unchanged by it.
     - `tables.ts`: the category table (Entrance, Emphasis, Exit, Looping) and the numeric param-range table, keyed by effect id.
@@ -488,6 +488,7 @@ reported). They are planning estimates, not budgets.
 - Property 12: Generated output is CSP-clean (Task 9.8; scoper example checks in Task 9.6)
 - Property 13: Adapter binding coverage (Task 10.2)
 - Property 14: Adapter purity (Task 10.2)
+- Property 15: Invalid effect params are never committed (Task 3.3; `model/params.test.ts`)
 
 
 ## Task Dependency Graph
