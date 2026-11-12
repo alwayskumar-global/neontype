@@ -1,5 +1,6 @@
-import { gotoStudio } from "./helpers.js";
+import { gotoStudio, shrinkProject } from "./helpers.js";
 import { test, expect } from "@playwright/test";
+import { ERROR_MESSAGES } from "../src/export/errors.js";
 
 /**
  * Export dialog end-to-end (Requirement 8). Exports a short project to MP4 and
@@ -14,13 +15,7 @@ declare global {
   }
 }
 
-async function shrink(page: import("@playwright/test").Page, duration: string): Promise<void> {
-  const nums = page.locator(".app-left .panel input[type='number']");
-  await nums.nth(0).fill("160"); // width
-  await nums.nth(1).fill("90");  // height
-  await nums.nth(3).fill(duration); // duration (index 2 is fps)
-  await page.waitForTimeout(50);
-}
+const shrink = shrinkProject;
 
 async function openDialog(page: import("@playwright/test").Page): Promise<void> {
   await page.getByRole("button", { name: "Export", exact: true }).click();
@@ -82,4 +77,69 @@ test("dialog traps Tab inside and returns focus to the Export button on close", 
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(opener).toBeFocused();
+});
+// ---- Safety-net additions (format gating, progress, the transparency note, error mapping) ----
+test("a format the browser cannot encode is disabled, with its reason", async ({ page }) => {
+  await page.addInitScript(() => {
+    Reflect.deleteProperty(window, "VideoEncoder");
+  });
+  await gotoStudio(page, true);
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export" });
+  await expect(dialog).toBeVisible();
+  const mp4 = dialog.getByRole("button", { name: /Export mp4/ });
+  await expect(mp4).toBeDisabled();
+  await expect(mp4).toHaveText(/unsupported/);
+  await expect(mp4).toHaveAttribute("title", /.+/);
+  // The other formats stay available.
+  await expect(dialog.getByRole("button", { name: /Export png-sequence/ })).toBeEnabled();
+  await expect(dialog.getByRole("button", { name: /Export gif/ })).toBeEnabled();
+});
+test("progress advances while an export runs", async ({ page }) => {
+  await gotoStudio(page, true);
+  await openDialog(page);
+  await page.getByRole("button", { name: /Export mp4/ }).click();
+  const progress = page.getByRole("progressbar", { name: "Export progress" });
+  await expect(progress).toBeVisible();
+  await expect.poll(() => progress.evaluate((el) => (el as HTMLProgressElement).value), { timeout: 15000 }).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByText("Export cancelled.")).toBeVisible();
+});
+test("a transparent project shows the mp4-no-transparency note before and after exporting", async ({ page }) => {
+  await gotoStudio(page, true);
+  await shrink(page, "0.3");
+  await page.getByLabel("Transparent").check();
+  await openDialog(page);
+  const dialog = page.getByRole("dialog", { name: "Export" });
+  await expect(dialog.getByText(/MP4 has no transparency/)).toBeVisible();
+  await page.getByRole("button", { name: /Export mp4/ }).click();
+  await expect(page.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 9000 });
+  await expect(dialog.getByText(/Exported without transparency/)).toBeVisible();
+});
+test("a failed export shows the message mapped from its ErrorCode", async ({ page }) => {
+  await gotoStudio(page, true);
+  // 120 fps for 600 s is 72000 frames, over the exporters' frame limit.
+  await page.getByRole("region", { name: "Project settings" }).getByLabel("FPS").fill("120");
+  await page.getByRole("region", { name: "Project settings" }).getByLabel("Duration (s)").fill("600");
+  await openDialog(page);
+  await page.getByRole("button", { name: /Export gif/ }).click();
+  const alert = page.getByRole("dialog", { name: "Export" }).getByRole("alert");
+  await expect(alert).toBeVisible({ timeout: 15000 });
+  const text = ((await alert.innerText()) ?? "").trim();
+  expect(Object.values(ERROR_MESSAGES)).toContain(text);
+});
+// KNOWN BUG, found while writing this spec: "reset" returns the machine to idle, but the
+// capability check runs only when the dialog mounts, so Back (after a failure or a cancel) and
+// "Export again" leave the dialog on "Detecting capabilities..." with no format buttons.
+// Un-fixme when the dialog re-detects or the reset goes back to configuring.
+test.fixme("Back after a failed export returns to the format choices", async ({ page }) => {
+  await gotoStudio(page, true);
+  await page.getByRole("region", { name: "Project settings" }).getByLabel("FPS").fill("120");
+  await page.getByRole("region", { name: "Project settings" }).getByLabel("Duration (s)").fill("600");
+  await openDialog(page);
+  await page.getByRole("button", { name: /Export gif/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Export" });
+  await expect(dialog.getByRole("alert")).toBeVisible({ timeout: 15000 });
+  await dialog.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: /Export mp4/ })).toBeVisible();
 });

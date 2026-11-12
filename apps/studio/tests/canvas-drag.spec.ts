@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoStudio } from "./helpers.js";
+import { gotoStudio, previewCanvas } from "./helpers.js";
 
 /**
  * Canvas direct manipulation (Requirement 3.8-3.20, 16): click selects the topmost
@@ -22,8 +22,8 @@ interface Box { minX: number; maxX: number; minY: number; maxY: number }
 
 /** Pixel bbox of one layer colour on the preview canvas, in canvas px. */
 async function colorBBox(page: Page, rgb: [number, number, number], tol = 60): Promise<Box> {
-  return await page.evaluate(({ rgb, tol }) => {
-    const c = document.querySelector("canvas.preview-canvas") as HTMLCanvasElement;
+  return await previewCanvas(page).evaluate((el, { rgb, tol }) => {
+    const c = el as HTMLCanvasElement;
     const d = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
     let minX = c.width, maxX = -1, minY = c.height, maxY = -1;
     for (let y = 0; y < c.height; y++) {
@@ -40,8 +40,8 @@ async function colorBBox(page: Page, rgb: [number, number, number], tol = 60): P
 const TITLE: [number, number, number] = [0xff, 0xcc, 0x00];
 
 async function canvasRect(page: Page) {
-  return await page.evaluate(() => {
-    const c = document.querySelector("canvas.preview-canvas") as HTMLCanvasElement;
+  return await previewCanvas(page).evaluate((el) => {
+    const c = el as HTMLCanvasElement;
     const r = c.getBoundingClientRect();
     return { left: r.left, top: r.top, width: r.width, height: r.height, cw: c.width, ch: c.height };
   });

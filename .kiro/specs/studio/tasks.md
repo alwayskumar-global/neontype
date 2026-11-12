@@ -42,7 +42,8 @@ reported). They are planning estimates, not budgets.
   state (selection, playhead, dialog state) is separate and never serialized
   into the saved project.
 - Preview and every export derive each frame from the SAME engine render path;
-  the studio contains no alternate or duplicated render logic. One
+  the studio contains no alternate or duplicated render logic. One display
+  provider (owned by the exporter `FrameRenderer`) plus one hit-only
   `CanvasMetricsProvider` per canvas; never share a layout cache across providers.
 - Security: strict CSP with NO `'unsafe-inline'` for scripts or styles; no inline
   `<script>`, no `<style>` element, no `style="..."` markup; dynamic styling only
@@ -107,7 +108,7 @@ reported). They are planning estimates, not budgets.
     - **Completion:** all three exit 0 with zero failures.
     - Commit: `feat(studio): scaffold app, strict CSP, and pure model layer`
 
-- [ ] 2. Group 2: Fonts, preview pipeline, playback, transport, parity  *(est. ~16 credits)*
+- [x] 2. Group 2: Fonts, preview pipeline, playback, transport, parity  *(est. ~16 credits)*
   - [x] 2.1 Bundle fonts and the readiness gate
     - Bundle four self-hosted woff2 into `apps/studio/src/fonts/` (or `public/fonts/`): weights 400 and 700 for BOTH families — `noto-sans-latin-400-normal.woff2`, `noto-sans-latin-700-normal.woff2` (family "Noto Sans", OFL-1.1) and `noto-sans-tamil-tamil-400-normal.woff2`, `noto-sans-tamil-tamil-700-normal.woff2` (family "Noto Sans Tamil", OFL-1.1); include each family's OFL-1.1 licence file. Create `fonts.css` (`@font-face` for each family/weight, self-hosted, no network) and `fonts/fonts.ts` exposing `whenFontsReady()` that loads the `FontFace`s, adds them to `document.fonts`, awaits `document.fonts.ready`, and maps a load timeout to `font-not-ready` and a decode failure to `font-decode-failed`. The layer `fontWeight` control selects 400 or 700.
     - **Covers:** Requirement 6.1–6.5; Design "Fonts"
@@ -118,12 +119,12 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 1.2, 1.3, 1.4, 1.7, 13.2a; Design "Architecture / playback"
     - **Completion:** unit tests for loop-wrap math and scrub clamping pass; the purity guard still passes (bans allowed only here).
 
-  - [ ] 2.3 Preview canvas + metrics provider + draw
-    - Create `apps/studio/src/preview/PreviewCanvas.tsx` owning the `<canvas>` at project pixel size and ONE `CanvasMetricsProvider`, and `preview/draw.ts` calling `renderFrame(project, t, { ctx, metricsProvider })`. Wire the clock to draw per frame WITHOUT re-rendering React per frame (draw reads the live store snapshot). CSS fit-to-container via transform; checkerboard behind a transparent canvas.
+  - [x] 2.3 Preview canvas + metrics provider + draw
+    - Create `apps/studio/src/preview/PreviewCanvas.tsx` owning the `<canvas>` at project pixel size, and `preview/draw.ts` painting through the exporter `FrameRenderer`, which owns the ONE display `CanvasMetricsProvider` (PreviewCanvas adds a separate hit-only provider with its own layout cache, task 4.3) Wire the clock to draw per frame WITHOUT re-rendering React per frame (draw reads the live store snapshot). CSS fit-to-container via transform; checkerboard behind a transparent canvas.
     - **Covers:** Requirement 1.1, 2.6, 2.7; Design "Components / Preview pipeline"
-    - **Completion:** a Playwright smoke renders a known project and asserts a non-blank canvas; one provider per canvas (asserted in a unit/towards-parity check).
+    - **Completion:** a Playwright smoke renders a known project and asserts a non-blank canvas; `src/preview/providers.test.ts` asserts one display provider (owned by the `FrameRenderer`) and one hit-only provider that never share a layout cache.
 
-  - [ ] 2.4 Transport controls + frame/time readout
+  - [x] 2.4 Transport controls + frame/time readout
     - Create the play/pause/loop/scrub transport UI and the frame-index/time/total-frame readout, driven by the clock and the store. Scrubbing shows the clamped frame without starting playback.
     - **Covers:** Requirement 1.2, 1.3, 1.4, 1.5, 1.6, 1.8; Design "Components / Preview pipeline"
     - **Completion:** `tests/preview.spec.ts` passes (play advances, pause holds, loop wraps, scrub clamps, readout correct).
@@ -133,18 +134,18 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 9.1, 9.2, 9.3, 9.4; Design "Preview pipeline — parity test design"
     - **Completion:** `pnpm --filter @studio/app exec playwright test tests/parity.spec.ts` passes.
 
-  - [ ] 2.6 Checkpoint — Group 2
+  - [x] 2.6 Checkpoint — Group 2
     - Run typecheck, lint, Vitest, and `playwright test tests/preview.spec.ts tests/parity.spec.ts`.
     - **Completion:** all pass.
     - Commit: `feat(studio): fonts, preview pipeline, playback, and parity`
 
 - [ ] 3. Group 3: Editing panels + export dialog (demoable end to end)  *(est. ~18 credits)*
-  - [ ] 3.1 Settings panel
+  - [x] 3.1 Settings panel
     - Create `apps/studio/src/panels/SettingsPanel.tsx`: canvas width/height with presets (1920×1080, 1280×720, 1080×1080, 1080×1920) and custom integer entry within engine bounds; fps (1–120) and duration (0.1–600) inputs; background colour + transparent toggle. Out-of-bound entries are rejected/clamped with an inline message and never written invalid. All edits dispatch model transitions; preview updates live.
     - **Covers:** Requirement 2.1–2.7; Design "Components / panels"
     - **Completion:** `tests/settings.spec.ts` passes.
 
-  - [ ] 3.2 Layers panel
+  - [x] 3.2 Layers panel
     - Create `apps/studio/src/panels/LayersPanel.tsx`: add/edit-text/delete/reorder layers; per-layer `fontFamily` (the two bundled families), `fontSize`, `fontWeight`, `fill`, `align`, `anchor` position, and start offset / duration (deriving `endSeconds`). Text is rendered via React text nodes only (no `innerHTML`). Reorder changes `Project.layers` order (draw order). Invalid edits rejected inline.
     - **Covers:** Requirement 3.1–3.7; Design "Components / panels"
     - **Completion:** `tests/layers.spec.ts` passes (incl. draw-order-follows-order and no-innerHTML check).
@@ -159,7 +160,7 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 8.5, 8.6; Design "Export dialog state machine", "Error Handling"
     - **Completion:** unit tests for every state transition pass; the error map compiles exhaustively.
 
-  - [ ] 3.5 Export dialog UI over `@studio/exporters`
+  - [x] 3.5 Export dialog UI over `@studio/exporters`
     - Create `apps/studio/src/export/dialog.tsx`: call `detectCapabilities()` on open; offer EXACTLY MP4, PNG sequence, GIF; disable an `unsupported` format with its reason; per-format option fields (MP4 `videoBitrate`/`backgroundFallback`; output size) seeded from the project; progress bar from `onProgress`; Cancel via an `AbortController` signal → `cancelled`; success offers the file for download by `fileName`; the `mp4-no-transparency` note shown for a transparent project targeting MP4; errors shown via the error map. The export runs off the main thread when the exporter uses a worker, and the dialog stays responsive.
     - Done: the dialog passes the four bundled font files to the exporters as `fonts` bytes (fetched once, memoized; the font gate is memoized per document) so Worker exports match the preview; a font failure now shows in the dialog because it enters the running state before the font checks. _Requirements: 6.1–6.5, 8.6, 9.1_
     - **Covers:** Requirement 8.1, 8.2, 8.3, 8.4, 8.7, 8.8, 8.9; Design "Export dialog state machine"
@@ -267,14 +268,14 @@ reported). They are planning estimates, not budgets.
     - **Completion:** all pass.
     - Commit: `feat(studio): save/load and built-in demo project`
 
-- [ ] 6. Group 6: Accessibility, performance, and CSP specs  *(est. ~12 credits)*
-  - [ ] 6.1 Accessibility pass
+- [x] 6. Group 6: Accessibility, performance, and CSP specs  *(est. ~12 credits)*
+  - [x] 6.1 Accessibility pass
     - Ensure all interactive controls are keyboard-operable with programmatic labels and visible focus; the export dialog traps focus, closes on Escape, and restores focus to the invoker; reduced-motion reduces UI chrome transitions only (not the preview); add the keyboard timeline equivalents if not already present. Add `tests/a11y.spec.ts`.
     - Done: the export dialog traps Tab/Shift+Tab, returns focus to the opener on close, and aborts a running export when closed. _Requirements: 12.1–12.6_
     - **Covers:** Requirement 12.1–12.6; Design "Error Handling"/shell
     - **Completion:** `tests/a11y.spec.ts` passes.
 
-  - [ ] 6.2 Performance measurement spec
+  - [x] 6.2 Performance measurement spec
     - Create `apps/studio/tests/perf.spec.ts` loading the 1280×720 / 5-layer / one-effect-each fixture, playing for a fixed 10 s window, computing mean and p95 frame interval via `playback/perf.ts`, and reporting the measured numbers; PASS when mean <= `1000/fps` ms and p95 <= 1.5x that.
     - **Covers:** Requirement 13.1, 13.2, 13.2a, 13.3; Design "Performance measurement"
     - **Completion:** `tests/perf.spec.ts` runs and reports numbers; indicative on CI, authoritative manually.
@@ -285,7 +286,7 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 11.2, 11.3; Design "CSP and security", risk 2
     - **Completion:** `tests/csp.spec.ts` passes with zero violations.
 
-  - [ ] 6.4 Checkpoint — Group 6
+  - [x] 6.4 Checkpoint — Group 6
     - Run typecheck, lint, Vitest, and `playwright test tests/a11y.spec.ts tests/perf.spec.ts tests/csp.spec.ts tests/security.spec.ts`.
     - **Completion:** all pass (perf reports numbers).
     - Commit: `feat(studio): accessibility, performance, and CSP verification`
@@ -402,7 +403,7 @@ reported). They are planning estimates, not budgets.
     - (e) export parity is not exactly 0 at t = 1, 3, 5.5, or the CSP spec records a violation beyond the one allowed Zod probe;
     - (f) any store change beyond `UiState.playing` is needed;
     - (g) `src/generated` would need a hand edit (fix the converter or the design source instead, Requirement 19.8).
-  - [ ] 10.1 Safety-net Playwright specs (written first, against the current UI)
+  - [x] 10.1 Safety-net Playwright specs (written first, against the current UI)
     - Create in `apps/studio/tests/`: `preview.spec.ts`, `settings.spec.ts`, `layers.spec.ts`, `effects.spec.ts`, `a11y.spec.ts`, `perf.spec.ts`, `security.spec.ts`, and extend `export.spec.ts` (format gating, progress, `mp4-no-transparency` note, error mapping), with the assertions listed in the design table "Safety-net specs". Use only `getByRole`, `getByLabel`, `getByText`, and `page.evaluate` for document-wide invariants. No CSS or class selector. Use `first()` and a shared checked-or-pressed helper where the accessible-name contract table says names repeat.
     - Add accessible names only (`aria-label` or an equivalent name; no behaviour and no layout change) where the current UI lacks a name the generated screens expose, for example `Timecode` on the readout, and give the preview canvas an accessible name so specs can find it without a class selector. List every added name in the commit message.
     - Move the selectors of the existing specs (`canvas-drag`, `timeline`, `editing`, `saveload`, `fonts`, `export`, `parity`) from CSS and class selectors to roles and labels. Assertions are untouched.
@@ -412,6 +413,7 @@ reported). They are planning estimates, not budgets.
     - **Closes when done:** tasks 2.3, 2.4, 2.6, 3.1, 3.2, 3.3, 3.5, 3.8, 6.1, 6.2, and 6.4 (then Groups 2, 3, and 6).
     - **Covers:** Requirement 19.6; Requirements 1, 2, 3, 4, 8, 9, 11, 12, 13
     - **Completion:** every new and migrated spec passes against the CURRENT UI, 3 runs in a row; the full Playwright suite is green; no assertion in an existing spec changed; `perf.spec.ts` reports mean and p95; the provider test passes.
+    - **Outcome.** Groups 2 and 6 are closed. Tasks 3.3 and 3.8 stay open, so Group 3 stays open: Requirement 4.5 (reject a param edit that fails the effect's schema) is not implemented, because the model validates only the project schema and effect params are an open record. The check is `test.fixme` in `effects.spec.ts`. Also found and left as `test.fixme` in `export.spec.ts`: Back (after a failure or a cancel) and Export again return the dialog to idle without re-detecting capabilities, so it stays on "Detecting capabilities...". One selector remains outside role, label, and text: the selection outline in `canvas-drag.spec.ts` (`.selection-outline`, an `aria-hidden` element inside the hosted preview, which no swap changes).
   - [ ] 10.2 Adapters and binding-coverage tests
     - Create `apps/studio/src/wiring/{types,format,tables}.ts` and the adapters `export-flow.ts`, `effects-library.ts`, `studio-editor.ts`, each exporting `INERT_BINDINGS`. Classify every key exactly as the design tables do. Add `UiState.playing` (T-1) to the store and have the preview wiring set it; a test asserts `serializeProject` output and undo history are unchanged by it.
     - `tables.ts`: the category table (Entrance, Emphasis, Exit, Looping) and the numeric param-range table, keyed by effect id.
@@ -457,7 +459,7 @@ reported). They are planning estimates, not budgets.
 - `design/` is a visual reference only: never copy its code/markup/styles/scripts,
   never serve or bundle it; rebuild screens from `tokens.css` and the design as
   reference.
-- One `CanvasMetricsProvider` per canvas; the model is pure and the only clock is
+- One display provider plus one hit-only `CanvasMetricsProvider` per canvas, never a shared layout cache; the model is pure and the only clock is
   in `apps/studio/src/playback/`.
 - Per-group checkpoints run `pnpm --filter @studio/app exec tsc --noEmit`,
   `pnpm --filter @studio/app lint`, `pnpm --filter @studio/app exec vitest run`, plus the

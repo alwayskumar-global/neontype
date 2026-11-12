@@ -1,4 +1,4 @@
-import { gotoStudio } from "./helpers.js";
+import { gotoStudio, canvasHash, layerField, layersPanel, applyPreset } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 
 /**
@@ -7,12 +7,6 @@ import { test, expect } from "@playwright/test";
  * the panels drive the pure model and the preview updates live.
  */
 
-async function canvasHash(page: import("@playwright/test").Page): Promise<string> {
-  return await page.evaluate(() => {
-    const c = document.querySelector("canvas.preview-canvas") as HTMLCanvasElement;
-    return c.toDataURL();
-  });
-}
 
 test("add layer, edit text, change effect updates the preview", async ({ page }) => {
   await gotoStudio(page, true);
@@ -26,16 +20,15 @@ test("add layer, edit text, change effect updates the preview", async ({ page })
   // Add a layer.
   await page.getByRole("button", { name: "Add layer" }).click();
   // Select the new (second) layer, then edit its text.
-  const layerButtons = page.locator(".layer .layer-select");
-  await layerButtons.last().click();
-  const textInput = page.locator(".layer-editor input[type='text']");
+  await layersPanel(page).getByRole("listitem").last().getByRole("button").first().click();
+  const textInput = layerField(page, "Text");
   await textInput.fill("Vанакkam");
   await page.waitForTimeout(80);
   const afterText = await canvasHash(page);
   expect(afterText, "preview changed after add+edit").not.toBe(before);
 
   // Change the selected layer's effect via the effect picker.
-  await page.getByLabel("Add effect").selectOption("wave");
+  await applyPreset(page, "Wave");
   await page.waitForTimeout(80);
   const afterEffect = await canvasHash(page);
   expect(afterEffect, "preview changed after effect add").not.toBe(afterText);

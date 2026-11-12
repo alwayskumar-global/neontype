@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoStudio } from "./helpers.js";
+import { gotoStudio, layerField } from "./helpers.js";
 
 /**
  * Timeline editing (Requirement 5, 12.6, 16): a ruler that scrubs, per-layer bars
@@ -32,7 +32,7 @@ test("dragging an end handle changes the duration and snaps to a frame; one undo
   const box = (await handle.boundingBox())!;
   const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;
-  const durationField = page.locator(".layer-editor").getByLabel("Duration (s)");
+  const durationField = layerField(page, "Duration (s)");
   const d0 = Number(await durationField.inputValue());
 
   await page.mouse.move(x, y);

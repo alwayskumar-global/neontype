@@ -1,4 +1,4 @@
-import { gotoStudio } from "./helpers.js";
+import { gotoStudio, previewCanvas, layerField, layersPanel } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 
 /**
@@ -10,8 +10,8 @@ import { test, expect } from "@playwright/test";
  */
 
 async function nonBlankCanvas(page: import("@playwright/test").Page): Promise<boolean> {
-  return await page.evaluate(() => {
-    const c = document.querySelector("canvas.preview-canvas") as HTMLCanvasElement;
+  return await previewCanvas(page).evaluate((el) => {
+    const c = el as HTMLCanvasElement;
     const ctx = c.getContext("2d")!;
     const data = ctx.getImageData(0, 0, c.width, c.height).data;
     for (let i = 3; i < data.length; i += 4) if (data[i] !== 0) return true;
@@ -25,7 +25,7 @@ test("demo loads on start with a non-blank canvas at a visible time", async ({ p
   await page.waitForTimeout(80);
   expect(await nonBlankCanvas(page)).toBe(true);
   // The Tamil layer uses Noto Sans Tamil (presence of the layer in the list).
-  await expect(page.locator(".layer-select", { hasText: "வணக்கம்" })).toBeVisible();
+  await expect(layersPanel(page).getByRole("button", { name: "வணக்கம்" })).toBeVisible();
 });
 
 test("save then reopen round-trips the project", async ({ page }) => {
@@ -33,7 +33,7 @@ test("save then reopen round-trips the project", async ({ page }) => {
 
   // Edit so the project differs from the demo, then Save.
   await page.getByRole("button", { name: "New" }).click();
-  const textInput = page.locator(".layer-editor input[type='text']");
+  const textInput = layerField(page, "Text");
   await textInput.fill("Round Trip");
   const dl = page.waitForEvent("download");
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -43,15 +43,15 @@ test("save then reopen round-trips the project", async ({ page }) => {
   // Change something, then Open the saved file; the text should return.
   await textInput.fill("changed");
   await page.getByLabel("Open project file").setInputFiles(path);
-  await expect(page.locator(".layer-editor input[type='text']")).toHaveValue("Round Trip");
+  await expect(layerField(page, "Text")).toHaveValue("Round Trip");
 });
 
 test("opening an invalid file shows a clear error and keeps the project", async ({ page }) => {
   await gotoStudio(page, true);
   // Build an invalid File in the browser and fire the input's change handler
   // (avoids Playwright's buffer path, which needs a Node Buffer).
-  await page.evaluate(() => {
-    const input = document.querySelector("input[type='file']") as HTMLInputElement;
+  await page.getByLabel("Open project file").evaluate((el) => {
+    const input = el as HTMLInputElement;
     const file = new File(["{ not valid json "], "bad.json", { type: "application/json" });
     const dt = new DataTransfer();
     dt.items.add(file);
@@ -60,5 +60,5 @@ test("opening an invalid file shows a clear error and keeps the project", async 
   });
   await expect(page.getByRole("alert")).toContainText(/could not open the project/i);
   // The canvas still renders (project unchanged).
-  await expect(page.locator("canvas.preview-canvas")).toBeVisible();
+  await expect(previewCanvas(page)).toBeVisible();
 });

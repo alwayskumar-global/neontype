@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoStudio } from "./helpers.js";
+import { gotoStudio, previewCanvas } from "./helpers.js";
 
 /**
  * Fonts loaded before layout (bug-fix regression). After opening the studio with
@@ -30,9 +30,9 @@ async function colorBBox(
   rgb: [number, number, number],
   tol = 60,
 ): Promise<{ minX: number; maxX: number; minY: number; maxY: number; w: number; h: number }> {
-  return await page.evaluate(
-    ({ rgb, tol }) => {
-      const c = document.querySelector("canvas.preview-canvas") as HTMLCanvasElement;
+  return await previewCanvas(page).evaluate(
+    (el, { rgb, tol }) => {
+      const c = el as HTMLCanvasElement;
       const d = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
       let minX = c.width, maxX = -1, minY = c.height, maxY = -1;
       for (let y = 0; y < c.height; y++) {

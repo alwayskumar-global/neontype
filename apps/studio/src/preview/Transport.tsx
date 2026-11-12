@@ -36,7 +36,7 @@ export function Transport({ store, canvasRef }: { store: Store; canvasRef: { cur
         value={ui.playhead}
         onChange={(e) => getClock(canvasRef.current)?.seek(Number(e.target.value))}
       />
-      <span className="readout">
+      <span className="readout" aria-label="Timecode">
         frame {frameIndex} / {total} - {ui.playhead.toFixed(2)}s
       </span>
     </div>

@@ -30,9 +30,10 @@ is the UI layer that holds the only playback clock.
   no `Math.random`, `Date.now`, or `performance.now` in model code (enforced by
   the ESLint bans in `src`). The playback/animation clock lives only in the UI
   shell.
-- Exactly one `CanvasMetricsProvider` per canvas: the preview owns one; each
-  export owns its own (created inside `@studio/exporters`). A text layout cache
-  is never shared across providers.
+- One display `CanvasMetricsProvider` per canvas (owned by the exporter
+  `FrameRenderer` that paints the preview) plus one hit-only provider that
+  `PreviewCanvas` creates for selection boxes; each export owns its own (created
+  inside `@studio/exporters`). A text layout cache is never shared across providers.
 - No runtime network requests, no backend, no accounts, no analytics/telemetry,
   no AI features, and no legacy product name or assets.
 - `design/` is a visual reference only: its HTML/`support.js` must never be
