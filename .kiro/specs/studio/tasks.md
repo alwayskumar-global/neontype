@@ -17,7 +17,10 @@ Commit message. `studio` depends on `@studio/engine` and `@studio/exporters`
 only; it holds no render, schema, or encoding logic. Group 9 adds the
 design-source converter (Requirement 17), the hand-ported design-system
 components (Requirement 18), and a dev-only CSP smoke harness, without wiring any
-generated screen into the live studio UI.
+generated screen into the live studio UI. Group 10 (Requirement 19) wires the
+generated screens into the live studio: Export Flow and Effects Library, and the
+Studio Editor after the owner revises the design; the Landing Page and Error States
+stay deferred.
 
 Credit estimates are per group in the group heading (honest; the total is
 reported). They are planning estimates, not budgets.
@@ -389,6 +392,60 @@ reported). They are planning estimates, not budgets.
     - **Completion:** all commands exit 0; parity is exactly 0 at the three times on both routes; no change under `packages/`; `tokens.css` unchanged; `dist/` scan clean.
     - Commit: `feat(studio): dc converter and design-system port`
 
+- [ ] 10. Group 10: Wire the generated screens into the live studio  *(est. ~90 credits, range 65 to 120; excludes the owner's design revision)*
+  - **Scope.** Requirement 19 and the design section "Generated-screen wiring". WIRE: Export Flow, Effects Library, and the Studio Editor (gated). DEFERRED: Landing Page and Error States. Exporters Groups 6 and 7 are NOT part of this group.
+  - **Stop-and-wait rules for this group.** STOP and ask the owner if:
+    - (a) at the start of 10.3 any of gaps D-1, D-2, D-3 is unresolved and unwaived (Requirement 19.9);
+    - (b) a binding in a `*_BINDINGS` list is missing from the design table or its classification would change;
+    - (c) a safety-net spec needs any edit to pass after a swap (show the diff first);
+    - (d) the work would need a change under `packages/`, a new dependency (including `axe-core`), or a change to `tokens.css`;
+    - (e) export parity is not exactly 0 at t = 1, 3, 5.5, or the CSP spec records a violation beyond the one allowed Zod probe;
+    - (f) any store change beyond `UiState.playing` is needed;
+    - (g) `src/generated` would need a hand edit (fix the converter or the design source instead, Requirement 19.8).
+  - [ ] 10.1 Safety-net Playwright specs (written first, against the current UI)
+    - Create in `apps/studio/tests/`: `preview.spec.ts`, `settings.spec.ts`, `layers.spec.ts`, `effects.spec.ts`, `a11y.spec.ts`, `perf.spec.ts`, `security.spec.ts`, and extend `export.spec.ts` (format gating, progress, `mp4-no-transparency` note, error mapping), with the assertions listed in the design table "Safety-net specs". Use only `getByRole`, `getByLabel`, `getByText`, and `page.evaluate` for document-wide invariants. No CSS or class selector. Use `first()` and a shared checked-or-pressed helper where the accessible-name contract table says names repeat.
+    - Add `aria-label` only (no behaviour change) where the current UI lacks a name the generated screens expose, for example `Timecode` on the readout, and give the preview canvas an accessible name so specs can find it without a class selector. List every added name in the commit message.
+    - Move the selectors of the existing specs (`canvas-drag`, `timeline`, `editing`, `saveload`, `fonts`, `export`, `parity`) from CSS and class selectors to roles and labels. Assertions are untouched.
+    - `a11y.spec.ts` uses Playwright's built-in ARIA snapshot and explicit focus-order and reduced-motion checks. It adds no dependency (Requirement 19.6).
+    - Fix the stale wording of task 2.3 and the Notes bullet: "one display `CanvasMetricsProvider` plus one hit-only provider per canvas, and never a shared layout cache". Add a test (unit or Playwright) that asserts exactly that: the display provider and the hit provider are distinct, and neither shares a `LayoutCache`.
+    - List every control that has no counterpart in a generated screen as input to gap D-2.
+    - **Closes when done:** tasks 2.3, 2.4, 2.6, 3.1, 3.2, 3.3, 3.5, 3.8, 6.1, 6.2, and 6.4 (then Groups 2, 3, and 6).
+    - **Covers:** Requirement 19.6; Requirements 1, 2, 3, 4, 8, 9, 11, 12, 13
+    - **Completion:** every new and migrated spec passes against the CURRENT UI, 3 runs in a row; the full Playwright suite is green; no assertion in an existing spec changed; `perf.spec.ts` reports mean and p95; the provider test passes.
+  - [ ] 10.2 Adapters and binding-coverage tests
+    - Create `apps/studio/src/wiring/{types,format,tables}.ts` and the adapters `export-flow.ts`, `effects-library.ts`, `studio-editor.ts`, each exporting `INERT_BINDINGS`. Classify every key exactly as the design tables do. Add `UiState.playing` (T-1) to the store and have the preview wiring set it; a test asserts `serializeProject` output and undo history are unchanged by it.
+    - `tables.ts`: the category table (Entrance, Emphasis, Exit, Looping) and the numeric param-range table, keyed by effect id.
+    - Create `wiring.test.ts` and `tables.test.ts` as listed in the design, and `wiring.property.test.ts` for Properties 13 and 14 (>= 100 iterations, tagged `// Feature: studio, Property N: ...`, run 3x).
+    - **Covers:** Requirement 19.2, 19.3, 19.10; Properties 13, 14
+    - **Completion:** `vitest run src/wiring` passes; a deliberately wrong adapter (an extra key, a missing key) fails the coverage test; adapters import no `react`, engine render function, or exporter (static audit passes).
+  - [ ] 10.3 Studio Editor screen (GATED by Requirement 19.9)
+    - Starts only after the owner supplies a revised Studio Editor design (gaps D-1, D-2, D-3) or waives each gap in writing; otherwise STOP (rule a). Re-run `pnpm --filter @studio/app dc:convert`; `git diff --stat src/generated` shows only the intended change.
+    - Create `wiring/hosts/studio-editor-host.tsx`: mount `<PreviewCanvas/>` and `<Timeline/>` into the screen's slots, hold the view state (tab, checkerboard, safe area), and provide the dispatchers. Route `App.tsx` to it.
+    - **Covers:** Requirement 19.1, 19.3, 19.4, 19.6, 19.9
+    - **Completion:** every 10.1 spec passes unchanged; the interactive-element audit shows no control without a handler or a hidden state; export parity is exactly 0 at t = 1, 3, 5.5.
+  - [ ] 10.4 Export flow
+    - Create `wiring/hosts/export-flow-host.tsx`. Keep the modal behaviour of `ExportDialog` (focus trap, Escape, focus restore, abort on close, undo guard). Destinations: Reel, Story, Square, YouTube, Overlay; the Web embed card is omitted and WebM stays unsupported. Before deleting `export/dialog.tsx`, check overlay stacking over the hand-written editor (risk 28).
+    - **Covers:** Requirement 19.1, 19.3, 19.4, 19.6
+    - **Completion:** `export.spec.ts` (including the 10.1 additions) passes unchanged against the generated flow; MP4 and GIF exports still produce valid headers; the CSP spec is clean; `export/dialog.tsx` is deleted only after this passes.
+  - [ ] 10.5 Landing, effects library and error states
+    - Effects Library: create `wiring/hosts/effects-library-host.tsx` for the preset picker; apply uses the gesture API so one apply is one undo step; the toast Undo calls `store.undo()`. `effects.spec.ts` passes unchanged (12 catalog presets listed).
+    - Landing Page and Error States: NOT wired in this group (Requirement 19.1). This sub-task records the owner's decision for each: keep DEFERRED, or promote after the listed gap (D-7 for the landing; a warnings surface for Error States) is closed.
+    - **Covers:** Requirement 19.1, 19.3, 19.6
+    - **Completion:** the Effects Library host passes the 10.1 specs; `landing.spec.ts` is untouched and green; the decision for the two deferred screens is written into Requirement 19.1.
+  - [ ] 10.6 Delete the old UI
+    - Delete the files in the design table "Files to remove" whose replacement has passed, and nothing else. Remove dead CSS with them. Do not add a feature flag. Report the deleted files and the remaining hand-written routes.
+    - **Covers:** Requirement 19.7
+    - **Completion:** `git diff --stat` lists only the planned deletions and import edits; tsc, lint, and the 10.1 specs pass; there is no dual UI for any wired route.
+  - [ ] 10.7 Invert dist-scan
+    - In `__tests__/dc/dist-scan.test.ts` invert the two assertions from commits 63b3a32 and b9318aa: the default-route dist HAS `.ds-root`, a `.ui-` selector, and all six DS fonts. Add `import "./ds/ds.css"` to `main.tsx` (Requirement 19.5). Keep the harness assertions. Update the Requirement 18.10 and design lines that say the live app does not import `ds.css`.
+    - **Covers:** Requirement 19.5
+    - **Completion:** the inverted tests pass and fail when the import and the screens are removed (mutation check, then restore).
+  - [ ] 10.8 Checkpoint — Group 10
+    - Run `pnpm --filter @studio/app exec tsc --noEmit`, `pnpm --filter @studio/app lint`, `pnpm --filter @studio/app exec vitest run`, the FULL studio Playwright suite including every 10.1 spec unchanged, the CSP spec, `pnpm --filter @studio/app run test:dc`, and root `pnpm test`. Confirm export parity is exactly 0 at t = 1, 3, 5.5 on the default route, `git diff --stat -- packages/` is empty, `src/generated` has no hand edit, and the Task 7.2 no-drift check passes.
+    - **Closes when done:** task 7.2 (then Group 7).
+    - **Completion:** all commands exit 0; the no-drift check passes.
+    - Commit: `feat(studio): wire generated screens into the live studio`
+
 ---
 
 ## Notes
@@ -422,6 +479,8 @@ reported). They are planning estimates, not budgets.
 - Property 10: No-op detection is exact (Task 4.1)
 - Property 11: Converter determinism (Task 9.8)
 - Property 12: Generated output is CSP-clean (Task 9.8; scoper example checks in Task 9.6)
+- Property 13: Adapter binding coverage (Task 10.2)
+- Property 14: Adapter purity (Task 10.2)
 
 
 ## Task Dependency Graph
@@ -463,11 +522,19 @@ reported). They are planning estimates, not budgets.
     { "id": 31, "tasks": ["9.8"] },
     { "id": 32, "tasks": ["9.9"] },
     { "id": 33, "tasks": ["9.10"] },
-    { "id": 34, "tasks": ["9.11"] }
+    { "id": 34, "tasks": ["9.11"] },
+    { "id": 35, "tasks": ["10.1"] },
+    { "id": 36, "tasks": ["10.2"] },
+    { "id": 37, "tasks": ["10.3"] },
+    { "id": 38, "tasks": ["10.4"] },
+    { "id": 39, "tasks": ["10.5"] },
+    { "id": 40, "tasks": ["10.6"] },
+    { "id": 41, "tasks": ["10.7"] },
+    { "id": 42, "tasks": ["10.8"] }
   ]
 }
 ```
 
-Groups are strictly ordered (G1 → G7, then G9); within a group the waves above show
+Groups are strictly ordered (G1 → G7, then G9, then G10); within a group the waves above show
 which sub-tasks may proceed in parallel and which gate on an earlier wave. Group 8
 is a reserve and is not in the graph.

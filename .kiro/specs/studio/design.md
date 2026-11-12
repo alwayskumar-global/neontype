@@ -1860,6 +1860,432 @@ never references it), and is not part of `dist/`. Its output goes to
   expects exactly 0 without `ds.css`. Parity with `ds.css` loaded is checked on the
   harness build. As built, the probe reports exactly 0
 at t = 1, 3, and 5.5 on the default route (dev) and in the harness build.
+### Generated-screen wiring (Requirement 19)
+Requirements 17 and 18 produced the five generated screens and left them out of the
+live studio. Requirement 19 puts them in. This section is the architecture, the
+binding tables, the design gaps, and the deletion list. It is a proposal for owner
+review; no implementation exists.
+
+**Findings that shape the plan** (all measured on `main`):
+- Each generated screen is a pure function of `data: DcProps`, keyed by an exported
+  `*_BINDINGS` list: Studio Editor 54 keys, Export Flow 74, Effects Library 51,
+  Error States 8, Landing Page 7.
+- The screens are mock-ups, not skins of the live features. `Studio Editor.dc.html`
+  hard-codes a 6 s, 30 fps "Grand Opening" project, simulates the stage with HTML
+  text (`l1Chars`, `l2Words`), and has 57 interactive elements of which only 19 carry
+  a bound handler. It has no slot for a canvas or a timeline, no canvas-settings
+  controls, no New/Open/Save/Load controls, and an Undo, Redo, Help, and Export
+  button with no handler.
+- Several mock features have no backing behaviour in the product. The spec's Out of
+  scope list already excludes redo, canvas zoom, keyframe-curve editing, audio, WebM
+  alpha, and the embed web component; the screens show all of them.
+- Every generated module imports `../../ds/ds.css` itself. Wiring any one screen
+  therefore pulls `ds.css` and the six DS fonts into the default dist, with or
+  without the `main.tsx` import that criterion 19.5 requires.
+- The store has undo but no redo, and no `playing` flag. `PlaybackClock.isPlaying`
+  exists but nothing notifies React when it changes.
+
+**Decisions and recommendations.**
+| Screen | Recommendation |
+| --- | --- |
+| Export Flow | Wire. Feasible: omit the Web embed card, keep WebM unsupported, hide framing, and treat the Loop and Audio rows as gap D-4. |
+| Effects Library | Wire. Feasible with a category table and a param-range table in `src/wiring/` (D-5, D-6). |
+| Studio Editor | Wire only after the owner revises the design (D-1, D-2, D-3). Wired as-is it would remove working features (settings, layers editing, save/load, timeline editing) and leave visible controls that do nothing, which Requirement 19.3 forbids. |
+| Landing Page | Do not wire. Copy conflicts with the true-claims rule and `landing.spec.ts` (D-7). |
+| Error States | Do not wire. No warnings surface, and the offline toast is untrue (all 8 bindings inert). |
+
+#### Architecture
+```
+apps/studio/src/
+  wiring/
+    types.ts                   AdapterState, per-screen Dispatchers, INERT marker
+    format.ts                  pure formatters (timecode, percent, ruler ticks)
+    tables.ts                  category table + param-range table (keyed by effect id), drift-tested
+    export-flow.ts             adaptExportFlow(state, d): DcProps        (pure)
+    effects-library.ts         adaptEffectsLibrary(state, d): DcProps    (pure)
+    studio-editor.ts           adaptStudioEditor(state, d): DcProps      (pure; gated by 19.9)
+    hosts/
+      export-flow-host.tsx     React: subscribes, holds view state, owns the modal behaviour
+      effects-library-host.tsx
+      studio-editor-host.tsx   (gated)
+    wiring.test.ts             binding coverage, purity, handler dispatch table
+    wiring.property.test.ts    Properties 13 and 14
+```
+Deferred screens (Landing Page, Error States) get no adapter in this group.
+
+**Adapter contract.** `adaptX(state: AdapterState, d: XDispatchers): DcProps`, where
+- `AdapterState` is a plain-data snapshot: `{ project, ui, playing, exportRun, caps,
+  view }`. `project` and `ui` come from the store. `playing` comes from the new
+  `UiState.playing` mirror (T-1 below). `exportRun` is the export machine state
+  (`machine.ts`). `caps` is `detectCapabilities()` output. `view` is the host's view
+  state (tab, checker, safe, library query, filters, wizard step, staged params, chosen
+  format and size).
+- `XDispatchers` is an object of functions the host builds: store actions
+  (`dispatch`, `dispatchGuarded`, `beginGesture`/`commitGesture`, `undo`, `setUi`),
+  clock methods (`play`, `pause`, `seek`), the export pipeline (`startExport`,
+  `cancelExport`), and view setters.
+- Handlers in the returned data are closures over `d`. Constructing the data calls no
+  dispatcher (Property 14). A handler binding classified inert is `INERT`, a shared
+  no-argument function marker; each adapter exports `INERT_BINDINGS`.
+
+**Host pattern.** A host is a small React component that (1) subscribes with
+`useStoreState`, (2) owns the view state with `useState`, (3) builds `dispatchers`,
+(4) calls the pure adapter, (5) renders the generated screen. Hosts contain no
+formatting or classification logic; that stays in the adapter so Node tests cover it.
+
+**Store extension T-1 (the only one).** `UiState.playing: boolean`, written by the
+preview wiring when the clock plays or pauses. It is UI state, never saved, and is
+needed so `playing` and `paused` are selectors. Any other store change stops the
+group (rule f).
+
+**Modal behaviour stays in the host.** The generated Export Flow and Effects Library
+are markup only. The host keeps what `ExportDialog` does today: focus trap,
+Escape to close, focus restore to the opener, abort a running export on close, and
+the Ctrl/Cmd+Z guard while open (`shouldUndo`).
+
+#### Mounting the canvas and timeline into the Studio Editor
+The generated Studio Editor cannot host them today (gap D-1). The proposed design
+change adds two node bindings, `stage` and `timeline`, plus a `stageAspect` string
+binding set through `setCssVars` so the stage follows the project aspect instead of
+the fixed 1:1. The host passes `<PreviewCanvas/>` (with its overlay, clock, and hit
+provider) as `stage` and the existing `<Timeline/>` as `timeline`. Neither component
+changes. Fallback if the owner prefers refs: `stageRef` and `timelineRef` bindings
+(`asRef` exists in `dc-runtime.ts`) and a React portal from the host into each ref.
+The `l1Chars`, `l2Words`, `l2dy`, `l2op`, `l2s`, `l3op` bindings stay supplied as empty
+values (C) so the HTML simulation renders nothing.
+The Export Flow and Effects Library `backdrop` prop is rendered inside the overlay;
+the host passes `null` while the editor is hand-written and the editor stays mounted
+behind the overlay, so the canvas, clock, and selection are not torn down.
+
+#### `ds.css` and `tokens.css` coexistence
+- `tokens.css` stays on `:root`. DS tokens are scoped under `.ds-root`, and every
+  generated screen root carries `ds-root`.
+- 44 token names are shared and 6 differ in value (Requirement 18.1). Custom
+  properties inherit, so anything rendered INSIDE a `.ds-root` subtree resolves the DS
+  value. Rule: hand-written components are not rendered inside a `.ds-root` subtree,
+  except the hosted canvas and timeline, which read no shared token whose value differs
+  (the collision test already records the six; add a test that the hosted components'
+  CSS references none of them, or list the ones it references and approve them).
+- The hosted `PreviewCanvas` draws with the engine, not CSS, so token values cannot
+  change preview or export pixels. Parity stays 0.
+- `main.tsx` imports `./ds/ds.css`. Vite de-duplicates it with the generated modules'
+  own import; the explicit import makes the dist guarantee independent of which
+  screens are wired.
+- `ds.css` and `src/fonts/fonts.css` still share no `font-family` (Requirement 18.9).
+
+#### Binding tables
+Kinds: **A** action (store action, gesture API, clock method, or export-pipeline call),
+**S** selector (pure read or derivation from state, the catalog, or the error map),
+**C** constant (adapter-local constant or empty value), **V** host view state (React
+state in the host, not in the store), **I** inert in v1 (no backing behaviour; reason
+given). Every table was checked against the screen's exported `*_BINDINGS` list: no key
+is missing and none is extra. The adapter test (task 10.2) enforces the same.
+
+| Screen | Keys | A | S | C | V | I |
+| --- | --- | --- | --- | --- | --- | --- |
+| studio-editor | 54 | 4 | 11 | 6 | 12 | 21 |
+| export-flow | 74 | 4 | 25 | 10 | 10 | 25 |
+| effects-library | 51 | 2 | 16 | 6 | 26 | 1 |
+| error-states | 8 | 0 | 0 | 0 | 0 | 8 |
+| landing-page | 7 | 1 | 0 | 6 | 0 | 0 |
+| total | 194 | 11 | 52 | 28 | 48 | 55 |
+
+Inert bindings that need the owner (they sit behind controls with no visibility
+binding, so the control stays visible): Studio Editor `kfOpen`, `toggleKf`, `kfPos`,
+`kfOp`, `kfScale` (keyframe diamonds), `zoomIn`, `zoomOut`, `zoomLabel` (zoom
+buttons), `onName` (name input); Export Flow `loop`, `onLoop`, `loopHelp`, `audio`,
+`onAudio`. These are gaps D-2, D-3, and D-4.
+
+#### studio-editor (STUDIO_EDITOR_BINDINGS, 54 keys: A 4, S 11, C 6, V 12, I 21)
+
+| Binding | Kind | Source or reason |
+| --- | --- | --- |
+| `bezText` | I | as kfOpen |
+| `checker` | V | stage checkerboard toggle (class on the hosted stage) |
+| `checkerAria` | V | String(checker) |
+| `curve` | I | as kfOpen |
+| `easeOpts` | I | as kfOpen |
+| `hideBanner` | I | warning banner dismissal; there is no warnings surface (see warning) |
+| `kfOp` | I | as kfOpen |
+| `kfOpen` | I | keyframe popover: the studio has no keyframe actions (engine tracks exist, studio cannot edit them) |
+| `kfPos` | I | as kfOpen |
+| `kfScale` | I | as kfOpen |
+| `l1Chars` | C | []: the HTML text simulation is superseded by the hosted canvas (needs stage slot D-1) |
+| `l2Words` | C | []: as l1Chars |
+| `l2dy` | C | "0": as l1Chars |
+| `l2op` | C | "0": as l1Chars |
+| `l2s` | C | "1": as l1Chars |
+| `l3op` | C | "0": as l1Chars |
+| `loop` | S | ui.loop |
+| `noChecker` | V | !checker |
+| `noLoop` | S | !ui.loop |
+| `noSafe` | V | !safe |
+| `noWarning` | I | constant true (paired with warning) |
+| `onName` | I | no Project.name to write to; typing would be a silent no-op (gap D-3) |
+| `opacity` | I | TextLayer has no opacity property (effects own opacity) |
+| `opacityPct` | I | as opacity |
+| `paused` | S | !ui.playing (needs T-1) |
+| `phLeft` | S | ui.playhead / canvas.durationSeconds as a percent |
+| `playing` | S | clock.isPlaying mirrored into a new UiState.playing field (store extension T-1) |
+| `posEase` | I | as kfOpen |
+| `posY` | S | selected layer anchor.y |
+| `presetGroups` | S | presetCatalog grouped by loop flag; `on` from the selected layer's effectInstances. Items have NO click binding in the markup, so cards cannot apply an effect (gap D-2) |
+| `projectName` | I | Project has no name field (engine schema); a display-only constant would be a fabricated value |
+| `rulerLabels` | S | ruler labels derived from canvas.durationSeconds |
+| `safe` | V | safe-area guide toggle |
+| `safeAria` | V | String(safe) |
+| `scale` | I | TextLayer has no scale property |
+| `showBanner` | I | constant false (paired with warning) |
+| `showLayers` | V | left-panel tab setter |
+| `showPresets` | V | left-panel tab setter |
+| `showSelection` | S | ui.selectedLayerId !== null and not playing |
+| `tabLayers` | V | left-panel tab |
+| `tabPresets` | V | left-panel tab |
+| `ticks` | S | ruler ticks derived from canvas.durationSeconds |
+| `timecode` | S | format ui.playhead at project fps |
+| `toEnd` | A | clock pause() then seek(durationSeconds - 1/fps) |
+| `toStart` | A | clock seek(0) |
+| `toggleChecker` | V | toggles checker |
+| `toggleKf` | I | as kfOpen |
+| `toggleLoop` | A | store.setUi({ loop }) |
+| `togglePlay` | A | clock play()/pause() (PlaybackClock via getClock) |
+| `toggleSafe` | V | toggles safe |
+| `warning` | I | no store field carries the engine's FrameState.warnings; constant false until an Error States task exists |
+| `zoomIn` | I | no canvas zoom exists in the preview (CSS fit-to-container only) |
+| `zoomLabel` | I | as zoomIn |
+| `zoomOut` | I | as zoomIn |
+
+#### export-flow (EXPORT_FLOW_BINDINGS, 74 keys: A 4, S 25, C 10, V 10, I 25)
+
+| Binding | Kind | Source or reason |
+| --- | --- | --- |
+| `audio` | I | studio has no audio source; row has no visibility binding (gap D-4) |
+| `cancelExport` | A | AbortController.abort() |
+| `crumbs` | S | derived from the wizard step and machine state |
+| `d` | C | the selected destination record from the catalog above |
+| `destCards` | C | destination catalog (Reel, Story, Square, YouTube, Overlay) mapped to format + output size; Web embed is omitted (no embed package); `pick` is V |
+| `dur` | S | project.canvas.durationSeconds |
+| `embedCode` | I | no embed package (packages/embed does not exist); destination omitted |
+| `embedLoop` | I | as embedCode |
+| `embedPreview` | I | as embedCode |
+| `embedSize` | I | as embedCode |
+| `embedStart` | I | as embedCode |
+| `embedTag` | I | as embedCode |
+| `embedW` | I | as embedCode |
+| `errCode` | S | the ErrorCode string |
+| `estimate` | S | frame count and format name only; no size estimate (exporters give none, so none is shown) |
+| `eta` | I | exporters report frame counts only; an ETA needs a wall clock the pure adapter may not read |
+| `exportLabel` | C | "Export" |
+| `exportSteps` | S | stage list derived from the selected format and ExportProgress |
+| `failText` | S | export/errors.ts message for the ErrorCode |
+| `fileIcon` | S | from the format |
+| `fileMeta` | S | size, dimensions, duration, fps from the result and project |
+| `fileName` | S | ExportResult.fileName |
+| `fps` | S | project.canvas.fps |
+| `fpsOpts` | C | 24, 30, 60 |
+| `frameTc` | S | format progress frame at project fps |
+| `frames` | S | frameCountFor(project) |
+| `framesText` | S | ExportProgress frames done / total |
+| `framing` | I | exporters scale uniformly; no fit/fill crop option |
+| `framingHelp` | I | as framing |
+| `framingOpts` | I | as framing |
+| `isAlpha` | V | selected destination kind |
+| `isEmbed` | C | constant false (embed destination omitted) |
+| `isMp4` | V | selected destination kind |
+| `loop` | I | exporters have no loop/hold-to-duration option; row has no visibility binding (gap D-4) |
+| `loopHelp` | I | as loop |
+| `needsFraming` | C | constant false: hides the framing row via the screen's own visibility binding |
+| `noFraming` | C | constant true (paired with needsFraming) |
+| `onAudio` | I | as audio |
+| `onDur` | A | dispatch set-duration (edits the project, one undo step) |
+| `onEmbedLoop` | I | as embedCode |
+| `onEmbedSize` | I | as embedCode |
+| `onEmbedStart` | I | as embedCode |
+| `onFps` | A | dispatch set-fps (edits the project, one undo step) |
+| `onFraming` | I | as framing |
+| `onLoop` | I | as loop |
+| `onRes` | V | sets output size |
+| `outSummary` | S | size, fps, duration, format of the pending export |
+| `pct` | S | ExportProgress percent |
+| `pctText` | S | ExportProgress percent as text |
+| `pickPng` | V | selects PNG sequence |
+| `pickWebm` | I | WebM-alpha is a deferred stub (exporters Group 6) |
+| `pngChecked` | V | String(format === png) |
+| `pngSize` | I | no size estimator; empty string |
+| `res` | V | selected output size, passed to exporters as `output` |
+| `resOpts` | C | sizes of the selected destination |
+| `s1` | V | wizard step 1 (choose destination) |
+| `s2` | V | wizard step 2 (options) |
+| `s3` | S | export machine state is running |
+| `s4` | S | export machine state is done |
+| `s5` | S | export machine state is failed |
+| `sizeOpts` | I | as embedCode |
+| `stageInThumb` | S | thumbnail geometry from output size |
+| `startExport` | A | export pipeline: runExport(...) with the selected format and options |
+| `startOpts` | I | as embedCode |
+| `successText` | S | from the finished export result |
+| `successTitle` | S | from the finished export result and destination |
+| `thumbW` | S | thumbnail geometry from output size |
+| `toDest` | V | step 2 to 1 |
+| `toOptions` | V | step 1 to 2 |
+| `tryNext` | C | suggestion list keyed by ErrorCode (new copy, listed in design) |
+| `unsupported` | S | detectCapabilities(): webmAlpha unsupported |
+| `webmChecked` | C | "false" |
+| `webmOk` | S | detectCapabilities().webmAlpha.status !== unsupported (false in v1) |
+| `webmSize` | I | WebM is deferred; empty string |
+
+#### effects-library (EFFECTS_LIBRARY_BINDINGS, 51 keys: A 2, S 16, C 6, V 26, I 1)
+
+| Binding | Kind | Source or reason |
+| --- | --- | --- |
+| `anyFilter` | V | any filter or query active |
+| `applyHelp` | S | whether the selected layer already has the effect |
+| `applySel` | A | gesture: add-effect then set-effect-granularity/param for the staged values, one undo step |
+| `cards` | S | presetCatalog entries (id, displayName, granularities, applied-on-selected-layer); `thumb` is a CSS-animation approximation built from ds.css classes, not engine output (gap D-5) |
+| `catChips` | C | Entrance, Emphasis, Exit, Looping; the engine catalog has no category, so a drift-tested table keyed by effect id supplies it |
+| `clearAll` | V | clears filters |
+| `clearQuery` | V | clears query |
+| `close` | V | closes the library |
+| `closeToast` | V | dismisses the toast |
+| `closed` | V | !open |
+| `countText` | S | filtered count of presetCatalog.length |
+| `deselect` | V | clears library selection |
+| `ease` | V | staged easing (only for effects whose params include `easing`) |
+| `easeOpts` | C | linear, easeIn, easeOut, easeInOut |
+| `emptyText` | S | from active filters |
+| `emptyTitle` | S | from query |
+| `granChips` | V | granularity filter chips (toggle state) |
+| `gridRef` | V | ref for the card grid |
+| `hasQuery` | V | query !== "" |
+| `hasSel` | V | an effect is selected in the library |
+| `hasToast` | V | toast visible |
+| `loading` | C | constant false (catalog is synchronous) |
+| `multiSplit` | S | supportedGranularities.length > 1 |
+| `noQuery` | V | query === "" |
+| `onEase` | V | stages easing |
+| `onGridKey` | V | grid arrow-key navigation (DOM-only handler) |
+| `onQuery` | V | sets query |
+| `onSort` | V | sets sort |
+| `onSplit` | V | stages granularity |
+| `open` | V | library visible |
+| `paramList` | S | numeric params of the staged effect from defaultParams plus a drift-tested range table in src/wiring (gap D-6); enum and text params are omitted |
+| `preview` | I | large live preview of the selected effect: CSS approximation only (gap D-5); null until a pure approximation exists |
+| `query` | V | search text |
+| `reopen` | V | reopens the library |
+| `scrimDown` | V | close on scrim press |
+| `searchRef` | V | ref for the search input (the "/" shortcut focuses it) |
+| `selCat` | C | category table |
+| `selMeta` | S | granularity and duration text |
+| `selName` | S | catalog displayName |
+| `showEmpty` | S | filtered list is empty |
+| `showGrid` | S | filtered list is not empty |
+| `singleSplit` | S | supportedGranularities.length === 1 |
+| `singleSplitText` | S | from the catalog |
+| `skeletons` | C | [] |
+| `sort` | V | sort key |
+| `sortOptions` | C | four sort options |
+| `split` | V | staged granularity |
+| `splitOpts` | S | supportedGranularities |
+| `toastAction` | A | store.undo() |
+| `toastText` | S | layer text, split, duration |
+| `toastTitle` | S | "Applied <name>" |
+
+#### error-states (ERROR_STATES_BINDINGS, 8 keys: A 0, S 0, C 0, V 0, I 8)
+
+| Binding | Kind | Source or reason |
+| --- | --- | --- |
+| `anyRemoved` | I | as warnings |
+| `hideOffline` | I | as showOffline |
+| `noWarnings` | I | as warnings |
+| `offlineAction` | I | as showOffline |
+| `resetWarnings` | I | as warnings |
+| `showOffline` | I | the app has no offline behaviour or service worker; the toast would assert something untrue |
+| `warnCount` | I | as warnings |
+| `warnings` | I | no warnings surface exists in the store or UI |
+
+#### landing-page (LANDING_PAGE_BINDINGS, 7 keys: A 1, S 0, C 6, V 0, I 0)
+
+| Binding | Kind | Source or reason |
+| --- | --- | --- |
+| `access` | C | marketing copy (4 items); contains claims the app cannot make, see D-7 |
+| `dests` | C | 6 destination tiles; includes Web embed and WebM alpha, which are not shipped |
+| `gallery` | C | 6 CSS-animation tiles (neon, glitch, pop, wave, spot, wipe); live landing uses the real renderer |
+| `heroPlayhead` | C | CSS-animation playhead |
+| `heroStage` | C | CSS-animation hero text |
+| `onOpenStudio` | A | App.openStudio(demo) |
+| `privacy` | C | marketing copy (4 items); "Works offline" is untrue in v1, see D-7 |
+
+#### Design gaps (owner decisions, Requirement 19.9)
+A gap is fixed in the design source and the converter re-run (19.8), or waived.
+| Id | Screen | Gap | What the live app needs |
+| --- | --- | --- | --- |
+| D-1 | Studio Editor | No slot for the preview canvas or the timeline; the stage is a fixed 1:1 box showing an HTML text simulation | `stage` and `timeline` node bindings (or refs) and a stage aspect that follows the project |
+| D-2 | Studio Editor | 38 of 57 interactive elements are static (no handler): Undo, Redo, Help, Export, library filter chips, preset buttons, layer rows, Add layer, the whole Inspector (font, weight, align, anchor, blur, effect stack, Split by, Direction, Remove effect), Snap, timeline zoom, track rows, keyframe markers. Controls the live app has are absent: canvas settings (size, fps, duration, background, transparent), New, Load demo, Save, Open | Handlers or visibility bindings for each control that stays; removal from the design of controls with no backing behaviour (redo, keyframes, blur slider, zoom) or an owner waiver; a place for the settings and the file actions |
+| D-3 | Studio Editor | The project-name input writes `onName`, but `Project` has no name field | Remove the input, make it read-only text, or approve a schema field outside this group |
+| D-4 | Export Flow | The Loop and Audio rows have no visibility binding and no backing behaviour; Frame rate and Duration rows edit project settings, not export options | Visibility bindings for Loop and Audio, and an owner decision that Frame rate and Duration may edit the project from the export step |
+| D-5 | Effects Library | Card thumbnails and the large preview are CSS animations, not engine output; "Most used" and "Newest" sorts have no data; "Shortest first" needs a duration that not every effect has | Owner accepts approximations for thumbnails, or supplies a pure render hook; the adapter offers only the sorts it can honour (Name A to Z) |
+| D-6 | Effects Library | The engine catalog has no per-param range, step, or unit; the design has sliders with ranges | A drift-tested range table in `src/wiring/tables.ts` (Requirement 19.10); numeric params only |
+| D-7 | Landing Page | Copy and tiles claim Web embed, WebM alpha, offline use, and focus-ring behaviour the app does not ship; the hero and gallery are CSS approximations | A copy pass in the design source before any promotion from DEFERRED |
+
+#### Safety-net specs (task 10.1)
+Written first, against the current UI, using `getByRole`, `getByLabel`, `getByText`,
+and `page.evaluate` for document-wide invariants only. No CSS or class selector. They
+must pass unchanged after each swap; any needed edit stops the group (rule c).
+| Spec | Asserts |
+| --- | --- |
+| `preview.spec.ts` | play advances the readout, pause holds it, loop wraps, scrub clamps and shows the clamped frame, the frame and time readout is correct |
+| `settings.spec.ts` | canvas presets and custom size within engine bounds, fps and duration inputs, background and transparent, out-of-bound entry rejected with a message and never written |
+| `layers.spec.ts` | add, edit text, delete, reorder (draw order follows list order), per-layer fields, user text rendered as text (no HTML) |
+| `effects.spec.ts` | the picker lists exactly the 12 catalog presets by display name, apply seeds defaults and the first granularity, granularity change, invalid param rejected, remove |
+| `export.spec.ts` (additions) | unsupported formats disabled with a reason, progress advances, the `mp4-no-transparency` note for a transparent project, an ErrorCode shown through the error map |
+| `a11y.spec.ts` | Playwright ARIA snapshot of each region, focus order through the main controls, focus trap and restore in the export dialog, reduced motion leaves the preview playing |
+| `perf.spec.ts` | the 10 s measurement of Requirement 13 on the 1280x720, 5-layer fixture, reporting mean and p95 |
+| `security.spec.ts` | no `style` attribute and no inline script in the DOM, layer text containing markup creates no element, an oversized or invalid project file is rejected before use |
+The existing specs (`canvas-drag`, `timeline`, `editing`, `saveload`, `fonts`,
+`export`, `parity`, `landing`) are audited for CSS selectors (for example
+`canvas.preview-canvas`); selectors move to roles and labels in 10.1, assertions are
+untouched.
+
+**Accessible-name contract.** The safety-net specs run before and after the swap, so
+they can only rely on names that BOTH UIs expose. Known differences, from the generated
+markup:
+| Control | Current UI | Generated Studio Editor | Consequence for the specs |
+| --- | --- | --- | --- |
+| Play, Pause | two buttons, always both present | one of them at a time, and the name appears twice (top bar and timeline) | use `getByRole("button", { name: "Play" }).first()` and the same for Pause |
+| Loop | checkbox labelled "Loop" | button with `aria-pressed`, also duplicated | use `getByLabel("Loop").first()` and a helper that reads `checked` or `aria-pressed` |
+| Scrub | range input labelled "Scrub" | none (the ruler has no input) | gap D-1/D-2: the revised design needs a labelled scrubber, or the spec scrubs through the timeline |
+| Readout | text "frame N / M - t s", no name | element labelled "Timecode" (mm:ss:ff) | 10.1 adds `aria-label="Timecode"` to the current readout and asserts frame and time through it |
+10.1 may add accessible names to the current UI (aria-label only, no behaviour
+change) so both UIs expose the contract. It records every control that has no
+counterpart in a generated screen as a gap for criterion 19.9.
+
+#### Files to remove (Requirement 19.7)
+Each deletion waits for its replacement to pass the safety-net specs.
+| File | Replaced by | When |
+| --- | --- | --- |
+| `export/dialog.tsx` | `wiring/hosts/export-flow-host.tsx` | 10.4. `export/machine.ts`, `errors.ts`, `prepare.ts` stay. |
+| `panels/EffectsPanel.tsx` | Effects Library host (picker) plus the Studio Editor inspector effect stack | 10.5 for the picker; the effect-stack editing stays hand-written until the revised Studio Editor covers it |
+| `panels/SettingsPanel.tsx`, `panels/LayersPanel.tsx`, `preview/Transport.tsx`, `shell/StudioView.tsx`, most of `shell/layout.css` | Studio Editor host | 10.3, only if the owner resolves D-1 and D-2 |
+Stay: `preview/PreviewCanvas.tsx`, `preview/draw.ts`, `timeline/Timeline.tsx`,
+`playback/*`, `model/*`, `io/*`, `fonts/*`, `tokens.css`, and, while DEFERRED,
+`landing/*`. If the Studio Editor stays unwired, StudioView and its panels also stay,
+and the group ends with one hand-written route (the editor) by owner decision. Also
+removed or changed when the editor is wired: the dc-harness (Deviation 21 says it is
+deleted when a real route renders the generated screens).
+
+#### Tests for Requirement 19
+| Clause | Test | Kind | What it checks |
+| --- | --- | --- | --- |
+| 19.2 | `wiring/wiring.test.ts` | unit | for each wired screen, `Object.keys(adapt(...).data)` sorted equals the sorted `*_BINDINGS`; no extra, none missing; a deliberately wrong adapter fails the test |
+| 19.2 | `wiring/wiring.test.ts` | unit | static audit: adapters import no `react`, no `computeFrameState`, no `renderFrame`, no exporter, no `document`, `window`, `Date`, `performance`, `Math.random` |
+| 19.3 | `wiring/wiring.test.ts` | unit | with spy dispatchers, every non-inert handler calls its documented dispatcher once; every inert handler is `INERT` and calls none; `INERT_BINDINGS` matches the design table |
+| 19.6 | `wiring/tables.test.ts` | unit | category and range tables have one entry per `presetCatalog` id and each range contains the effect's default value; every key matches a real param in the effect's schema |
+| 19.5 | `__tests__/dc/dist-scan.test.ts` | unit (slow) | inverted: default-route dist has `.ds-root`, a `.ui-` selector, and all six DS fonts; the harness dist still does |
+| 19.4 | Playwright, default route | e2e | `__studioExportParity` is 0 at t = 1, 3, 5.5 after the swap |
+| 19.6 | the 10.1 specs | e2e | unchanged after each swap |
+| 19.5 | CSP spec | e2e | at most the one Zod probe |
+Properties 13 and 14 are in "Correctness Properties".
+
 
 ## Correctness Properties
 
@@ -2041,6 +2467,20 @@ all five are accepted. The test performs its own scan on the output; it does not
 reuse the converter's built-in invariant check.
 
 **Validates: Requirements 17.1, 17.3.10, 17.5, 17.6**
+### Property 13: Adapter binding coverage
+For any `AdapterState` built from an arbitrary valid project (the existing
+`arb-project` generator), any `ui`, any `exportRun`, and any `view`, and for each wired
+adapter, the sorted keys of `adapt(state, dispatchers).data` equal the sorted exported
+`*_BINDINGS` list of that screen. No key is missing and none is extra.
+**Validates: Requirements 19.2**
+
+### Property 14: Adapter construction is pure and deterministic
+For the same inputs, two calls of an adapter return structurally equal data, where a
+function value is compared by `typeof` and by the dispatcher it calls when invoked
+with a fixed argument. Constructing the data calls no dispatcher (all spies stay at
+zero calls), reads no clock, and does not mutate `state`.
+**Validates: Requirements 19.2, 19.3**
+
 
 ## Error Handling
 
@@ -2319,3 +2759,28 @@ recorded in `docs/dependencies.md` (see risk 1).
     `sc-for`; the three config rules). The requirement amendments listed in the
     findings table (17.3.10, 18.1, 18.3) and `.d.mts` in place of `.d.ts` for the
     hand-written types remain proposals in this design.
+### Risks for Requirement 19
+25. **The Studio Editor is a mock-up of a bigger product.** 21 of 54 bindings are
+    inert and 38 of 57 interactive elements are static. Wiring it as-is would delete
+    working features (settings, layer editing, save/load) or leave dead controls. The
+    plan gates task 10.3 on the owner's design revision (19.9). This is the main
+    schedule risk of the group and is not in the credit estimate.
+26. **"Pass unchanged" depends on names.** The safety-net specs use roles and labels
+    only, but a generated screen may expose different names or duplicate them (Play
+    appears twice). The accessible-name contract table lists known cases. Any spec edit
+    after the swap stops the group.
+27. **`axe-core` is MPL-2.0.** The requested "axe clean" check cannot use it under
+    the dependency rule. The plan uses Playwright's ARIA snapshot plus
+    explicit checks. An owner exception would be needed to add axe.
+28. **Overlay stacking.** The generated Export Flow and Effects Library render
+    `backdrop` inside their own overlay. Whether they are `position: fixed` and how
+    they stack over the hand-written editor is unverified; task 10.4 checks it before
+    deleting `export/dialog.tsx`.
+29. **Landing and Error States stay hand-written or absent.** Requirement 19.7's "no
+    dual UI" applies per wired route. The landing keeps its component; Error States has
+    no live route.
+30. **Export Flow edits the project.** Its Frame rate and Duration controls would
+    dispatch `set-fps` and `set-duration` from the export step. That changes the
+    project (one undo step each). Gap D-4 asks the owner to accept or remove them.
+31. **Store change T-1.** `UiState.playing` is new UI state. It must not enter saved
+    files or history; a test asserts that `serializeProject` output is unchanged.

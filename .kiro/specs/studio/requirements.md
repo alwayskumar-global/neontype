@@ -902,6 +902,81 @@ have accessible, CSP-safe building blocks that do not restyle the live studio.
     NOT load `ds.css`, and its parity at those times stays exactly 0 without it.
     *(Playwright)*
 
+### Requirement 19: Generated-screen wiring
+**User Story:** As the owner, I want the live studio to render the screens I
+designed, driven by pure adapters over the existing store, so that users see my
+design while rendering, export, and schema logic stay where they are today.
+#### Acceptance criteria
+1. THE screen-to-route map SHALL be the one below. A route marked WIRE SHALL render
+   its generated screen. A route marked DEFERRED SHALL keep its existing
+   hand-written component until the owner promotes it by an explicit decision
+   recorded in this requirement. *(review, then Playwright per route)*
+
+   | Live route | Generated screen | Decision | Why |
+   | --- | --- | --- | --- |
+   | Editor | Studio Editor | WIRE, gated by criterion 9 | 38 of its 57 interactive elements have no bound handler, it has no slot for the canvas or the timeline, and 21 of its 54 bindings are inert in v1 |
+   | Export dialog | Export Flow | WIRE | 74 bindings, 25 inert; the inert set is hidden or unreachable (Web embed destination omitted, WebM stays unsupported) except two rows (criterion 9, gap D-4) |
+   | Preset picker | Effects Library | WIRE | 51 bindings, 1 inert (the large preview); needs a studio-side category table and a param-range table (design gaps D-5, D-6) |
+   | Landing | Landing Page | DEFERRED | its copy and tiles claim Web embed, WebM alpha, and "Works offline", none of which ship; `tests/landing.spec.ts` asserts those words are absent; its hero and gallery are CSS approximations while the live landing draws with the real renderer |
+   | Error and empty states | Error States | DEFERRED | all 8 bindings are inert: no warnings surface exists in the store or UI, and the offline toast would assert an offline mode the app does not have |
+
+2. THE app SHALL contain exactly one pure adapter per wired screen at
+   `apps/studio/src/wiring/<slug>.ts`, with the signature
+   `(state, dispatchers) => DcProps`. THE adapter's data keys SHALL equal that
+   screen's exported `*_BINDINGS` list exactly, with no missing and no extra key.
+   THE adapter SHALL read only store state, `presetCatalog`, the export error map,
+   and the selectors in `model/selectors.ts`. IT SHALL NOT call `computeFrameState`,
+   `renderFrame`, or any exporter; read the DOM, a clock, or a random source; or use
+   a React hook. *(unit, property)*
+3. EVERY binding SHALL be classified in the design as an action (A), selector (S),
+   constant (C), host view state (V), or inert in v1 (I), with its source or reason.
+   EVERY handler binding SHALL either call one documented store action, gesture
+   API call, clock method, export-pipeline call, or host setter, or be listed as
+   inert in v1 with a reason. AN inert control SHALL be unreachable: hidden through
+   the screen's own visibility binding, omitted from a data list, or the screen is
+   gated by criterion 9. THE adapter SHALL NOT show a number or text it cannot
+   derive (no fabricated sizes, ETAs, names, or opacity values). *(unit)*
+4. THE preview canvas, the playback clock, the timeline interaction, and the export
+   pipeline SHALL be unchanged; a generated screen only hosts them through a slot
+   (a node binding) or a ref. THE host SHALL NOT call `computeFrameState` or
+   `renderFrame` outside `preview/` and the exporters. WHEN a screen is wired,
+   `window.__studioExportParity(t)` SHALL return exactly 0 at t = 1, 3, and 5.5 on
+   the default route (dev build). *(Playwright)*
+5. THE app entry `main.tsx` SHALL import `./ds/ds.css`. THE `dist-scan` assertions
+   of Requirement 18.10 SHALL be inverted: the default-route production dist SHALL
+   contain the `.ds-root` selector, at least one `.ui-` selector, and all six
+   DM Mono and Instrument Sans files. THE CSP SHALL be unchanged and the CSP spec
+   SHALL record no violation beyond the one allowed Zod `allowsEval` probe.
+   *(unit, Playwright)*
+6. THE following behaviour SHALL stay green through the swap, with the SAME
+   Playwright specs and no assertion edited: undo (there is no redo in v1, see Out
+   of scope), canvas drag and nudge, timeline editing, save and load, the demo
+   project, keyboard shortcuts, accessibility, and the performance budget. THE
+   safety-net specs (design, "Safety-net specs") SHALL use only `getByRole`,
+   `getByLabel`, and `getByText`, plus `page.evaluate` for document-wide
+   invariants, and SHALL pass against the current UI before any screen is wired.
+   THE accessibility spec SHALL use Playwright's built-in ARIA snapshot; it SHALL
+   NOT add `axe-core` or `@axe-core/playwright` (MPL-2.0, outside the approved
+   licences) without a recorded owner exception. *(Playwright)*
+7. THE hand-written component that a wired screen replaces SHALL be deleted only
+   after the replacement passes the safety-net specs. THE design SHALL list every
+   file to be removed. WHEN the group ends there SHALL be no second UI for any WIRED
+   route and no feature flag. DEFERRED routes keep their component. *(review)*
+8. THE folder `apps/studio/src/generated/` SHALL NOT be edited by hand. A gap SHALL be
+   fixed in the converter (`scripts/`) or in the design source, then regenerated.
+   *(unit: `convert` determinism and the regenerate-diff-empty check)*
+9. THE design source for a wired screen SHALL provide what the live behaviour needs
+   before that screen's wiring task starts. THE gaps are listed in the design
+   (D-1 to D-7). IF a gap that blocks a screen is unresolved when its wiring task
+   is about to start, THEN the implementer SHALL STOP and ask the owner, who either
+   supplies a revised design (re-run through the converter) or records a waiver per
+   gap. *(review)*
+10. THE wiring SHALL add no runtime or dev dependency, SHALL NOT change
+    `src/tokens.css`, and SHALL NOT change anything under `packages/`. A catalog
+    category table or param-range table that the engine lacks SHALL live in
+    `apps/studio/src/wiring/` and SHALL have a drift test against `presetCatalog`
+    and the effects' param schemas. *(unit for manifest and drift)*
+
 ---
 
 ## Out of scope (v1)
@@ -919,12 +994,13 @@ have accessible, CSP-safe building blocks that do not restyle the live studio.
 - Dedicated mobile/touch layout (desktop layout only in v1).
 - Keyframe-track editing UI (per-property keyframe curves) and keyframe editing
   generally, beyond effect params and layer timing.
-- Design conversion (Requirements 17 and 18): wiring generated screens into the
-  live studio; replacing the existing panels or the landing page with generated
-  output; porting design-system components beyond the 12; executing or porting
+- Design conversion (Requirements 17 and 18): porting design-system components beyond the 12; executing or porting
   the data scripts' state logic (the mockups' fake state); Tooltip, Modal, Tabs
   and similar components; changing `apps/studio/src/tokens.css`; any change under
-  `packages/`.
+  `packages/`. Wiring the generated screens into the live studio is Requirement 19.
+- Within Requirement 19: wiring the Landing Page and Error States screens (both
+  DEFERRED), the embed destination, WebM alpha, redo, canvas zoom, keyframe-curve
+  editing, audio, and any change to the saved project schema (a project name).
 
 ---
 
@@ -1009,6 +1085,10 @@ They are recorded here as decisions.
     `letterSpacing` and `lineHeight`.
   - Existing Property 3 (Drag bounds) is updated to refer to the frame-grid
     version, Property 8 (Req 5.2, 5.10).
+  - Property 13, adapter binding coverage (Req 19.2): for any adapter state, an
+    adapter's data keys equal its screen's `*_BINDINGS` exactly.
+  - Property 14, adapter purity (Req 19.2, 19.3): same inputs give structurally
+    equal data, and constructing the data calls no dispatcher.
 - **Playwright** (bundled Chromium, localhost): preview playback/scrub, settings,
   layer and effect editing, timeline drags, font readiness, save/load, the export
   dialog end-to-end, preview/export parity, no-network session, and accessibility
