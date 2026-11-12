@@ -12,13 +12,30 @@ export const DS_NAMESPACE = "MotionTextStudioDesignSystem_f5b901";
 
 const EVENT_ATTRS = new Set(["onClick", "onChange", "onInput", "onKeyDown", "onPointerDown", "onMouseEnter", "onMouseLeave", "onFocus", "onBlur"]);
 const BOOL_ATTRS = new Set(["disabled", "checked", "hidden", "readOnly", "required", "selected", "multiple", "autoFocus"]);
+/** Elements a boolean attribute is valid on. `multiple` on <input> is further limited to type="file"; `hidden` is global. */
+const BOOL_HOSTS = {
+  disabled: ["button", "input", "select", "option", "textarea"],
+  checked: ["input"],
+  readOnly: ["input", "textarea"],
+  required: ["input", "select", "textarea"],
+  selected: ["option"],
+  multiple: ["select", "input"],
+  autoFocus: ["button", "input", "select", "textarea"],
+};
+/** Attributes each native form element accepts (besides `style*`, `hint-*`, `dc-props`). */
+const FORM_ATTRS = {
+  select: new Set(["value", "onChange", "disabled", "multiple", "class", "name", "id"]),
+  option: new Set(["value", "disabled", "selected", "class", "id"]),
+  textarea: new Set(["value", "onChange", "rows", "cols", "maxlength", "placeholder", "class"]),
+};
+const TEXTAREA_NUMBERS = new Set(["rows", "cols", "maxlength"]);
 const PLAIN_ATTRS = new Set([
   "id", "htmlFor", "role", "title", "alt", "href", "type", "name", "placeholder", "rel", "value",
   "d", "x", "y", "cx", "cy", "r", "rx", "width", "height", "fill", "stroke", "viewBox", "preserveAspectRatio",
   "strokeWidth", "strokeLinecap", "strokeLinejoin", "strokeDasharray",
 ]);
 const RENAME = {
-  class: "className", for: "htmlFor", tabindex: "tabIndex", readonly: "readOnly", autofocus: "autoFocus",
+  class: "className", for: "htmlFor", tabindex: "tabIndex", readonly: "readOnly", autofocus: "autoFocus", maxlength: "maxLength",
   "stroke-width": "strokeWidth", "stroke-linecap": "strokeLinecap", "stroke-linejoin": "strokeLinejoin", "stroke-dasharray": "strokeDasharray",
 };
 const ARIA_TRISTATE = new Set(["aria-checked", "aria-pressed"]);
@@ -160,11 +177,20 @@ export function emitJsx(root, { file, slug, styles, assets }) {
     if (sp) classParts.push({ lit: sp.className });
     const hasOnChange = el.attrs.some((a) => a.name === "onChange");
     const isInput = el.tag === "input";
+    const isSelect = el.tag === "select";
+    const isTextarea = el.tag === "textarea";
+    const isControl = isInput || isSelect || isTextarea;
+    const formAttrs = FORM_ATTRS[el.tag];
+    if (isSelect) {
+      if (!hasOnChange && !el.attrs.some((a) => a.name === "disabled")) fail("<select> needs an onChange handler or must be disabled (a select cannot be read-only)", el.line);
+      if (el.attrs.some((a) => a.name === "multiple") && el.attrs.some((a) => a.name === "value")) fail("<select multiple> with a bound value is not supported", el.line);
+    }
     for (const a of el.attrs) {
       const name = a.name;
       if (name.startsWith("hint-") || name === "style" || name === "style-hover" || name === "style-focus" || name === "style-active") continue;
       if (name === "dc-props") continue;
       const line = a.line;
+      if (formAttrs && !formAttrs.has(name) && !name.startsWith("aria-")) fail(`attribute "${name}" is not supported on <${el.tag}>`, line);
       if (name === "class") {
         const whole = parseWholeValue(a.value, file, line, name);
         if (whole.static !== undefined) classParts.push({ lit: whole.static });
@@ -184,17 +210,25 @@ export function emitJsx(root, { file, slug, styles, assets }) {
         continue;
       }
       if (EVENT_ATTRS.has(name)) {
-        props.push(`${name}=${handlerValue(parseWholeValue(a.value, file, line, name), ctx, line, name, isInput && name === "onChange")}`);
+        props.push(`${name}=${handlerValue(parseWholeValue(a.value, file, line, name), ctx, line, name, isControl && name === "onChange")}`);
         continue;
       }
       const out = RENAME[name] ?? name;
-      if (name === "value" && isInput) {
+      if (name === "value" && (isInput || isTextarea || isSelect)) {
         const whole = parseWholeValue(a.value, file, line, name);
         props.push(`value=${stringValue(whole, ctx, true)}`);
-        if (!hasOnChange) props.push("readOnly");
+        // A text field without a handler is read-only; a select has no read-only state (it was required to be disabled above).
+        if (!hasOnChange && !isSelect) props.push("readOnly");
+        continue;
+      }
+      if (isTextarea && TEXTAREA_NUMBERS.has(name)) {
+        props.push(`${out}=${numberValue(parseWholeValue(a.value, file, line, name), ctx, line, name)}`);
         continue;
       }
       if (BOOL_ATTRS.has(out)) {
+        const hosts = BOOL_HOSTS[out];
+        if (hosts && !hosts.includes(el.tag)) fail(`attribute "${name}" is not valid on <${el.tag}> (valid on: ${hosts.join(", ")})`, line);
+        if (out === "multiple" && el.tag === "input" && !el.attrs.some((x) => x.name === "type" && x.value === "file")) fail('attribute "multiple" is only valid on <input type="file">', line);
         props.push(`${out}=${boolValue(parseWholeValue(a.value, file, line, name), ctx, line, name)}`);
         continue;
       }

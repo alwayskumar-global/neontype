@@ -400,7 +400,7 @@ describe("boolean attributes and design-time props (owner-approved, narrow)", ()
       ["<div hidden>x</div>", "hidden={true}"],
       ["<input type=\"file\" multiple>", "multiple={true}"],
       ["<input autofocus>", "autoFocus={true}"],
-      ["<input selected>", "selected={true}"],
+      ["<select disabled><option value=\"a\" selected>A</option></select>", "selected={true}"],
     ];
     for (const [body, want] of cases) expect(tsx(convert(body)), body).toContain(want);
   });
@@ -433,5 +433,78 @@ describe("boolean attributes and design-time props (owner-approved, narrow)", ()
     fails(() => convert("<span aria-label='x'>y</span>"), /double-quoted/, 5);
     const onOtherScript = doc("<div>x</div>").replace("</x-dc>", "<style data-x='1'>a{}</style>\n</x-dc>");
     expect(() => convertDc(onOtherScript, { fileName: "T.dc.html" })).toThrow(/double-quoted/);
+  });
+});
+describe("native form elements: select, option, textarea (owner-approved)", () => {
+  const SELECT = '<select value="{{ v }}" onChange="{{ h }}"><sc-for list="{{ opts }}" as="o"><option value="{{ o.value }}">{{ o.label }}</option></sc-for></select>';
+  it("a select with value and onChange, and options under sc-for, is accepted", () => {
+    const out = tsx(convert(SELECT));
+    expect(out).toMatch(/<select value=\{asString\(/);
+    expect(out).toMatch(/onChange=\{asHandler\(.*\) \?\? noop\}/);
+    expect(out).toContain("<option value=");
+    expect(out).not.toContain("readOnly");
+  });
+  it("a select with no onChange is accepted only when disabled, and never gets readOnly", () => {
+    const out = tsx(convert('<select value="{{ v }}" disabled><option value="a">A</option></select>'));
+    expect(out).toContain("disabled={true}");
+    expect(out).not.toContain("readOnly");
+    fails(() => convert('<select value="{{ v }}"><option value="a">A</option></select>'), /needs an onChange handler or must be disabled/, 5);
+  });
+  it("select: multiple is allowed without a bound value, aria-* and name and id are allowed, anything else fails", () => {
+    expect(tsx(convert('<select multiple onChange="{{ h }}" aria-label="Pick" name="n" id="i"><option value="a">A</option></select>'))).toContain("multiple={true}");
+    fails(() => convert('<select multiple value="{{ v }}" onChange="{{ h }}"><option value="a">A</option></select>'), /multiple.*not supported/, 5);
+    fails(() => convert('<select onChange="{{ h }}" title="x"><option value="a">A</option></select>'), /attribute "title" is not supported on <select>/, 5);
+    fails(() => convert('<select onChange="{{ h }}">text<option value="a">A</option></select>'), /text directly inside <select>/, 5);
+    fails(() => convert('<select onChange="{{ h }}"><div></div></select>'), /<div> inside <select>/, 5);
+  });
+  it("an option takes a static or bound value, disabled, and selected; text content is its label", () => {
+    const out = tsx(convert('<select disabled><option value="a" disabled>A</option><option value="{{ x }}" selected>B</option></select>'));
+    expect(out).toContain('<option value="a" disabled={true}>');
+    expect(out).toContain("selected={true}");
+    fails(() => convert('<select disabled><option value="a" label="x">A</option></select>'), /attribute "label" is not supported on <option>/, 5);
+  });
+  it("an option outside a select fails, even under a directive", () => {
+    fails(() => convert('<option value="a">A</option>'), /<option> is only supported inside <select>/, 5);
+    fails(() => convert('<div><sc-for list="{{ l }}" as="o"><option value="a">A</option></sc-for></div>'), /<option> is only supported inside <select>/, 5);
+  });
+  it("a textarea with a bound value and onChange is accepted with rows, cols, maxlength, placeholder, aria-*", () => {
+    const out = tsx(convert('<textarea class="a" rows="2" cols="30" maxlength="2000" placeholder="Type" aria-label="Text" value="{{ t }}" onChange="{{ h }}"></textarea>'));
+    expect(out).toMatch(/<textarea /);
+    expect(out).toContain("rows={2}");
+    expect(out).toContain("cols={30}");
+    expect(out).toContain("maxLength={2000}");
+    expect(out).toContain('placeholder="Type"');
+    expect(out).toMatch(/value=\{asString\(/);
+    expect(out).not.toContain("readOnly");
+  });
+  it("a textarea without onChange is read-only", () => {
+    expect(tsx(convert('<textarea value="{{ t }}"></textarea>'))).toContain("readOnly");
+  });
+  it("textarea content, a child element, and unsupported attributes fail closed", () => {
+    fails(() => convert('<textarea value="{{ t }}">hello</textarea>'), /<textarea> content is not supported/, 5);
+    fails(() => convert('<textarea value="{{ t }}"><span>x</span></textarea>'), /<textarea> content is not supported/, 5);
+    fails(() => convert('<textarea value="{{ t }}" wrap="soft"></textarea>'), /attribute "wrap" is not supported on <textarea>/, 5);
+    fails(() => convert('<textarea value="{{ t }}" rows="two"></textarea>'), /must be a number/, 5);
+  });
+});
+describe("boolean attributes are valid only on their hosts", () => {
+  it("selected only on <option>; multiple only on <select> and <input type=file>; checked only on <input>", () => {
+    fails(() => convert("<input selected>"), /"selected" is not valid on <input>/, 5);
+    fails(() => convert("<div selected></div>"), /"selected" is not valid on <div>/, 5);
+    fails(() => convert('<input type="text" multiple>'), /only valid on <input type="file">/, 5);
+    fails(() => convert("<button multiple>x</button>"), /"multiple" is not valid on <button>/, 5);
+    fails(() => convert("<button checked>x</button>"), /"checked" is not valid on <button>/, 5);
+    fails(() => convert("<div checked></div>"), /"checked" is not valid on <div>/, 5);
+    expect(tsx(convert('<input type="checkbox" checked>'))).toContain("checked={true}");
+    expect(tsx(convert('<input type="file" multiple>'))).toContain("multiple={true}");
+  });
+  it("the other booleans are limited to the elements they are valid on", () => {
+    fails(() => convert("<div disabled></div>"), /"disabled" is not valid on <div>/, 5);
+    fails(() => convert("<button readonly>x</button>"), /"readonly" is not valid on <button>/, 5);
+    fails(() => convert("<div required></div>"), /"required" is not valid on <div>/, 5);
+    expect(tsx(convert("<div hidden>x</div>"))).toContain("hidden={true}");
+    expect(tsx(convert("<input readonly>"))).toContain("readOnly={true}");
+    // A textarea gets readOnly from having no handler, not from a source attribute.
+    fails(() => convert("<textarea readonly value=\"{{ t }}\"></textarea>"), /attribute "readonly" is not supported on <textarea>/, 5);
   });
 });

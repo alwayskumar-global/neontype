@@ -23,7 +23,7 @@ const BOOLEAN_ATTRS = new Set(["disabled", "checked", "readonly", "required", "h
 export const ALLOWED_ELEMENTS = new Set([
   "html", "head", "body", "x-dc", "helmet", "meta", "title", "link", "style", "script",
   "div", "span", "p", "a", "ul", "ol", "li", "section", "aside", "header", "nav", "main", "footer",
-  "figure", "figcaption", "h1", "h2", "h3", "label", "button", "input", "img",
+  "figure", "figcaption", "h1", "h2", "h3", "label", "button", "input", "img", "select", "option", "textarea",
   "svg", "path", "circle", "rect",
   "sc-if", "sc-for", "x-import", "dc-import",
 ]);
@@ -274,6 +274,31 @@ function applyOmit(node, rule, counter) {
   for (const c of node.children) if (c.type === "el") applyOmit(c, rule, counter);
 }
 
+/**
+ * Form-element structure (native <select>, <option>, <textarea>): an <option> sits directly in a <select> (directives
+ * <sc-if> and <sc-for> in between are fine); a <select> holds only <option>s and directives; a <textarea> has no content
+ * (its text comes from a bound `value`).
+ */
+function checkFormElements(node, file, parentTag) {
+  for (const c of node.children) {
+    if (c.type === "text") {
+      if (parentTag === "select" && c.text.trim() !== "") throw new DcConvertError("text directly inside <select> is not supported (use <option>)", file, c.line);
+      continue;
+    }
+    if (c.tag === "option" && parentTag !== "select") throw new DcConvertError("<option> is only supported inside <select>", file, c.line);
+    if (c.tag === "textarea") {
+      for (const k of c.children) {
+        if (k.type === "el" || k.text.trim() !== "") throw new DcConvertError("<textarea> content is not supported (bind its value instead)", file, k.line ?? c.line);
+      }
+    }
+    if (parentTag === "select" && !["option", "sc-if", "sc-for"].includes(c.tag)) {
+      throw new DcConvertError(`<${c.tag}> inside <select> is not supported (only <option>)`, file, c.line);
+    }
+    // Directives are transparent: an <option> under <sc-for> inside a <select> still has the select as its parent.
+    const next = c.tag === "sc-if" || c.tag === "sc-for" ? parentTag : c.tag;
+    checkFormElements(c, file, next);
+  }
+}
 /** Stage (c). Returns { helmetCss, root, dropped }. */
 export function structurePass(tree, file, omitIf = []) {
   const dropped = [];
@@ -302,5 +327,6 @@ export function structurePass(tree, file, omitIf = []) {
     applyOmit({ children: [root] }, rule, counter);
     if (counter.n === 0) throw new DcConvertError(`omitIf rule ${JSON.stringify(rule)} matched nothing (stale rule)`, file, 1);
   }
+  checkFormElements({ children: [root] }, file, null);
   return { helmetCss, root, dropped };
 }
