@@ -43,7 +43,9 @@ Paste this into Claude Design. It lists what to change so the screens can be wir
 
 **Change**: Frame rate and Duration become plain read-only text bound to `fps` and `dur`; no card may assume a fixed aspect ratio, so drop the 9:16 / 1:1 / 16:9 labels and sizes; size options are scales of the project's own size (`res`, `resOpts`, `onRes`). (D-4, D-9)
 
-**Keep** (names unchanged): `crumbs`, `s1`, `s2`, `s3`, `s4`, `s5`, `toOptions`, `toDest`, `d`, `res`, `resOpts`, `onRes`, `fps`, `dur`, `frames`, `framesText`, `frameTc`, `pct`, `pctText`, `exportSteps`, `estimate`, `outSummary`, `startExport`, `cancelExport`, `exportLabel`, `thumbW`, `stageInThumb`, `successTitle`, `successText`, `fileName`, `fileMeta`, `fileIcon`, `failText`, `errCode`, `tryNext`.
+**Addendum (D-4): close and download.** Three controls currently do nothing. Bind the Close X, the Cancel button on the format step, and the Done button on the success step to handler `onClose`★ (it closes the export dialog). Bind the Download button on the success step to handler `onDownload`★ (it saves the finished file).
+
+**Keep** (names unchanged): `crumbs`, `s1`, `s2`, `s3`, `s4`, `s5`, `toOptions`, `toDest`, `d`, `res`, `resOpts`, `onRes`, `fps`, `dur`, `frames`, `framesText`, `frameTc`, `pct`, `pctText`, `exportSteps`, `estimate`, `outSummary`, `startExport`, `cancelExport`, `exportLabel`, `thumbW`, `stageInThumb`, `successTitle`, `successText`, `fileName`, `fileMeta`, `fileIcon`, `failText`, `errCode`, `tryNext`, plus two handlers added by the addendum below: `onClose`★ and `onDownload`★.
 
 ## 3. Effects Library
 
@@ -63,7 +65,7 @@ Paste this into Claude Design. It lists what to change so the screens can be wir
 - [ ] Layers list, Add layer, the Inspector fields and the effects list all carry the bindings in section 1. (D-2)
 - [ ] No keyframe, blur, opacity, scale, rotation, zoom, Help, Snap, warning-banner or Presets-tab controls remain. (D-2)
 - [ ] The project-name input is gone or read-only. (D-3)
-- [ ] Export Flow has no Loop, Audio, Web embed, Fit/Fill or PNG/WebM sub-picker; Frame rate and Duration are read-only text. (D-4)
+- [ ] Export Flow has no Loop, Audio, Web embed, Fit/Fill or PNG/WebM sub-picker; Frame rate and Duration are read-only text; Close X, Cancel (format step) and Done carry `onClose`, and Download carries `onDownload`. (D-4)
 - [ ] Export Flow cards: MP4, PNG sequence, GIF, WebP available; WebM alpha always unavailable with a reason; no fixed aspect ratios anywhere. (D-9)
 - [ ] Effects Library has no large preview, a bound "Applying to" chip and effect count, and Easing only when `showEase`. (D-5, D-8, D-10)
 - [ ] Every remaining control has a binding, and every binding is used by a control. (all)
