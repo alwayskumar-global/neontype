@@ -1,4 +1,5 @@
 # Dependencies
+Every version below is an exact pin: it is the version in every `package.json` and in `pnpm-lock.yaml`. No `^` or `~` ranges are allowed (root `.npmrc` sets `save-exact=true`; `apps/studio/src/__tests__/exact-pins.test.ts` enforces it).
 
 | Package | Version | License | Reason |
 | --- | --- | --- | --- |
