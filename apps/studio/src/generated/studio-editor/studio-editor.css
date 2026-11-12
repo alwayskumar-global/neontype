@@ -69,7 +69,7 @@
 .dc-studio-editor .dc-studio-editor-s26eedb { position: absolute; top: 50%; left: 0; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 999px; background: #F4F6F9; box-shadow: 0 0 0 1px #5E6776; }
 .dc-studio-editor .dc-studio-editor-s286372 { flex: 1; min-width: 0; }
 .dc-studio-editor .dc-studio-editor-s286b64 { display: flex; gap: 4px; }
-.dc-studio-editor .dc-studio-editor-s2911e6 { display: grid; grid-template-columns: 264px minmax(0,1fr) 304px; grid-template-rows: 48px minmax(0,1fr) 248px; height: 100vh; min-width: 1280px; min-height: 760px; background: #0C0E12; overflow: hidden; }
+.dc-studio-editor.dc-studio-editor-s2911e6 { display: grid; grid-template-columns: 264px minmax(0,1fr) 304px; grid-template-rows: 48px minmax(0,1fr) 248px; height: 100vh; min-width: 1280px; min-height: 760px; background: #0C0E12; overflow: hidden; }
 .dc-studio-editor .dc-studio-editor-s2a4bc1 { position: absolute; top: 50%; left: var(--dc-0); width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 999px; background: #F4F6F9; box-shadow: 0 0 0 1px #5E6776; }
 .dc-studio-editor .dc-studio-editor-s2aa5d5 { position: absolute; left: 0%; width: 100%; top: 4px; bottom: 4px; display: flex; align-items: center; gap: 6px; padding: 0 8px; background: #242A33; border: 1px solid #3C4451; border-radius: 4px; overflow: hidden; }
 .dc-studio-editor .dc-studio-editor-s2c103a { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-bottom: 1px solid #1C2129; flex: none; }

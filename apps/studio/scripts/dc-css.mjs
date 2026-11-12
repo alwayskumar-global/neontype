@@ -128,7 +128,9 @@ export function createStyleRegistry(slug, keyframeMap) {
   /** @type {Map<string, {hashed: string, base: any, states: Record<string, any>}>} */
   const classes = new Map();
   const hashToText = new Map();
-
+  /** How many elements use each class, and how many of those are the screen root. */
+  const uses = new Map();
+  const rootUses = new Map();
   return {
     add({ style, hover, focus, active, file, line }) {
       const base = style !== undefined
@@ -148,7 +150,15 @@ export function createStyleRegistry(slug, keyframeMap) {
       }
       hashToText.set(h6, hashed);
       if (!classes.has(className)) classes.set(className, { hashed, base, states });
+      uses.set(className, (uses.get(className) ?? 0) + 1);
       return { className, vars: base.vars };
+    },
+    /**
+     * Records that one use of `className` is the screen ROOT element. The root carries `dc-<slug>` itself, so a
+     * descendant selector (`.dc-<slug> .cls`) can never match it; its rule is emitted as `.dc-<slug>.cls`.
+     */
+    markRoot(className) {
+      rootUses.set(className, (rootUses.get(className) ?? 0) + 1);
     },
     /** The CSS for every registered class, sorted by class name. */
     render() {
@@ -156,10 +166,15 @@ export function createStyleRegistry(slug, keyframeMap) {
       const out = [];
       for (const className of [...classes.keys()].sort()) {
         const { base, states } = classes.get(className);
-        const sel = `.dc-${slug} .${className}`;
-        if (base.decls.length) out.push(`${sel} { ${fmt(base.decls)} }`);
+        // Root-only class: match the root element itself. Shared with a descendant: match both.
+        const nRoot = rootUses.get(className) ?? 0;
+        const nAll = uses.get(className) ?? 0;
+        const descendant = `.dc-${slug} .${className}`;
+        const onRoot = `.dc-${slug}.${className}`;
+        const sel = (suffix) => (nRoot === 0 ? descendant + suffix : nRoot >= nAll ? onRoot + suffix : `${onRoot}${suffix}, ${descendant}${suffix}`);
+        if (base.decls.length) out.push(`${sel("")} { ${fmt(base.decls)} }`);
         for (const key of ["hover", "focus", "active"]) {
-          if (states[key] && states[key].decls.length) out.push(`${sel}:${key} { ${fmt(states[key].decls)} }`);
+          if (states[key] && states[key].decls.length) out.push(`${sel(":" + key)} { ${fmt(states[key].decls)} }`);
         }
       }
       return out.join("\n");

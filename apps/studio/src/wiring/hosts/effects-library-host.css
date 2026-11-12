@@ -4,10 +4,9 @@
  * reuse the design-system `fx` classes and add the keyframes the generated screen already declares.
  * Values come from the design-system tokens.
  */
-/* The converter scopes the screen root rule as a DESCENDANT selector (".dc-x .dc-x-sc0e48e"), so it never
-   matches the root element, which carries both classes. Until the converter is fixed (Requirement 19.8) the
-   host supplies the root rule: a fixed full-viewport frame that lets the studio show through the scrim. */
-.lib-host > .ds-root.dc-effects-library { position: fixed; inset: 0; overflow: auto; z-index: 1000; color-scheme: dark; background: transparent; }
+/* The generated root rule is `position: fixed; inset: 0` with an opaque app background. The host raises it above the
+   studio and lets the studio show through the scrim. */
+.lib-host > .ds-root.dc-effects-library { z-index: 1000; background: transparent; }
 .lib-thumb { display: inline-flex; white-space: nowrap; font-family: var(--font-ui); font-weight: var(--font-weight-bold); font-size: var(--text-title-size); line-height: var(--text-title-line); color: var(--color-text-primary); }
 .lib-thumb.lib-tamil { font-family: var(--font-tamil); line-height: var(--text-tamil-line); }
 .lib-thumb > span { white-space: pre; }

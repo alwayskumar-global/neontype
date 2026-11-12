@@ -98,7 +98,7 @@
 .dc-landing-page .dc-landing-page-s8f32d1:hover { color: var(--color-text-primary); }
 .dc-landing-page .dc-landing-page-s9126ef { position: absolute; left: 26%; right: 8%; top: 0; bottom: 0; border-radius: 2px; background: var(--color-neutral-700); }
 .dc-landing-page .dc-landing-page-s936b8c { border-top: 1px solid var(--color-border-subtle); background: var(--color-bg-canvas); }
-.dc-landing-page .dc-landing-page-s97f564 { min-height: 100vh; background: var(--color-bg-app); overflow-x: hidden; }
+.dc-landing-page.dc-landing-page-s97f564 { min-height: 100vh; background: var(--color-bg-app); overflow-x: hidden; }
 .dc-landing-page .dc-landing-page-s99bd02 { margin: 0; max-width: 420px; color: var(--color-text-secondary); text-wrap: pretty; }
 .dc-landing-page .dc-landing-page-s9d343c { position: relative; display: grid; gap: 10px; justify-self: center; width: min(100%,520px); }
 .dc-landing-page .dc-landing-page-s9dc02b { position: relative; aspect-ratio: 1/1; background: #000; border-radius: var(--radius-lg); box-shadow: 0 0 0 1px var(--color-border-default),0 30px 80px -30px rgba(242,61,200,.45); display: grid; place-items: center; align-content: center; gap: clamp(8px,1.6vw,14px); overflow: hidden; container-type: inline-size; }

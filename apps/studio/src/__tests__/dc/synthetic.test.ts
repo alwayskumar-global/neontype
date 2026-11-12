@@ -357,3 +357,36 @@ describe("mapping: markup", () => {
     expect(tsx(a)).not.toBe(tsx(b)); // different raw bytes, different hash
   });
 });
+describe("root-rule scoping (finding C-1)", () => {
+  /** The class names a root-only rule can have, e.g. `.dc-t.dc-t-s1a2b3c`. */
+  const onRoot = /^\.dc-t\.dc-t-s[0-9a-f]{6}(:hover)? \{/m;
+  const descendant = /^\.dc-t \.dc-t-s[0-9a-f]{6}(:hover)? \{/m;
+  it("a root element's own style rule matches the root itself, not a descendant", () => {
+    const out = css(convertRaw('<div style="position: fixed; inset: 0"><span>x</span></div>'));
+    expect(out).toMatch(onRoot);
+    expect(out).not.toMatch(descendant);
+    // The root really carries both classes the rule needs.
+    expect(tsx(convertRaw('<div style="position: fixed; inset: 0"><span>x</span></div>'))).toMatch(/className="ds-root dc-t dc-t-s[0-9a-f]{6}"/);
+  });
+  it("a child element's rule stays a descendant rule", () => {
+    const out = css(convertRaw('<div style="position: fixed"><span style="color: red">x</span></div>'));
+    expect(out).toMatch(onRoot);
+    expect(out).toMatch(descendant);
+    expect(out.match(/^\.dc-t\.dc-t-s/gm)?.length).toBe(1);
+    expect(out.match(/^\.dc-t \.dc-t-s/gm)?.length).toBe(1);
+  });
+  it("a style the root shares with a child is emitted for both", () => {
+    const out = css(convertRaw('<div style="color: red"><span style="color: red">x</span></div>'));
+    expect(out).toMatch(/^\.dc-t\.dc-t-s([0-9a-f]{6}) \{|^\.dc-t\.dc-t-s([0-9a-f]{6}), \.dc-t \.dc-t-s\2 \{/m);
+    expect(out).toMatch(/^(\.dc-t\.dc-t-s[0-9a-f]{6}), \.dc-t \.dc-t-s[0-9a-f]{6} \{ color: red; \}$/m);
+  });
+  it("hover and focus rules on the root follow the same scoping", () => {
+    const out = css(convertRaw('<div style="color: red" style-hover="color: blue"><span>x</span></div>'));
+    expect(out).toMatch(/^\.dc-t\.dc-t-s[0-9a-f]{6}:hover \{/m);
+    expect(out).not.toMatch(/^\.dc-t \.dc-t-s[0-9a-f]{6}:hover/m);
+  });
+  it("a root with no style produces no root rule", () => {
+    const out = css(convertRaw("<div><span>x</span></div>"));
+    expect(out).not.toMatch(/^\.dc-t\.dc-t-s/m);
+  });
+});

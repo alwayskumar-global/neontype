@@ -402,6 +402,8 @@ export function emitJsx(root, { file, slug, styles, assets }) {
     if (cur.startsWith('className="')) rootProps[rootClassIdx] = `className="${rootExtra} ${cur.slice(11, -1)}"`;
     else rootProps[rootClassIdx] = "className={`" + rootExtra + " " + cur.slice("className={`".length);
   } else rootProps.unshift(`className="${rootExtra}"`);
+  // The root element's own style classes: their rules must match the root itself, not a descendant (C-1).
+  for (const m of (rootProps.find((p) => p.startsWith("className=")) ?? "").matchAll(new RegExp(`dc-${slug}-s[0-9a-f]{6}`, "g"))) styles.markRoot(m[0]);
   const rootEl = element(root.tag, rootProps, root.children, ctx0, 2)[0];
 
   return {
