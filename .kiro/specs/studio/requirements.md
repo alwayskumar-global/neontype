@@ -914,11 +914,11 @@ design while rendering, export, and schema logic stay where they are today.
 
    | Live route | Generated screen | Decision | Why |
    | --- | --- | --- | --- |
-   | Editor | Studio Editor | WIRE, gated by criterion 9 | 38 of its 57 interactive elements have no bound handler, it has no slot for the canvas or the timeline, and 21 of its 54 bindings are inert in v1 |
-   | Export dialog | Export Flow | WIRE | 74 bindings, 25 inert; the inert set is hidden or unreachable (Web embed destination omitted, WebM stays unsupported) except two rows (criterion 9, gap D-4) |
-   | Preset picker | Effects Library | WIRE | 51 bindings, 1 inert (the large preview); needs a studio-side category table and a param-range table (design gaps D-5, D-6) |
-   | Landing | Landing Page | DEFERRED | its copy and tiles claim Web embed, WebM alpha, and "Works offline", none of which ship; `tests/landing.spec.ts` asserts those words are absent; its hero and gallery are CSS approximations while the live landing draws with the real renderer |
-   | Error and empty states | Error States | DEFERRED | all 8 bindings are inert: no warnings surface exists in the store or UI, and the offline toast would assert an offline mode the app does not have |
+   | Editor | Studio Editor | WIRE, gated by criterion 9 (blocked: awaiting the owner's design revision) | 38 of its 57 interactive elements have no bound handler, it has no slot for the canvas or the timeline, and 21 of its 54 bindings are inert in v1 |
+   | Export dialog | Export Flow | WIRE (blocked: awaiting the owner's design revision, D-4) | 74 bindings, 27 inert; the inert set is hidden or unreachable (Web embed destination omitted, WebM stays unsupported). Owner decision: Frame rate and Duration are read-only displays and the export step SHALL NOT edit the project; the Loop and Audio rows are removed from the design |
+   | Preset picker | Effects Library | WIRE (task 10.5) | 51 bindings, 1 inert (the large preview); needs a studio-side category table and a param-range table (design gaps D-5, D-6) |
+   | Landing | Landing Page | DEFERRED (owner decision: not wired) | its copy and tiles claim Web embed, WebM alpha, and "Works offline", none of which ship; `tests/landing.spec.ts` asserts those words are absent; its hero and gallery are CSS approximations while the live landing draws with the real renderer |
+   | Error and empty states | Error States | DEFERRED (owner decision: not wired) | all 8 bindings are inert: no warnings surface exists in the store or UI, and the offline toast would assert an offline mode the app does not have |
 
 2. THE app SHALL contain exactly one pure adapter per wired screen at
    `apps/studio/src/wiring/<slug>.ts`, with the signature
@@ -957,7 +957,7 @@ design while rendering, export, and schema logic stay where they are today.
    invariants, and SHALL pass against the current UI before any screen is wired.
    THE accessibility spec SHALL use Playwright's built-in ARIA snapshot; it SHALL
    NOT add `axe-core` or `@axe-core/playwright` (MPL-2.0, outside the approved
-   licences) without a recorded owner exception. *(Playwright)*
+   licences); the owner has declined an exception. *(Playwright)*
 7. THE hand-written component that a wired screen replaces SHALL be deleted only
    after the replacement passes the safety-net specs. THE design SHALL list every
    file to be removed. WHEN the group ends there SHALL be no second UI for any WIRED

@@ -1888,11 +1888,11 @@ review; no implementation exists.
 **Decisions and recommendations.**
 | Screen | Recommendation |
 | --- | --- |
-| Export Flow | Wire. Feasible: omit the Web embed card, keep WebM unsupported, hide framing, and treat the Loop and Audio rows as gap D-4. |
+| Export Flow | Wire, blocked until the owner's design revision lands (D-4). Omit the Web embed card, keep WebM unsupported, hide framing; Frame rate and Duration are read-only; Loop and Audio rows are removed from the design. |
 | Effects Library | Wire. Feasible with a category table and a param-range table in `src/wiring/` (D-5, D-6). |
-| Studio Editor | Wire only after the owner revises the design (D-1, D-2, D-3). Wired as-is it would remove working features (settings, layers editing, save/load, timeline editing) and leave visible controls that do nothing, which Requirement 19.3 forbids. |
-| Landing Page | Do not wire. Copy conflicts with the true-claims rule and `landing.spec.ts` (D-7). |
-| Error States | Do not wire. No warnings surface, and the offline toast is untrue (all 8 bindings inert). |
+| Studio Editor | Wire only after the owner's design revision lands (D-1, D-2, D-3; blocked, awaiting it). Wired as-is it would remove working features (settings, layers editing, save/load, timeline editing) and leave visible controls that do nothing, which Requirement 19.3 forbids. |
+| Landing Page | Not wired (owner decision, D-7). Copy conflicts with the true-claims rule and `landing.spec.ts`. |
+| Error States | Not wired (owner decision). No warnings surface, and the offline toast is untrue (all 8 bindings inert). |
 
 #### Architecture
 ```
@@ -1980,21 +1980,25 @@ Kinds: **A** action (store action, gesture API, clock method, or export-pipeline
 state in the host, not in the store), **I** inert in v1 (no backing behaviour; reason
 given). Every table was checked against the screen's exported `*_BINDINGS` list: no key
 is missing and none is extra. The adapter test (task 10.2) enforces the same.
+Export Flow reflects the owner decisions on D-4: Frame rate and Duration are read-only
+displays of project settings (`onFps`, `onDur` inert), and the Loop and Audio rows are
+removed from the design (their keys leave `EXPORT_FLOW_BINDINGS` at the re-export, and the
+tables are regenerated then).
 
 | Screen | Keys | A | S | C | V | I |
 | --- | --- | --- | --- | --- | --- | --- |
 | studio-editor | 54 | 4 | 11 | 6 | 12 | 21 |
-| export-flow | 74 | 4 | 25 | 10 | 10 | 25 |
+| export-flow | 74 | 2 | 25 | 10 | 10 | 27 |
 | effects-library | 51 | 2 | 16 | 6 | 26 | 1 |
 | error-states | 8 | 0 | 0 | 0 | 0 | 8 |
 | landing-page | 7 | 1 | 0 | 6 | 0 | 0 |
-| total | 194 | 11 | 52 | 28 | 48 | 55 |
+| total | 194 | 9 | 52 | 28 | 48 | 57 |
 
-Inert bindings that need the owner (they sit behind controls with no visibility
-binding, so the control stays visible): Studio Editor `kfOpen`, `toggleKf`, `kfPos`,
+Inert bindings that sit behind controls with no visibility binding, so the control stays
+visible until the design is revised: Studio Editor `kfOpen`, `toggleKf`, `kfPos`,
 `kfOp`, `kfScale` (keyframe diamonds), `zoomIn`, `zoomOut`, `zoomLabel` (zoom
 buttons), `onName` (name input); Export Flow `loop`, `onLoop`, `loopHelp`, `audio`,
-`onAudio`. These are gaps D-2, D-3, and D-4.
+`onAudio`, `onFps`, `onDur`. These are gaps D-2, D-3, and D-4.
 
 #### studio-editor (STUDIO_EDITOR_BINDINGS, 54 keys: A 4, S 11, C 6, V 12, I 21)
 
@@ -2055,11 +2059,11 @@ buttons), `onName` (name input); Export Flow `loop`, `onLoop`, `loopHelp`, `audi
 | `zoomLabel` | I | as zoomIn |
 | `zoomOut` | I | as zoomIn |
 
-#### export-flow (EXPORT_FLOW_BINDINGS, 74 keys: A 4, S 25, C 10, V 10, I 25)
+#### export-flow (EXPORT_FLOW_BINDINGS, 74 keys: A 2, S 25, C 10, V 10, I 27)
 
 | Binding | Kind | Source or reason |
 | --- | --- | --- |
-| `audio` | I | studio has no audio source; row has no visibility binding (gap D-4) |
+| `audio` | I | owner removes the Audio row from the design (D-4); drop this key when the re-export lands |
 | `cancelExport` | A | AbortController.abort() |
 | `crumbs` | S | derived from the wizard step and machine state |
 | `d` | C | the selected destination record from the catalog above |
@@ -2092,16 +2096,16 @@ buttons), `onName` (name input); Export Flow `loop`, `onLoop`, `loopHelp`, `audi
 | `isAlpha` | V | selected destination kind |
 | `isEmbed` | C | constant false (embed destination omitted) |
 | `isMp4` | V | selected destination kind |
-| `loop` | I | exporters have no loop/hold-to-duration option; row has no visibility binding (gap D-4) |
+| `loop` | I | owner removes the Loop row from the design (D-4); drop this key when the re-export lands |
 | `loopHelp` | I | as loop |
 | `needsFraming` | C | constant false: hides the framing row via the screen's own visibility binding |
 | `noFraming` | C | constant true (paired with needsFraming) |
 | `onAudio` | I | as audio |
-| `onDur` | A | dispatch set-duration (edits the project, one undo step) |
+| `onDur` | I | read-only display of project duration (owner decision D-4); the export step does not edit the project |
 | `onEmbedLoop` | I | as embedCode |
 | `onEmbedSize` | I | as embedCode |
 | `onEmbedStart` | I | as embedCode |
-| `onFps` | A | dispatch set-fps (edits the project, one undo step) |
+| `onFps` | I | read-only display of project fps (owner decision D-4); the export step does not edit the project |
 | `onFraming` | I | as framing |
 | `onLoop` | I | as loop |
 | `onRes` | V | sets output size |
@@ -2216,16 +2220,24 @@ buttons), `onName` (name input); Export Flow `loop`, `onLoop`, `loopHelp`, `audi
 | `privacy` | C | marketing copy (4 items); "Works offline" is untrue in v1, see D-7 |
 
 #### Design gaps (owner decisions, Requirement 19.9)
-A gap is fixed in the design source and the converter re-run (19.8), or waived.
-| Id | Screen | Gap | What the live app needs |
-| --- | --- | --- | --- |
-| D-1 | Studio Editor | No slot for the preview canvas or the timeline; the stage is a fixed 1:1 box showing an HTML text simulation | `stage` and `timeline` node bindings (or refs) and a stage aspect that follows the project |
-| D-2 | Studio Editor | 38 of 57 interactive elements are static (no handler): Undo, Redo, Help, Export, library filter chips, preset buttons, layer rows, Add layer, the whole Inspector (font, weight, align, anchor, blur, effect stack, Split by, Direction, Remove effect), Snap, timeline zoom, track rows, keyframe markers. Controls the live app has are absent: canvas settings (size, fps, duration, background, transparent), New, Load demo, Save, Open | Handlers or visibility bindings for each control that stays; removal from the design of controls with no backing behaviour (redo, keyframes, blur slider, zoom) or an owner waiver; a place for the settings and the file actions |
-| D-3 | Studio Editor | The project-name input writes `onName`, but `Project` has no name field | Remove the input, make it read-only text, or approve a schema field outside this group |
-| D-4 | Export Flow | The Loop and Audio rows have no visibility binding and no backing behaviour; Frame rate and Duration rows edit project settings, not export options | Visibility bindings for Loop and Audio, and an owner decision that Frame rate and Duration may edit the project from the export step |
-| D-5 | Effects Library | Card thumbnails and the large preview are CSS animations, not engine output; "Most used" and "Newest" sorts have no data; "Shortest first" needs a duration that not every effect has | Owner accepts approximations for thumbnails, or supplies a pure render hook; the adapter offers only the sorts it can honour (Name A to Z) |
-| D-6 | Effects Library | The engine catalog has no per-param range, step, or unit; the design has sliders with ranges | A drift-tested range table in `src/wiring/tables.ts` (Requirement 19.10); numeric params only |
-| D-7 | Landing Page | Copy and tiles claim Web embed, WebM alpha, offline use, and focus-ring behaviour the app does not ship; the hero and gallery are CSS approximations | A copy pass in the design source before any promotion from DEFERRED |
+A gap is fixed in the design source and the converter re-run (19.8), or waived. The
+owner has decided every gap below; the status column is the current state.
+| Id | Screen | Gap | What the live app needs | Status |
+| --- | --- | --- | --- | --- |
+| D-1 | Studio Editor | No slot for the preview canvas or the timeline; the stage is a fixed 1:1 box showing an HTML text simulation | `stage` and `timeline` node bindings (or refs) and a stage aspect that follows the project | blocked: awaiting design revision (owner is revising; 10.3 does not start until a re-export lands in `design/`) |
+| D-2 | Studio Editor | 38 of 57 interactive elements are static (no handler): Undo, Redo, Help, Export, library filter chips, preset buttons, layer rows, Add layer, the whole Inspector (font, weight, align, anchor, blur, effect stack, Split by, Direction, Remove effect), Snap, timeline zoom, track rows, keyframe markers. Controls the live app has are absent: canvas settings (size, fps, duration, background, transparent), New, Load demo, Save, Open | Handlers or visibility bindings for each control that stays; removal from the design of controls with no backing behaviour (redo, keyframes, blur slider, zoom) or an owner waiver; a place for the settings and the file actions | blocked: awaiting design revision |
+| D-3 | Studio Editor | The project-name input writes `onName`, but `Project` has no name field | Remove the input, make it read-only text, or approve a schema field outside this group | blocked: awaiting design revision |
+| D-4 | Export Flow | The Loop and Audio rows have no visibility binding and no backing behaviour; Frame rate and Duration rows edit project settings, not export options | Loop and Audio rows removed; Frame rate and Duration shown read-only | owner decision: Frame rate and Duration are READ-ONLY displays of project settings and the export step must not edit the project; the owner removes the Loop and Audio rows from the design. Blocked: awaiting the re-export (10.4 does not start) |
+| D-5 | Effects Library | Card thumbnails and the large preview are CSS animations, not engine output; "Most used" and "Newest" sorts have no data; "Shortest first" needs a duration that not every effect has | Owner accepts approximations for thumbnails; the adapter offers only the sorts it can honour (Name A to Z) | owner decision: accepted by the owner's instruction to wire the Effects Library with the D-5 and D-6 tables (thumbnails stay CSS approximations; the large preview stays inert) |
+| D-6 | Effects Library | The engine catalog has no per-param range, step, or unit; the design has sliders with ranges | A drift-tested range table in `src/wiring/tables.ts` (Requirement 19.10); numeric params only | owner decision: table in `src/wiring` with drift tests (task 10.5) |
+| D-7 | Landing Page | Copy and tiles claim Web embed, WebM alpha, offline use, and focus-ring behaviour the app does not ship; the hero and gallery are CSS approximations | A copy pass in the design source before any promotion from DEFERRED | owner decision: Landing Page is NOT wired |
+
+**Other owner decisions (recorded).** Error States is NOT wired (DEFERRED). The
+scoping of Requirement 19.7 to wired routes is accepted. `axe-core` gets no exception:
+the accessibility spec uses Playwright's ARIA snapshot. Redo stays out of scope, so
+the wording is "undo". Task 10.1 may add `aria-label` or other accessible names to
+the CURRENT UI so both UIs expose the same names; names only, no behaviour and no
+layout change. Task 10.1 also fixes the task 2.3 wording.
 
 #### Safety-net specs (task 10.1)
 Written first, against the current UI, using `getByRole`, `getByLabel`, `getByText`,

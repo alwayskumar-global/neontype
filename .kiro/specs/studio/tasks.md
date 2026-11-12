@@ -393,7 +393,7 @@ reported). They are planning estimates, not budgets.
     - Commit: `feat(studio): dc converter and design-system port`
 
 - [ ] 10. Group 10: Wire the generated screens into the live studio  *(est. ~90 credits, range 65 to 120; excludes the owner's design revision)*
-  - **Scope.** Requirement 19 and the design section "Generated-screen wiring". WIRE: Export Flow, Effects Library, and the Studio Editor (gated). DEFERRED: Landing Page and Error States. Exporters Groups 6 and 7 are NOT part of this group.
+  - **Scope.** Requirement 19 and the design section "Generated-screen wiring". WIRE: Effects Library now; Export Flow and the Studio Editor are BLOCKED until the owner's design revision lands in `design/` (gaps D-1 to D-4). DEFERRED by owner decision: Landing Page and Error States. Exporters Groups 6 and 7 are NOT part of this group.
   - **Stop-and-wait rules for this group.** STOP and ask the owner if:
     - (a) at the start of 10.3 any of gaps D-1, D-2, D-3 is unresolved and unwaived (Requirement 19.9);
     - (b) a binding in a `*_BINDINGS` list is missing from the design table or its classification would change;
@@ -404,7 +404,7 @@ reported). They are planning estimates, not budgets.
     - (g) `src/generated` would need a hand edit (fix the converter or the design source instead, Requirement 19.8).
   - [ ] 10.1 Safety-net Playwright specs (written first, against the current UI)
     - Create in `apps/studio/tests/`: `preview.spec.ts`, `settings.spec.ts`, `layers.spec.ts`, `effects.spec.ts`, `a11y.spec.ts`, `perf.spec.ts`, `security.spec.ts`, and extend `export.spec.ts` (format gating, progress, `mp4-no-transparency` note, error mapping), with the assertions listed in the design table "Safety-net specs". Use only `getByRole`, `getByLabel`, `getByText`, and `page.evaluate` for document-wide invariants. No CSS or class selector. Use `first()` and a shared checked-or-pressed helper where the accessible-name contract table says names repeat.
-    - Add `aria-label` only (no behaviour change) where the current UI lacks a name the generated screens expose, for example `Timecode` on the readout, and give the preview canvas an accessible name so specs can find it without a class selector. List every added name in the commit message.
+    - Add accessible names only (`aria-label` or an equivalent name; no behaviour and no layout change) where the current UI lacks a name the generated screens expose, for example `Timecode` on the readout, and give the preview canvas an accessible name so specs can find it without a class selector. List every added name in the commit message.
     - Move the selectors of the existing specs (`canvas-drag`, `timeline`, `editing`, `saveload`, `fonts`, `export`, `parity`) from CSS and class selectors to roles and labels. Assertions are untouched.
     - `a11y.spec.ts` uses Playwright's built-in ARIA snapshot and explicit focus-order and reduced-motion checks. It adds no dependency (Requirement 19.6).
     - Fix the stale wording of task 2.3 and the Notes bullet: "one display `CanvasMetricsProvider` plus one hit-only provider per canvas, and never a shared layout cache". Add a test (unit or Playwright) that asserts exactly that: the display provider and the hit provider are distinct, and neither shares a `LayoutCache`.
@@ -418,20 +418,21 @@ reported). They are planning estimates, not budgets.
     - Create `wiring.test.ts` and `tables.test.ts` as listed in the design, and `wiring.property.test.ts` for Properties 13 and 14 (>= 100 iterations, tagged `// Feature: studio, Property N: ...`, run 3x).
     - **Covers:** Requirement 19.2, 19.3, 19.10; Properties 13, 14
     - **Completion:** `vitest run src/wiring` passes; a deliberately wrong adapter (an extra key, a missing key) fails the coverage test; adapters import no `react`, engine render function, or exporter (static audit passes).
-  - [ ] 10.3 Studio Editor screen (GATED by Requirement 19.9)
+  - [ ] 10.3 Studio Editor screen (BLOCKED: awaiting the owner's design revision; do not start)
     - Starts only after the owner supplies a revised Studio Editor design (gaps D-1, D-2, D-3) or waives each gap in writing; otherwise STOP (rule a). Re-run `pnpm --filter @studio/app dc:convert`; `git diff --stat src/generated` shows only the intended change.
     - Create `wiring/hosts/studio-editor-host.tsx`: mount `<PreviewCanvas/>` and `<Timeline/>` into the screen's slots, hold the view state (tab, checkerboard, safe area), and provide the dispatchers. Route `App.tsx` to it.
     - **Covers:** Requirement 19.1, 19.3, 19.4, 19.6, 19.9
     - **Completion:** every 10.1 spec passes unchanged; the interactive-element audit shows no control without a handler or a hidden state; export parity is exactly 0 at t = 1, 3, 5.5.
-  - [ ] 10.4 Export flow
-    - Create `wiring/hosts/export-flow-host.tsx`. Keep the modal behaviour of `ExportDialog` (focus trap, Escape, focus restore, abort on close, undo guard). Destinations: Reel, Story, Square, YouTube, Overlay; the Web embed card is omitted and WebM stays unsupported. Before deleting `export/dialog.tsx`, check overlay stacking over the hand-written editor (risk 28).
+  - [ ] 10.4 Export flow (BLOCKED: awaiting the owner's design revision, D-4; do not start)
+    - Create `wiring/hosts/export-flow-host.tsx`. Keep the modal behaviour of `ExportDialog` (focus trap, Escape, focus restore, abort on close, undo guard). Destinations: Reel, Story, Square, YouTube, Overlay; Frame rate and Duration are read-only displays (the export step never dispatches `set-fps` or `set-duration`); the Loop and Audio rows are gone from the design; the Web embed card is omitted and WebM stays unsupported. Before deleting `export/dialog.tsx`, check overlay stacking over the hand-written editor (risk 28).
     - **Covers:** Requirement 19.1, 19.3, 19.4, 19.6
     - **Completion:** `export.spec.ts` (including the 10.1 additions) passes unchanged against the generated flow; MP4 and GIF exports still produce valid headers; the CSP spec is clean; `export/dialog.tsx` is deleted only after this passes.
   - [ ] 10.5 Landing, effects library and error states
     - Effects Library: create `wiring/hosts/effects-library-host.tsx` for the preset picker; apply uses the gesture API so one apply is one undo step; the toast Undo calls `store.undo()`. `effects.spec.ts` passes unchanged (12 catalog presets listed).
-    - Landing Page and Error States: NOT wired in this group (Requirement 19.1). This sub-task records the owner's decision for each: keep DEFERRED, or promote after the listed gap (D-7 for the landing; a warnings surface for Error States) is closed.
+    - Landing Page and Error States: NOT wired (owner decision, Requirement 19.1). Nothing to do for them in this sub-task.
+    - Add the category table and the numeric param-range table to `wiring/tables.ts` with their drift tests (gaps D-5, D-6), and delete `panels/EffectsPanel.tsx`'s preset-picker part only after `effects.spec.ts` passes against the new UI. Wiring pulls `ds.css` and the DS fonts into the default dist, so the 10.7 dist-scan inversion lands in the same commit.
     - **Covers:** Requirement 19.1, 19.3, 19.6
-    - **Completion:** the Effects Library host passes the 10.1 specs; `landing.spec.ts` is untouched and green; the decision for the two deferred screens is written into Requirement 19.1.
+    - **Completion:** the Effects Library host passes the 10.1 specs unchanged; `landing.spec.ts` is untouched and green.
   - [ ] 10.6 Delete the old UI
     - Delete the files in the design table "Files to remove" whose replacement has passed, and nothing else. Remove dead CSS with them. Do not add a feature flag. Report the deleted files and the remaining hand-written routes.
     - **Covers:** Requirement 19.7
