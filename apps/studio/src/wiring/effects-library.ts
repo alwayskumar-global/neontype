@@ -60,7 +60,7 @@ export interface EffectsLibraryDispatchers {
 /** Binding keys that have no backing behaviour in v1: none. */
 export const INERT_BINDINGS: readonly string[] = [];
 export const EASE_OPTIONS: readonly string[] = ["linear", "easeIn", "easeOut", "easeInOut"];
-const GRAN_LABEL: Record<Granularity, string> = { character: "Character", word: "Word", line: "Line" };
+export const GRAN_LABEL: Record<Granularity, string> = { character: "Character", word: "Word", line: "Line" };
 const GRAN_ORDER: Granularity[] = ["character", "word", "line"];
 /** The sorts the adapter can honour (gap D-5): "Most used", "Newest" and "Shortest" have no data. */
 export const SORT_OPTIONS = [

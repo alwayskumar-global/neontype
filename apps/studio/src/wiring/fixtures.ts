@@ -7,6 +7,7 @@ import type { CapabilityReport, ErrorCode, ExportResult } from "@studio/exporter
 import type { ExportState } from "../export/machine.js";
 import type { EffectsLibraryDispatchers, EffectsLibraryState, EffectsLibraryView } from "./effects-library.js";
 import type { ExportFlowDispatchers, ExportFlowState, ExportFlowView } from "./export-flow.js";
+import type { StudioEditorDispatchers, StudioEditorState, StudioEditorView } from "./studio-editor.js";
 export interface Spy<T> {
   d: T;
   calls: string[];
@@ -78,3 +79,35 @@ export function exportState(project: Project, run: ExportState, view: ExportFlow
   return { project, run, view };
 }
 export const CATALOG_IDS: readonly string[] = presetCatalog.map((p) => p.id);
+/** Spy dispatchers for the Studio Editor: every method records its name; the two slots are plain strings. */
+export function studioSpy(): Spy<StudioEditorDispatchers> {
+  const calls: string[] = [];
+  const rec = (name: string) => (): void => {
+    calls.push(name);
+  };
+  const d: StudioEditorDispatchers = {
+    newProject: rec("newProject"), loadDemo: rec("loadDemo"), save: rec("save"), open: rec("open"), exportProject: rec("exportProject"),
+    undo: rec("undo"), setCanvasSize: rec("setCanvasSize"), setWidth: rec("setWidth"), setHeight: rec("setHeight"), setFps: rec("setFps"),
+    setDuration: rec("setDuration"), setBackground: rec("setBackground"), setTransparent: rec("setTransparent"), addLayer: rec("addLayer"),
+    selectLayer: rec("selectLayer"), moveLayer: rec("moveLayer"), deleteLayer: rec("deleteLayer"), setText: rec("setText"),
+    setFont: rec("setFont"), setWeight: rec("setWeight"), setSize: rec("setSize"), setFill: rec("setFill"), setAlign: rec("setAlign"),
+    setAnchor: rec("setAnchor"), setLayerTiming: rec("setLayerTiming"), setEffectGranularity: rec("setEffectGranularity"),
+    setEffectParam: rec("setEffectParam"), removeEffect: rec("removeEffect"), openLibrary: rec("openLibrary"), togglePlay: rec("togglePlay"),
+    toStart: rec("toStart"), toEnd: rec("toEnd"), toggleLoop: rec("toggleLoop"), toggleChecker: rec("toggleChecker"), toggleSafe: rec("toggleSafe"),
+    stage: "stage", timeline: "timeline",
+  };
+  return { d, calls };
+}
+export const EMPTY_STUDIO_VIEW: StudioEditorView = { checker: false, safe: true, settingsError: null };
+export function studioState(project: Project, patch: Partial<Omit<StudioEditorState, "project">> = {}): StudioEditorState {
+  return {
+    project,
+    selectedLayerId: project.layers[0]?.id ?? null,
+    playhead: 1.24,
+    loop: true,
+    playing: false,
+    canUndo: true,
+    view: EMPTY_STUDIO_VIEW,
+    ...patch,
+  };
+}

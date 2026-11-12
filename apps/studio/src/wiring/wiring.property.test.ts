@@ -4,9 +4,11 @@ import { presetCatalog } from "@studio/engine";
 import { arbProject } from "../model/__testing/arb-project.js";
 import { EFFECTS_LIBRARY_BINDINGS } from "../generated/effects-library/EffectsLibrary.js";
 import { EXPORT_FLOW_BINDINGS } from "../generated/export-flow/ExportFlow.js";
+import { STUDIO_EDITOR_BINDINGS } from "../generated/studio-editor/StudioEditor.js";
 import { adaptEffectsLibrary, type EffectsLibraryView } from "./effects-library.js";
 import { adaptExportFlow, FORMAT_CARDS, type ExportFlowView } from "./export-flow.js";
-import { ALL_ERROR_CODES, effectsSpy, exportRuns, exportSpy, exportState, libraryState } from "./fixtures.js";
+import { adaptStudioEditor, type StudioEditorView } from "./studio-editor.js";
+import { ALL_ERROR_CODES, effectsSpy, exportRuns, exportSpy, exportState, libraryState, studioSpy, studioState } from "./fixtures.js";
 import { CATEGORIES } from "./tables.js";
 import type { DcData } from "../ds/dc-runtime.js";
 /**
@@ -39,6 +41,21 @@ const arbExportView: fc.Arbitrary<ExportFlowView> = fc.record({
   format: fc.constantFrom(...FORMAT_CARDS.map((c) => c.id), "gone"),
   resolution: fc.option(fc.constantFrom("640 × 360", "1280 × 720", "nonsense"), { nil: null }),
 });
+const arbEditorView: fc.Arbitrary<StudioEditorView> = fc.record({
+  checker: fc.boolean(),
+  safe: fc.boolean(),
+  settingsError: fc.option(fc.string({ maxLength: 12 }), { nil: null }),
+});
+/** The editor's UI state around an arbitrary project: any layer (or none), playhead, flags. */
+const arbEditorPatch = (layerIds: string[]) =>
+  fc.record({
+    selectedLayerId: fc.option(fc.constantFrom(...layerIds, "gone"), { nil: null }),
+    playhead: fc.double({ min: -1, max: 700, noNaN: true }),
+    loop: fc.boolean(),
+    playing: fc.boolean(),
+    canUndo: fc.boolean(),
+    view: arbEditorView,
+  });
 const arbRun = fc.constantFrom(...ALL_ERROR_CODES).chain((code) => fc.constantFrom(...exportRuns(code)));
 /** Structural form of data: functions compared by type, so two builds can be compared. */
 const shape = (data: DcData): string => JSON.stringify(data, (_k, v: unknown) => (typeof v === "function" ? "[fn]" : v));
@@ -59,6 +76,21 @@ describe("Property 13: adapter binding coverage", () => {
         const keys = Object.keys(adaptExportFlow(exportState(project, run, view), exportSpy().d).data).sort();
         expect(keys).toEqual([...EXPORT_FLOW_BINDINGS].sort());
       }),
+      { numRuns: 150 },
+    );
+  });
+});
+// Feature: studio, Property 13 (Studio Editor)
+describe("Property 13: Studio Editor binding coverage", () => {
+  it("Studio Editor data keys equal STUDIO_EDITOR_BINDINGS for any project and editor state", () => {
+    fc.assert(
+      fc.property(
+        arbProject.chain((project) => arbEditorPatch(project.layers.map((l) => l.id)).map((patch) => ({ project, patch }))),
+        ({ project, patch }) => {
+          const keys = Object.keys(adaptStudioEditor(studioState(project, patch), studioSpy().d).data).sort();
+          expect(keys).toEqual([...STUDIO_EDITOR_BINDINGS].sort());
+        },
+      ),
       { numRuns: 150 },
     );
   });
@@ -96,6 +128,27 @@ describe("Property 14: adapter construction is pure and deterministic", () => {
         expect(b.calls).toEqual([]);
         expect(JSON.stringify(state)).toBe(before);
       }),
+      { numRuns: 150 },
+    );
+  });
+});
+// Feature: studio, Property 14 (Studio Editor)
+describe("Property 14: Studio Editor construction is pure and deterministic", () => {
+  it("two builds are structurally equal, call no dispatcher, and do not mutate the state", () => {
+    fc.assert(
+      fc.property(
+        arbProject.chain((project) => arbEditorPatch(project.layers.map((l) => l.id)).map((patch) => ({ project, patch }))),
+        ({ project, patch }) => {
+          const state = studioState(project, patch);
+          const before = JSON.stringify(state);
+          const a = studioSpy();
+          const b = studioSpy();
+          expect(shape(adaptStudioEditor(state, a.d).data)).toBe(shape(adaptStudioEditor(state, b.d).data));
+          expect(a.calls).toEqual([]);
+          expect(b.calls).toEqual([]);
+          expect(JSON.stringify(state)).toBe(before);
+        },
+      ),
       { numRuns: 150 },
     );
   });

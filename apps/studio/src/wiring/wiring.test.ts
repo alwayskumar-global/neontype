@@ -9,9 +9,12 @@ import { newProject } from "../model/project.js";
 import { readStudioText } from "../../scripts/dc-io.mjs";
 import { EFFECTS_LIBRARY_BINDINGS } from "../generated/effects-library/EffectsLibrary.js";
 import { EXPORT_FLOW_BINDINGS } from "../generated/export-flow/ExportFlow.js";
+import { STUDIO_EDITOR_BINDINGS } from "../generated/studio-editor/StudioEditor.js";
 import { adaptEffectsLibrary, INERT_BINDINGS as LIB_INERT } from "./effects-library.js";
 import { adaptExportFlow, INERT_BINDINGS as EXP_INERT, TRY_NEXT } from "./export-flow.js";
 import { ALL_ERROR_CODES, EXPORT_VIEWS, effectsSpy, exportRuns, exportSpy, exportState, libraryState } from "./fixtures.js";
+import { adaptStudioEditor, INERT_BINDINGS as ED_INERT, SIZE_PRESETS } from "./studio-editor.js";
+import { studioSpy, studioState } from "./fixtures.js";
 import { INERT } from "./types.js";
 import type { DcProps, DcValue } from "../ds/dc-runtime.js";
 interface Built {
@@ -68,6 +71,31 @@ const SCREENS: Screen[] = [
           }),
         ),
       ),
+  },
+  {
+    name: "Studio Editor",
+    bindings: STUDIO_EDITOR_BINDINGS,
+    inert: ED_INERT,
+    pure: /\.$/,
+    minHandlers: 30,
+    argFor: (path, data) => {
+      if (/onCanvasPreset$/.test(path)) return SIZE_PRESETS[2]!.value;
+      if (/onFont$/.test(path)) return "Noto Sans Tamil";
+      if (/onWeight$/.test(path)) return "700";
+      if (/onFill$|onBackground$/.test(path)) return "#112233";
+      if (/onLayerText$/.test(path)) return "hello";
+      const m = /^effects\[(\d+)\]\.onSplit$/.exec(path);
+      if (m) return ((data["effects"] as { splitOpts: { value: string }[] }[])[Number(m[1])]!.splitOpts[0]!.value);
+      return "5";
+    },
+    builds: () =>
+      projects.flatMap((p) => {
+        const second = p.layers[1]?.id ?? null;
+        return [{}, { selectedLayerId: null }, { selectedLayerId: second, playing: true, loop: false, canUndo: false }, { view: { checker: true, safe: false, settingsError: "Bad width." } }].map((patch) => {
+          const s = studioSpy();
+          return { props: adaptStudioEditor(studioState(p, patch), s.d), calls: s.calls };
+        });
+      }),
   },
 ];
 /** Every function in `value` with its path (arrays and plain objects only). */
@@ -129,9 +157,10 @@ describe.each(SCREENS)("$name adapter", (screen) => {
   });
 });
 describe("the inert counts match the design tables", () => {
-  it("Export Flow and Effects Library list no inert binding", () => {
+  it("Export Flow, Effects Library and Studio Editor list no inert binding", () => {
     expect(EXP_INERT.length).toBe(0);
     expect(LIB_INERT.length).toBe(0);
+    expect(ED_INERT.length).toBe(0);
   });
   it("Frame rate and Duration are text read from the project; there is no handler to edit them", () => {
     const s = exportSpy();
@@ -171,7 +200,7 @@ describe("the inert counts match the design tables", () => {
   });
 });
 describe("adapter sources are pure (static audit)", () => {
-  const FILES = ["effects-library.ts", "export-flow.ts", "format.ts", "tables.ts", "types.ts"];
+  const FILES = ["effects-library.ts", "export-flow.ts", "studio-editor.ts", "format.ts", "tables.ts", "types.ts"];
   for (const f of FILES) {
     const src = readStudioText(`src/wiring/${f}`);
     const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
@@ -185,4 +214,72 @@ describe("adapter sources are pure (static audit)", () => {
       expect(code).not.toMatch(/\bDate\b|performance\.now|Math\.random/);
     });
   }
+});
+
+describe("Studio Editor adapter details", () => {
+  const demo = projects[1]!;
+  const build = (patch = {}, p = demo) => {
+    const s = studioSpy();
+    return { data: adaptStudioEditor(studioState(p, patch), s.d).data, calls: s.calls };
+  };
+  const ev = (value: string) => ({ target: { value } });
+  it("anchor is shown as a fraction of the canvas and written back in pixels", () => {
+    const layer = demo.layers[0]!;
+    const { data } = build();
+    expect(data["anchorX"]).toBeCloseTo(layer.anchor.x / demo.canvas.width, 3);
+    const s = studioSpy();
+    const d2 = adaptStudioEditor(studioState(demo), s.d).data;
+    let got: unknown[] = [];
+    const spy = { ...s.d, setAnchor: (...a: unknown[]) => void (got = a) };
+    const d3 = adaptStudioEditor(studioState(demo), spy as typeof s.d).data;
+    (d3["onAnchorX"] as (e: unknown) => void)(ev("0.25"));
+    expect(got).toEqual([layer.id, 0.25 * demo.canvas.width, layer.anchor.y]);
+    expect(d2["onAnchorX"]).toBeTypeOf("function");
+  });
+  it("layer duration is end minus start and writing it keeps the start", () => {
+    const layer = demo.layers[1]!;
+    let got: unknown[] = [];
+    const s = studioSpy();
+    const spy = { ...s.d, setLayerTiming: (...a: unknown[]) => void (got = a) };
+    const data = adaptStudioEditor(studioState(demo, { selectedLayerId: layer.id }), spy as typeof s.d).data;
+    expect(data["layerDuration"]).toBeCloseTo(layer.endSeconds - layer.startSeconds, 3);
+    (data["onLayerDuration"] as (e: unknown) => void)(ev("2"));
+    expect(got).toEqual([layer.id, layer.startSeconds, layer.startSeconds + 2]);
+  });
+  it("a value that does not parse calls nothing", () => {
+    const { data, calls } = build();
+    for (const k of ["onCanvasWidth", "onCanvasHeight", "onFps", "onDuration", "onSize", "onAnchorX", "onAnchorY", "onLayerStart", "onLayerDuration"]) (data[k] as (e: unknown) => void)(ev(""));
+    (data["onFont"] as (e: unknown) => void)(ev("Comic Sans"));
+    (data["onCanvasPreset"] as (e: unknown) => void)(ev("custom"));
+    expect(calls).toEqual([]);
+  });
+  it("the size preset is custom when no preset matches, and 1280 × 720 is HD", () => {
+    expect(build().data["canvasPreset"]).toBe("hd");
+    const odd = { ...demo, canvas: { ...demo.canvas, width: 1000, height: 500 } };
+    expect(build({}, odd).data["canvasPreset"]).toBe("custom");
+    expect(build({}, odd).data["stageAspect"]).toBe("1000 / 500");
+  });
+  it("with no layer selected the inspector fields are empty and the effects list is empty", () => {
+    const { data } = build({ selectedLayerId: null });
+    expect(data["hasLayer"]).toBe(false);
+    expect(data["effects"]).toEqual([]);
+    expect(data["layerText"]).toBe("");
+  });
+  it("effect rows list the effect's sliders with formatted values", () => {
+    const { data } = build();
+    const fx = (data["effects"] as { name: string; params: { label: string; fmt: string }[] }[])[0]!;
+    expect(fx.name).toBe("Kinetic Pop");
+    expect(fx.params.map((p) => p.label)).toContain("Duration");
+    expect(fx.params.find((p) => p.label === "Duration")!.fmt).toMatch(/s$/);
+  });
+  it("playing, loop, checker and safe drive the paired flags", () => {
+    const { data } = build({ playing: true, loop: false, view: { checker: true, safe: false, settingsError: null } });
+    expect([data["playing"], data["paused"], data["loop"], data["noLoop"], data["checker"], data["noChecker"], data["safe"], data["noSafe"]]).toEqual([true, false, false, true, true, false, false, true]);
+    expect([data["checkerAria"], data["safeAria"]]).toEqual(["true", "false"]);
+  });
+  it("the settings error shows only when the host sets one", () => {
+    expect(build().data["hasSettingsError"]).toBe(false);
+    const withErr = build({ view: { checker: false, safe: true, settingsError: "Bad width." } }).data;
+    expect([withErr["hasSettingsError"], withErr["settingsError"]]).toEqual([true, "Bad width."]);
+  });
 });
