@@ -2501,6 +2501,9 @@ zero calls), reads no clock, and does not mutate `state`.
 ### Property 15: Invalid effect params are never committed
 For any valid project with effect instances and any sequence of `set-effect-param` actions with arbitrary values, every instance's params pass its effect's param schema (the engine's `paramSchema`), and an edit that the schema rejects returns the SAME project reference, so the store and the undo history are unchanged.
 **Validates: Requirements 4.5**
+### Property 16: A finished export can always be retried
+For any sequence of export events from a freshly opened dialog, if the machine is in a terminal state (done, failed, or cancelled), `reset` moves it to the format step (`configuring`, with the capabilities and chosen format kept) and `start` then begins a new export. `reset` in any other state returns the same state object.
+**Validates: Requirements 8.5, 8.6**
 
 
 ## Error Handling

@@ -1092,6 +1092,8 @@ They are recorded here as decisions.
     equal data, and constructing the data calls no dispatcher.
   - Property 15, invalid effect params are never committed (Req 4.5): a rejected param
     edit returns the same project reference and every instance stays schema-valid.
+  - Property 16, a finished export can always be retried (Req 8.5, 8.6): from a terminal
+    state `reset` reaches the format step and `start` begins a new export.
 - **Playwright** (bundled Chromium, localhost): preview playback/scrub, settings,
   layer and effect editing, timeline drags, font readiness, save/load, the export
   dialog end-to-end, preview/export parity, no-network session, and accessibility

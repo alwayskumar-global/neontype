@@ -128,11 +128,8 @@ test("a failed export shows the message mapped from its ErrorCode", async ({ pag
   const text = ((await alert.innerText()) ?? "").trim();
   expect(Object.values(ERROR_MESSAGES)).toContain(text);
 });
-// KNOWN BUG, found while writing this spec: "reset" returns the machine to idle, but the
-// capability check runs only when the dialog mounts, so Back (after a failure or a cancel) and
-// "Export again" leave the dialog on "Detecting capabilities..." with no format buttons.
-// Un-fixme when the dialog re-detects or the reset goes back to configuring.
-test.fixme("Back after a failed export returns to the format choices", async ({ page }) => {
+// Back (after a failure or a cancel) and "Export again" (after a success) return to the format step, and a second export runs.
+test("Back after a failed export returns to the format choices", async ({ page }) => {
   await gotoStudio(page, true);
   await page.getByRole("region", { name: "Project settings" }).getByLabel("FPS").fill("120");
   await page.getByRole("region", { name: "Project settings" }).getByLabel("Duration (s)").fill("600");
@@ -142,4 +139,32 @@ test.fixme("Back after a failed export returns to the format choices", async ({ 
   await expect(dialog.getByRole("alert")).toBeVisible({ timeout: 15000 });
   await dialog.getByRole("button", { name: "Back", exact: true }).click();
   await expect(dialog.getByRole("button", { name: /Export mp4/ })).toBeVisible();
+});
+test("after a cancel, Back returns to the format choices and a second export completes", async ({ page }) => {
+  await gotoStudio(page, true);
+  await openDialog(page);
+  await page.getByRole("button", { name: /Export mp4/ }).click();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  const dialog = page.getByRole("dialog", { name: "Export" });
+  await expect(dialog.getByText("Export cancelled.")).toBeVisible({ timeout: 9000 });
+  await dialog.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: /Export gif/ })).toBeVisible();
+  await dialog.getByRole("button", { name: /Export gif/ }).click();
+  await expect(dialog.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 30000 });
+  const info = await page.evaluate(() => window.__lastExport);
+  expect(ascii(info!.head.slice(0, 4))).toBe("GIF8");
+});
+test("after a success, Export again returns to the format choices and a second export completes", async ({ page }) => {
+  await gotoStudio(page, true);
+  await shrink(page, "0.3");
+  await openDialog(page);
+  const dialog = page.getByRole("dialog", { name: "Export" });
+  await dialog.getByRole("button", { name: /Export gif/ }).click();
+  await expect(dialog.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 9000 });
+  await dialog.getByRole("button", { name: "Export again" }).click();
+  await expect(dialog.getByRole("button", { name: /Export mp4/ })).toBeVisible();
+  await dialog.getByRole("button", { name: /Export mp4/ }).click();
+  await expect(dialog.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 9000 });
+  const info = await page.evaluate(() => window.__lastExport);
+  expect(ascii(info!.head.slice(4, 8))).toBe("ftyp");
 });

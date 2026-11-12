@@ -64,13 +64,14 @@ export const EXPORT_VIEWS: ExportFlowView[] = [
   { step: 2, destination: "square", resolution: "no-such-size" },
 ];
 export function exportRuns(code: ErrorCode = "out-of-memory"): ExportState[] {
+  const base = { capabilities: SUPPORTED_CAPS, format: "mp4" as const };
   return [
     { status: "idle" },
-    { status: "configuring", capabilities: SUPPORTED_CAPS, format: "mp4" },
-    { status: "running", format: "gif", fraction: 0.4 },
-    { status: "done", result: doneResult("title-youtube.mp4") },
-    { status: "failed", error: { code, message: "x" } },
-    { status: "cancelled" },
+    { status: "configuring", ...base },
+    { status: "running", ...base, format: "gif", fraction: 0.4 },
+    { status: "done", ...base, result: doneResult("title-youtube.mp4") },
+    { status: "failed", ...base, error: { code, message: "x" } },
+    { status: "cancelled", ...base },
   ];
 }
 export function exportState(project: Project, run: ExportState, view: ExportFlowView): ExportFlowState {

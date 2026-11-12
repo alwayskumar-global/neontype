@@ -413,7 +413,7 @@ reported). They are planning estimates, not budgets.
     - **Closes when done:** tasks 2.3, 2.4, 2.6, 3.1, 3.2, 3.3, 3.5, 3.8, 6.1, 6.2, and 6.4 (then Groups 2, 3, and 6).
     - **Covers:** Requirement 19.6; Requirements 1, 2, 3, 4, 8, 9, 11, 12, 13
     - **Completion:** every new and migrated spec passes against the CURRENT UI, 3 runs in a row; the full Playwright suite is green; no assertion in an existing spec changed; `perf.spec.ts` reports mean and p95; the provider test passes.
-    - **Outcome.** Groups 2 and 6 are closed. Tasks 3.3 and 3.8 stayed open until Requirement 4.5 (reject a param edit that fails the effect's schema) was implemented in `model/transitions.ts`; they are closed, and so is Group 3. Also found and left as `test.fixme` in `export.spec.ts`: Back (after a failure or a cancel) and Export again return the dialog to idle without re-detecting capabilities, so it stays on "Detecting capabilities...". One selector remains outside role, label, and text: the selection outline in `canvas-drag.spec.ts` (`.selection-outline`, an `aria-hidden` element inside the hosted preview, which no swap changes).
+    - **Outcome.** Groups 2 and 6 are closed. Tasks 3.3 and 3.8 stayed open until Requirement 4.5 (reject a param edit that fails the effect's schema) was implemented in `model/transitions.ts`; they are closed, and so is Group 3. Also found: Back (after a failure or a cancel) and Export again left the export dialog on "Detecting capabilities..."; fixed in `export/machine.ts` (`reset` returns to the format step), with the Playwright specs un-fixme'd. One selector remains outside role, label, and text: the selection outline in `canvas-drag.spec.ts` (`.selection-outline`, an `aria-hidden` element inside the hosted preview, which no swap changes).
   - [ ] 10.2 Adapters and binding-coverage tests
     - Create `apps/studio/src/wiring/{types,format,tables}.ts` and the adapters `export-flow.ts`, `effects-library.ts`, `studio-editor.ts`, each exporting `INERT_BINDINGS`. Classify every key exactly as the design tables do. Add `UiState.playing` (T-1) to the store and have the preview wiring set it; a test asserts `serializeProject` output and undo history are unchanged by it.
     - `tables.ts`: the category table (Entrance, Emphasis, Exit, Looping) and the numeric param-range table, keyed by effect id.
@@ -489,6 +489,7 @@ reported). They are planning estimates, not budgets.
 - Property 13: Adapter binding coverage (Task 10.2)
 - Property 14: Adapter purity (Task 10.2)
 - Property 15: Invalid effect params are never committed (Task 3.3; `model/params.test.ts`)
+- Property 16: A finished export can always be retried (Task 3.4; `export/machine.test.ts`)
 
 
 ## Task Dependency Graph
