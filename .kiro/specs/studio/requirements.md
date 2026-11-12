@@ -968,7 +968,7 @@ design while rendering, export, and schema logic stay where they are today.
    *(unit: `convert` determinism and the regenerate-diff-empty check)*
 9. THE design source for a wired screen SHALL provide what the live behaviour needs
    before that screen's wiring task starts. THE gaps are listed in the design
-   (D-1 to D-7). IF a gap that blocks a screen is unresolved when its wiring task
+   (D-1 to D-9). IF a gap that blocks a screen is unresolved when its wiring task
    is about to start, THEN the implementer SHALL STOP and ask the owner, who either
    supplies a revised design (re-run through the converter) or records a waiver per
    gap. *(review)*

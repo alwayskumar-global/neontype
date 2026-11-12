@@ -22,6 +22,8 @@ export interface ClockOptions {
   getDuration: () => number;
   /** Whether looping is enabled; read fresh each frame. */
   getLoop: () => boolean;
+  /** Called when playback starts (true) or stops (false); not called for a repeated play or pause. */
+  onPlayingChange?: (playing: boolean) => void;
 }
 
 /** A playback clock controlling preview time. */
@@ -46,16 +48,19 @@ export class PlaybackClock {
   play(): void {
     if (this.playing) return;
     this.playing = true;
+    this.opts.onPlayingChange?.(true);
     this.lastTs = performance.now();
     this.rafId = requestAnimationFrame(this.frame);
   }
 
   pause(): void {
+    const was = this.playing;
     this.playing = false;
     if (this.rafId !== null) {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
+    if (was) this.opts.onPlayingChange?.(false);
   }
 
   /** Jump to a specific time (scrub); clamps to [0, duration]; does not play. */

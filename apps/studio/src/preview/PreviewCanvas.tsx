@@ -15,6 +15,7 @@ import { useEffect, useRef, type RefObject } from "react";
 import { CanvasMetricsProvider, computeFrameState, type FrameState, type Project } from "@studio/engine";
 
 import { PlaybackClock } from "../playback/clock.js";
+import { playingSink } from "../playback/playing.js";
 import { drawPreviewFrame, makePreviewRenderer } from "./draw.js";
 import { onFontsLoadingDone } from "../fonts/fonts.js";
 import { clientToCanvas, dragAnchor, hitTest, layerBounds, nudgeAnchor } from "../model/hit.js";
@@ -79,6 +80,7 @@ export function PreviewCanvas({ store, canvasRef }: { store: Store; canvasRef: R
       },
       getDuration: () => store.getState().project.canvas.durationSeconds,
       getLoop: () => store.getState().ui.loop,
+      onPlayingChange: playingSink(store),
     });
     // Expose for the transport + tests; paint the initial frame.
     (canvas as unknown as { __clock: PlaybackClock }).__clock = clock;

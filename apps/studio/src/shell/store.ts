@@ -18,6 +18,8 @@ export interface UiState {
   selectedLayerId: string | null;
   playhead: number;
   loop: boolean;
+  /** Whether the preview clock is playing (mirrors the clock; UI state, never saved or in history). */
+  playing: boolean;
 }
 
 interface State {
@@ -38,7 +40,7 @@ export class Store {
   private gestureBase: Project | null = null;
 
   constructor(project: Project = newProject()) {
-    this.state = { project, ui: { selectedLayerId: project.layers[0]?.id ?? null, playhead: 0, loop: true } };
+    this.state = { project, ui: { selectedLayerId: project.layers[0]?.id ?? null, playhead: 0, loop: true, playing: false } };
   }
 
   getState = (): State => this.state;
@@ -131,7 +133,7 @@ export class Store {
   setProject(project: Project): void {
     this.history = [];
     this.gestureBase = null;
-    this.state = { project, ui: { selectedLayerId: project.layers[0]?.id ?? null, playhead: 0, loop: this.state.ui.loop } };
+    this.state = { project, ui: { selectedLayerId: project.layers[0]?.id ?? null, playhead: 0, loop: this.state.ui.loop, playing: this.state.ui.playing } };
     this.emit();
   }
 
