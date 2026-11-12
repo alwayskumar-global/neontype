@@ -5,7 +5,8 @@
  *
  * design/ is read as INPUT only; nothing here is imported by the app or bundled.
  */
-import { readFileSync, readdirSync, statSync, mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, mkdirSync, writeFileSync, rmSync, existsSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { convertDc } from "./dc-convert-lib.mjs";
@@ -103,4 +104,21 @@ export function listStudioFiles(dirRel, exts) {
 export function readDesignAsset(nameRel) {
   const config = loadConfig();
   return new Uint8Array(readFileSync(join(resolve(STUDIO_DIR, config.designDir), nameRel)));
+}
+
+/** Recursive list of file paths (relative to absDir, "/" separators) under an absolute directory. */
+export function listAbsFiles(absDir, rel = "") {
+  return readdirSync(join(absDir, rel), { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? listAbsFiles(absDir, rel ? `${rel}/${e.name}` : e.name) : [rel ? `${rel}/${e.name}` : e.name],
+  );
+}
+
+/** Runs fn(absDir) with a fresh temporary directory, always removing it afterwards. */
+export async function withTempDir(fn) {
+  const dir = mkdtempSync(join(tmpdir(), "studio-dist-"));
+  try {
+    return await fn(dir);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }

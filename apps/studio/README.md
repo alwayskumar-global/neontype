@@ -60,8 +60,8 @@ header names the source export id). Tokens are scoped under `.ds-root`, not the 
 components the mockups use; icons are typed shape data (no HTML injection); dynamic values go through
 `setCssVars`.
 
-Fonts: Instrument Sans and DM Mono are copied into `public/fonts/` with their SIL OFL texts (sources
-and commits in `public/fonts/README.md`). The design system's own Noto Sans Tamil face is **not**
+Fonts: Instrument Sans and DM Mono live in `src/ds/fonts/` with their SIL OFL texts (sources and commits
+in `src/ds/fonts/README.md`) and are bundled only into builds that import `ds.css`, not into the default dist. The design system's own Noto Sans Tamil face is **not**
 ported: the studio already declares that family, and a second declaration with different files would
 change canvas and export glyphs. A test asserts `ds.css` and `src/fonts/fonts.css` share no family.
 

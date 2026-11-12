@@ -833,13 +833,16 @@ have accessible, CSP-safe building blocks that do not restyle the live studio.
    criterion 2, and SHALL keep the `prefers-reduced-motion` block. *(unit)*
 2. THE fonts Instrument Sans (latin and latin-ext woff2) and DM Mono (400 and
    500, latin and latin-ext woff2) SHALL be copied into
-   `apps/studio/public/fonts` together with their SIL OFL 1.1 license texts, and
-   the `@font-face` rules in `ds.css` SHALL point at `/fonts/...`. Noto Sans Tamil
+   `apps/studio/src/ds/fonts` (NOT `public/`) together with their SIL OFL 1.1 license texts, and
+   the `@font-face` rules in `ds.css` SHALL point at `./fonts/...`, so that Vite emits the
+   files only for builds that import `ds.css`. A unit test SHALL assert that the default-route
+   production dist, as written, contains no DMMono or InstrumentSans file and that the harness
+   dist does. Noto Sans Tamil
    SHALL NOT be copied; `--font-tamil` SHALL resolve to the studio's own declared
    `Noto Sans Tamil`. THE license texts SHALL be taken from the upstream
    `google/fonts` repository (`ofl/instrumentsans/OFL.txt` and
    `ofl/dmmono/OFL.txt`; web lookup is read-only and owner-approved), and
-   `apps/studio/public/fonts/README.md` SHALL record the source URL and the
+   `apps/studio/src/ds/fonts/README.md` SHALL record the source URL and the
    commit or date of each. IF either text cannot be verified THEN the implementer
    SHALL STOP and ask the owner and SHALL NOT invent a copyright line. EACH font family SHALL have a `docs/dependencies.md` row (name, license,
    source, reason). THE app SHALL make no network request for these fonts at

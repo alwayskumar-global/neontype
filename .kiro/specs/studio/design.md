@@ -112,7 +112,7 @@ apps/studio/
   vite.dc-harness.config.ts           Vite config for the harness build (root dc-harness, outDir ../dist-dc-harness)
   playwright.dc.config.ts             Playwright config for the harness (port 5276)
   README.md                           converter, DS port, Deviations (new; did not exist before)
-  public/fonts/                       + InstrumentSans-*, DMMono-* woff2, their OFL texts, and README.md
+  ds/fonts/                           InstrumentSans-*, DMMono-* woff2, their OFL texts, and README.md (bundled by Vite only where ds.css is imported)
 ```
 
 Slugs and component names, in the fixed conversion order: `studio-editor`
@@ -1462,13 +1462,13 @@ Transformation recipe (exact, so a later re-port repeats it):
 | --- | --- | --- | --- |
 | 1 | line-start `:root{` in `colors.css`, `typography.css`, `spacing.css`, `elevation.css` | `.ds-root{` | 4 |
 | 2 | both `:root{` in `motion.css`: the base block AND the one inside `@media (prefers-reduced-motion: reduce)` | `.ds-root{` | 2 |
-| 3 | `url("../fonts/NAME.woff2")` | `url("/fonts/NAME.woff2")` | 6 |
+| 3 | `url("../fonts/NAME.woff2")` | `url("./fonts/NAME.woff2")` | 6 |
 | 4 | the `@font-face` rule with `font-family:"Noto Sans Tamil"` | removed | 1 |
 | 5 | `local("…"),` at the start of `src:` | removed from every kept `@font-face`; `url()` sources only, so a user-installed copy never replaces the bundled file | all |
 | 6 | every other character of the token files and `ui.css` | unchanged, including `/* @kind … */` comments | n/a |
 
 After the port, `ds.css` contains no `:root`, no `local(`, exactly six `url(` occurrences (all in
-`@font-face`, all starting `/fonts/`), the `@media (prefers-reduced-motion:
+`@font-face`, all starting `./fonts/`), the `@media (prefers-reduced-motion:
 reduce)` blocks of `motion.css` and `ui.css`, and the `@media (forced-colors:
 active)` block.
 
@@ -1495,10 +1495,10 @@ As built the rule is not nested under `.ds-root`; it is the last line of `ds.css
                 components/ui.css <sha256-12>
    Changes from the export (complete list):
      1. Token blocks are scoped under .ds-root instead of :root.
-     2. @font-face urls point at /fonts/…, local() sources are dropped; the Noto
+     2. @font-face urls point at ./fonts/… (src/ds/fonts), local() sources are dropped; the Noto
         Sans Tamil face is omitted (src/fonts/fonts.css declares it).
      5. One added rule at the end: .ds-w{width:var(--ds-w)}.
-   Fonts: Instrument Sans and DM Mono, SIL OFL 1.1, files in public/fonts with
+   Fonts: Instrument Sans and DM Mono, SIL OFL 1.1, files in src/ds/fonts with
    their licence texts. No network request. Never import from design/. */
 ```
 
@@ -1514,8 +1514,8 @@ and no `.ds-root` selector. Importing it is a task for the future "wire generate
 
 #### Fonts
 
-Copy these six files from `design/_ds/…/fonts/` to `apps/studio/public/fonts/` with
-their names unchanged (none collides with the four Noto files already there):
+Copy these six files from `design/_ds/…/fonts/` to `apps/studio/src/ds/fonts/` (not `public/`: Vite copies every `public/` file into every dist, and the live app does not use these) with
+their names unchanged:
 
 ```
 InstrumentSans-400-700-latin.woff2        InstrumentSans-400-700-latin-ext.woff2
@@ -1524,7 +1524,7 @@ DMMono-500-latin.woff2                    DMMono-500-latin-ext.woff2
 ```
 
 `NotoSansTamil-400-700-tamil.woff2` is NOT copied. Licence texts:
-`public/fonts/OFL-Instrument-Sans.txt` and `public/fonts/OFL-DM-Mono.txt`,
+`src/ds/fonts/OFL-Instrument-Sans.txt` and `src/ds/fonts/OFL-DM-Mono.txt`,
 following the naming of the existing `OFL-Noto-Sans.txt`.
 
 **Where the licence text and copyright lines come from.** The export contains no
@@ -1532,14 +1532,14 @@ licence file (`readme.md` only states "SIL OFL 1.1"). The owner approved a
 read-only web lookup. At implementation time the implementer takes the text
 unchanged from the upstream `google/fonts` repository: `ofl/instrumentsans/OFL.txt`
 and `ofl/dmmono/OFL.txt`. It records the source URL and the commit or date of each
-in `apps/studio/public/fonts/README.md`, and compares the copyright line with the
+in `apps/studio/src/ds/fonts/README.md`, and compares the copyright line with the
 string in each font file's name table. If either text cannot be fetched or verified,
 or does not match the files, the implementer STOPS and asks the owner. No copyright line is written from memory or invented, and neither this
 design nor the spec records one, because none has been verified. As built, the
 two licence texts come from `google/fonts` commits
 `2fc9491da70cf3e1bafd3c3da49244c5a496e9d5` and
 `d0623a232f5b64f5e1963dc88c66d7de8f25f872`, recorded in
-`public/fonts/README.md`. The font BINARIES were copied from the design export;
+`src/ds/fonts/README.md`. The font BINARIES were copied from the design export;
 their identity with an upstream release was NOT verified. `docs/dependencies.md`
 carries a note for the two new families. Adding an
 `@fontsource/*` package to obtain the files is NOT allowed: it would add a
@@ -2151,7 +2151,7 @@ counts are the verified facts.
 | 17.3, 17.5 | `__tests__/dc/synthetic.test.ts` | unit | synthetic documents for the style compiler, the CSS scoper, and the emitter rules (including the ARIA coercions and `<NAME>_BINDINGS` root names); uses `css-util.ts` |
 | 17.2, 17.3.10, 17.5, 17.6 | `__tests__/dc/properties.test.ts` | property (Properties 11 and 12) | determinism and CSP-clean output over generated documents, with the test's own scan and scoper check |
 | 17.3, 17.9 | `__tests__/dc/render.test.tsx` | unit | generated components rendered with `renderToStaticMarkup` over several data shapes (`'0'` and `'false'` strings are truthy, `0` and `""` are not, a non-array list renders nothing); static audit of `generated/` and `ds/` raw text; ESLint `Linter` pass with the repo's `no-restricted-syntax` selectors |
-| 17.10 | `__tests__/dc/dist-scan.test.ts` | unit (slow) | `vite build({ write: false })` for BOTH the production config and the harness config; for every emitted file, the path and (for text) the content must not match `(?<![A-Za-z0-9_])design/`, `_ds/`, `_ds_bundle`, `_ds_manifest`, `support.js`, `.dc.html`, or `MotionTextStudioDesignSystem`. `public/` files are copied at write time, so they are not in the in-memory output |
+| 17.10 | `__tests__/dc/dist-scan.test.ts` | unit (slow) | `vite build({ write: false })` for BOTH the production config and the harness config; for every emitted file, the path and (for text) the content must not match `(?<![A-Za-z0-9_])design/`, `_ds/`, `_ds_bundle`, `_ds_manifest`, `support.js`, `.dc.html`, or `MotionTextStudioDesignSystem`. `public/` files are copied at write time, so they are not in the in-memory output. Two further tests build for real into a temp directory: the default-route dist contains no `DMMono-*` / `InstrumentSans-*` file (and does contain the Noto fonts, as a non-vacuity guard), and the harness dist contains all six |
 | 18.1, 18.7 to 18.9 | `ds/ds-css.test.ts` | unit | raw text of `ds.css`: header, no `:root`, scoped token blocks, `url(` only in `@font-face` and under `/fonts/`, both `prefers-reduced-motion` blocks, the `.ds-w` rule, no Tamil `@font-face`, no `local(`, font-family sets disjoint from `src/fonts/fonts.css` |
 | 18.4 | `ds/dc-runtime.test.ts` | unit + property | `get` over arbitrary nested data never throws and never reads inherited keys; `truthy`; `asHandler` returns a `DcHandler` that forwards its arguments; `asBooleanish`, `asTristate`, `asCurrent`; `dcVars` writes finite numbers and strings and removes the rest; no `any`, `eval`, or `new Function` |
 | 18.5 | `ds/helpers.test.ts` | unit + property | `stepNumber` clamps, rounds to `precision`, applies Shift x10 and Alt x0.1; `tokenizeCode(code).map(t => t.text).join("") === code` |

@@ -39,8 +39,8 @@
 > **apps/studio design-system fonts (no package added):** Instrument Sans (SIL OFL 1.1,
 > `InstrumentSans-400-700-latin{,-ext}.woff2`) and DM Mono (SIL OFL 1.1,
 > `DMMono-{400,500}-latin{,-ext}.woff2`) are copied from the design-system export into
-> `apps/studio/public/fonts/` for the design-system UI (`src/ds/ds.css`) only. Reason: the ported
+> `apps/studio/src/ds/fonts/` (not `public/`, so the default dist does not ship them) for the design-system UI (`src/ds/ds.css`) only. Reason: the ported
 > design-system components set type in these families. Licence texts are the upstream
 > `google/fonts` files (`OFL-Instrument-Sans.txt`, `OFL-DM-Mono.txt`); source URLs, commits and
-> dates are recorded in `apps/studio/public/fonts/README.md`. No `@fontsource` package and no
+> dates are recorded in `apps/studio/src/ds/fonts/README.md`. No `@fontsource` package and no
 > network fetch at runtime.

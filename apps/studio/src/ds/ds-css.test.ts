@@ -30,7 +30,7 @@ describe("ds.css assembly (Requirement 18.1, 18.7-18.10)", () => {
     expect(outside.map((r) => r.prelude)).toEqual([]);
     const withUrl = rules.filter((r) => r.prelude.startsWith("@font-face"));
     expect(withUrl.length).toBeGreaterThan(0);
-    for (const r of withUrl) expect(r.body).toMatch(/url\("\/fonts\/[A-Za-z0-9-]+\.woff2"\)/);
+    for (const r of withUrl) expect(r.body).toMatch(/url\("\.\/fonts\/[A-Za-z0-9-]+\.woff2"\)/);
   });
 
   it("every selector is a .ui*/.ds-*/.fx* class (or :where/[attr]); no bare element selectors", () => {
@@ -82,15 +82,15 @@ describe("font-face rules (Requirement 18.7-18.9)", () => {
     expect(shared).toEqual([]);
   });
 
-  it("every font file ds.css references exists in public/fonts", () => {
-    const files = new Set(listStudioFiles("public/fonts", [".woff2"]).map((p) => p.split("/").pop()));
-    const refs = [...dsCss.matchAll(/url\("\/fonts\/([^"]+)"\)/g)].map((m) => m[1]);
+  it("every font file ds.css references exists in src/ds/fonts", () => {
+    const files = new Set(listStudioFiles("src/ds/fonts", [".woff2"]).map((p) => p.split("/").pop()));
+    const refs = [...dsCss.matchAll(/url\("\.\/fonts\/([^"]+)"\)/g)].map((m) => m[1]);
     expect(refs.length).toBe(6);
     for (const f of refs) expect(files.has(f), f).toBe(true);
   });
 
   it("the licence texts for the ported families are present", () => {
-    const names = new Set(listStudioFiles("public/fonts", [".txt"]).map((p) => p.split("/").pop()));
+    const names = new Set(listStudioFiles("src/ds/fonts", [".txt"]).map((p) => p.split("/").pop()));
     expect(names.has("OFL-Instrument-Sans.txt")).toBe(true);
     expect(names.has("OFL-DM-Mono.txt")).toBe(true);
   });

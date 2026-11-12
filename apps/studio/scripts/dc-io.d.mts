@@ -17,3 +17,5 @@ export function readTree(dirRel: string): Record<string, string | Uint8Array>;
 export function readStudioText(fileRel: string): string;
 export function listStudioFiles(dirRel: string, exts: readonly string[]): string[];
 export function readDesignAsset(nameRel: string): Uint8Array;
+export function listAbsFiles(absDir: string, rel?: string): string[];
+export function withTempDir<T>(fn: (absDir: string) => Promise<T>): Promise<T>;

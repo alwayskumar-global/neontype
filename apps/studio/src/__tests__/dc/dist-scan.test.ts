@@ -1,11 +1,10 @@
 /**
  * Nothing from design/ reaches a build (Requirement 17.6, 17.10). Builds the production config and
- * the harness config IN MEMORY (`write: false`; no temp directory) and scans every emitted file's
- * path and text for references to the design export, the vendor runtime, and the bundle namespace.
+ * the harness config IN MEMORY (`write: false`) and scans every emitted file's path and text for references to the design export, the vendor runtime, and the bundle namespace.
  */
 import { describe, it, expect } from "vitest";
 import { build } from "vite";
-import { STUDIO_DIR } from "../../../scripts/dc-io.mjs";
+import { STUDIO_DIR, listAbsFiles, withTempDir } from "../../../scripts/dc-io.mjs";
 
 const PATTERNS: { name: string; re: RegExp }[] = [
   { name: "design/ path", re: /(^|[^A-Za-z0-9_-])design\// },
@@ -59,6 +58,14 @@ function dsCssHits(css: { fileName: string; text: string }[]): string[] {
   }
   return hits;
 }
+/** Builds for real into a temp dir, so files copied from public/ at write time are included. */
+function writtenFiles(configFile: string): Promise<string[]> {
+  return withTempDir(async (outDir) => {
+    await build({ configFile: `${STUDIO_DIR}/${configFile}`, logLevel: "silent", build: { outDir, emptyOutDir: true } });
+    return listAbsFiles(outDir);
+  });
+}
+const DS_FONT = /(^|\/)(DMMono|InstrumentSans)-[^/]*\.woff2$/;
 describe("builds contain nothing from design/", () => {
   it("the production build", async () => {
     const files = await emitted("vite.config.ts");
@@ -77,6 +84,22 @@ describe("builds contain nothing from design/", () => {
   it("the harness build DOES carry the design-system CSS, so the CSS check can fail", async () => {
     const files = await emitted("vite.dc-harness.config.ts");
     expect(dsCssHits(files.filter((f) => f.fileName.endsWith(".css"))).length).toBeGreaterThanOrEqual(1);
+  }, 120_000);
+
+  it("the default-route dist (as written, including public/) has no DMMono or InstrumentSans file", async () => {
+    const files = await writtenFiles("vite.config.ts");
+    // Non-vacuity: the written dist includes the public/ copy (Noto fonts) and the app's own assets.
+    expect(files.some((p) => /fonts\/noto-sans-latin-400-normal\.woff2$/.test(p))).toBe(true);
+    expect(files.some((p) => p.endsWith("index.html"))).toBe(true);
+    expect(files.filter((p) => DS_FONT.test(p))).toEqual([]);
+  }, 120_000);
+
+  it("the harness dist DOES contain all six DMMono / InstrumentSans files", async () => {
+    const files = await writtenFiles("vite.dc-harness.config.ts");
+    const ds = files.filter((p) => DS_FONT.test(p));
+    expect(ds.filter((p) => /DMMono/.test(p)).length).toBe(4);
+    expect(ds.filter((p) => /InstrumentSans/.test(p)).length).toBe(2);
+    expect(DS_FONT.test("assets/DMMono-400-latin-abc123.woff2")).toBe(true); // the pattern matches hashed names
   }, 120_000);
 
   it("the dc-harness build (which bundles the generated screens)", async () => {
