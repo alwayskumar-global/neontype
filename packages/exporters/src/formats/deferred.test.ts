@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Project } from "@studio/engine";
 
-import { exportWebmAlpha, exportWebp } from "../api.js";
+import { exportWebmAlpha } from "../api.js";
 import { detectCapabilities } from "../capabilities.js";
 
 /** A minimal valid project (never actually encoded by the stubs). */
@@ -22,7 +22,7 @@ function project(): Project {
   } as Project;
 }
 
-describe("deferred format stubs", () => {
+describe("deferred format stub (WebM with alpha)", () => {
   it("exportWebmAlpha returns a typed browser-unsupported failure", async () => {
     const r = await exportWebmAlpha(project());
     expect(r.ok).toBe(false);
@@ -32,29 +32,20 @@ describe("deferred format stubs", () => {
     }
   });
 
-  it("exportWebp returns a typed browser-unsupported failure", async () => {
-    const r = await exportWebp(project());
-    expect(r.ok).toBe(false);
-    if (!r.ok) {
-      expect(r.error.code).toBe("browser-unsupported");
-      expect(r.error.message).toMatch(/not available in this release/i);
-    }
-  });
 });
 
-describe("capability report for deferred formats", () => {
-  it("reports webmAlpha and webp unsupported even if the runtime would support them", async () => {
+describe("capability report: WebM alpha is deferred, WebP follows its probe", () => {
+  it("reports webmAlpha unsupported even if the runtime would support it, and webp from its probe", async () => {
     // Inject an env where every probe would report supported; the report must
-    // STILL mark the deferred formats unsupported.
+    // STILL mark the deferred format (WebM alpha) unsupported.
     const report = await detectCapabilities({
       VideoEncoder: { isConfigSupported: async () => ({ supported: true, config: {} }) } as never,
       AudioEncoder: { isConfigSupported: async () => ({ supported: true, config: {} }) } as never,
       probeWebp: async () => "image/webp",
     });
     expect(report.webmAlpha.status).toBe("unsupported");
-    expect(report.webp.status).toBe("unsupported");
+    expect(report.webp.status).toBe("supported");
     expect(report.webmAlpha.reason).toMatch(/not available in this release/i);
-    expect(report.webp.reason).toMatch(/not available in this release/i);
     // Shipped formats remain available.
     expect(report.gif.status).toBe("supported");
     expect(report.pngSequence.status).toBe("supported");

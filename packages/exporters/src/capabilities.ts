@@ -11,6 +11,7 @@
  */
 
 import type { CapabilityReport, CapabilityResult } from "./types.js";
+import { probeStillWebpType } from "./webp/probe.js";
 
 /** Overall detection budget and per-probe non-settle bound (Req 3.10). */
 export const DETECTION_TIMEOUT_MS = 2000;
@@ -114,24 +115,8 @@ function resolveEnv(env: CapabilityEnv): Required<Pick<CapabilityEnv, "timeoutMs
   };
 }
 
-/** Default still-WebP probe using `OffscreenCanvas.convertToBlob` when present. */
-async function defaultWebpProbe(): Promise<string | null> {
-  const g = globalThis as Record<string, unknown>;
-  const OffscreenCanvasCtor = g.OffscreenCanvas as
-    | (new (w: number, h: number) => { convertToBlob(opts: { type: string }): Promise<{ type: string }> })
-    | undefined;
-  if (OffscreenCanvasCtor === undefined) {
-    return null;
-  }
-  try {
-    const c = new OffscreenCanvasCtor(2, 2);
-    const blob = await c.convertToBlob({ type: "image/webp" });
-    return blob.type;
-  } catch {
-    return null;
-  }
-}
-
+/** Default still-WebP probe (see `webp/probe.ts`). */
+const defaultWebpProbe = probeStillWebpType;
 /** Probes still-WebP support to a `CapabilityResult` (Req 3.5). */
 async function probeWebpCapability(
   probe: () => Promise<string | null>,
@@ -161,11 +146,10 @@ export async function detectCapabilities(env: CapabilityEnv = {}): Promise<Capab
   const resolved = resolveEnv(env);
   const timeoutMs = resolved.timeoutMs;
 
-  // The VP9-alpha and WebP probes are kept but their results are NOT reported:
-  // both formats are deferred (not shipped in this release), so the report
-  // always marks them unsupported regardless of the runtime probe (see
-  // src/formats/deferred.ts and the README "Not in this release" section).
-  const [mp4, , aac] = await Promise.all([
+  // The VP9-alpha probe is kept but its result is NOT reported: WebM with alpha is deferred by owner
+  // decision (Chrome does not support VP9 `alpha: "keep"`), so the report always marks it unsupported (see
+  // src/formats/deferred.ts and the README "Not in this release" section). WebP is reported from its probe.
+  const [mp4, , aac, webp] = await Promise.all([
     probeConfig(resolved.VideoEncoder, H264_CONFIG, "VideoEncoder is unavailable", timeoutMs),
     probeConfig(resolved.VideoEncoder, VP9_ALPHA_CONFIG, "VideoEncoder is unavailable", timeoutMs),
     probeConfig(resolved.AudioEncoder, AAC_CONFIG, "AudioEncoder is unavailable", timeoutMs),
@@ -182,7 +166,7 @@ export async function detectCapabilities(env: CapabilityEnv = {}): Promise<Capab
     mp4,
     webmAlpha: deferred("WebM (VP9 alpha)"),
     aac,
-    webp: deferred("animated WebP"),
+    webp,
     gif: supported(),
     pngSequence: supported(),
     embed: supported(),

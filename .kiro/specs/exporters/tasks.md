@@ -168,7 +168,8 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, and `pnpm --filter @studio/exporters exec vitest run`.
     - **Completion:** All three commands exit with code 0 and zero failures.
 
-- [ ] 6. Group 6: WebM-with-alpha export (capability-gated)
+- [ ] 6. Group 6: WebM-with-alpha export (capability-gated) — deferred (owner decision)
+  - **Deferred by owner decision.** Spike 4 shows VP9 `alpha: "keep"` is unsupported in Chrome, so this would ship as a permanent "unsupported". Group 6 stays open and unimplemented; `exportWebmAlpha` remains a typed stub and no `webm-muxer` dependency is added.
   - [ ] 6.1 Implement the WebM muxer adapter and VP9-alpha exporter
     - Add `webm-muxer` 5.1.4 to `packages/exporters/package.json` (exact pin) and create `packages/exporters/src/muxers/webm.ts` as a thin adapter over it.
     - Create `packages/exporters/src/formats/webm-alpha.ts` exporting `exportWebmAlpha`: encode frames to VP9 with `alpha: "keep"` → the WebM muxer, preserve per-frame alpha for a transparent background and encode over a solid opaque hex background otherwise, report "VP9 · 1 file", and return `browser-unsupported` with PNG-sequence guidance when the VP9-alpha `CapabilityResult` is `unsupported` (no encode started, project unchanged). Implemented independently of the other formats.
@@ -187,16 +188,17 @@ This plan converts the `exporters` design into an ordered series of coding tasks
     - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, `pnpm --filter @studio/exporters exec vitest run`, and `pnpm --filter @studio/exporters exec playwright test`.
     - **Completion:** All four commands exit with code 0 and zero failures.
 
-- [ ] 7. Group 7: Animated WebP export
-  - [ ] 7.1 Implement the hand-written RIFF container and WebP exporter
+- [x] 7. Group 7: Animated WebP export
+  - [x] 7.1 Implement the hand-written RIFF container and WebP exporter
     - Create `packages/exporters/src/webp/riff.ts` — a hand-written animated-WebP RIFF container writer emitting VP8X, ANIM, and ANMF chunks (no WebP encoder package).
     - Create `packages/exporters/src/formats/webp.ts` exporting `exportWebp`: encode each engine-rendered frame as a still WebP via canvas `convertToBlob('image/webp')` (the `quality` option feeds the encode), wrap the `round(durationSeconds * fps)` frames in the RIFF container as ANMF frames, preserve source alpha for a transparent background and encode over an opaque hex background otherwise, report "WebP · 1 file", derive WebP capability from the still-WebP probe, and return `browser-unsupported` (no partial file) when WebP capability is `unsupported`. Implemented independently of the other formats.
     - Add unit tests to `packages/exporters/src/formats/webp.test.ts` for the RIFF container structure (VP8X/ANIM/ANMF parse-back), transparent alpha preserved, and the capability-unsupported path.
-    - **Covers:** Requirement 7.1, Requirement 7.2, Requirement 7.3, Requirement 7.4, Requirement 7.5, Requirement 7.6, Property 1, Property 2
+    - **Covers:** Requirement 7.1, Requirement 7.2, Requirement 7.3, Requirement 7.4, Requirement 7.5, Requirement 7.6, Property 1, Property 2, Property 15, Property 16, Property 17
     - **Completion:** `pnpm --filter @studio/exporters exec vitest run src/formats/webp.test.ts` passes with zero failures.
+    - **Outcome.** Added `webp/probe.ts` (the shared still-WebP probe), `webp/riff.test`-style coverage inside `formats/webp.test.ts` (parse-back property, ALPH survives into the ANMF, capability path), the reader `__tests__/helpers/webp-reader.ts`, and the gated real-encode `tests/visual/webp.spec.ts` (decodes with `ImageDecoder`, asserts the frame count and that a transparent pixel stays transparent; skipped with a visible reason when the probe fails). Fixed a latent bug in the capability probe: `convertToBlob` throws until `getContext('2d')` has been called, so the old probe could never report `supported`.
     - Commit: `feat(exporters): add animated WebP exporter with hand-written RIFF container`
 
-  - [ ] 7.2 Checkpoint — Group 7
+  - [x] 7.2 Checkpoint — Group 7
     - Run `pnpm --filter @studio/exporters exec tsc --noEmit`, `pnpm --filter @studio/exporters lint`, and `pnpm --filter @studio/exporters exec vitest run`.
     - **Completion:** All three commands exit with code 0 and zero failures.
 

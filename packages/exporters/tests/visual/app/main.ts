@@ -446,7 +446,8 @@ window.renderBlurFrameWithWrapper = renderBlurFrameWithWrapper;
 
 /* --------------------------- MP4 real-encode harness ---------------------- */
 
-import { exportMp4, exportPngSequence, exportGif } from "../../../src/api.js";
+import { exportMp4, exportPngSequence, exportGif, exportWebp } from "../../../src/api.js";
+import { probeStillWebpType } from "../../../src/webp/probe.js";
 
 /** A small valid project for MP4: even 160x96, 1s at 12fps, one text layer. */
 function mp4Project(): Project {
@@ -670,4 +671,57 @@ declare global {
   }
 }
 
-window.runGifExport = runGifExportHarness;import "./fonts-harness.js";
+window.runGifExport = runGifExportHarness;
+
+// ---- Animated WebP (task 7.1): export through the worker, then decode with the browser ----
+/** The Blob type a still image/webp encode produces here (the capability probe). */
+async function webpProbeHarness(): Promise<string> {
+  return (await probeStillWebpType()) ?? "";
+}
+async function runWebpExportHarness(background: string): Promise<{ ok: boolean; code?: string; bytes: number[]; frameCount?: number }> {
+  const result = await exportWebp(gifHarnessProject(background));
+  if (!result.ok) return { ok: false, code: result.error.code, bytes: [] };
+  const buf = await result.file.arrayBuffer();
+  return { ok: true, bytes: Array.from(new Uint8Array(buf)), frameCount: result.summary.frameCount };
+}
+interface ImageDecoderLike {
+  tracks: { ready: Promise<void>; selectedTrack: { frameCount: number } };
+  decode(opts: { frameIndex: number }): Promise<{ image: VideoFrame }>;
+}
+/** Decodes an animated WebP; returns the frame count and each frame's corner pixel (RGBA). */
+async function decodeWebpHarness(bytes: number[]): Promise<{ viaImageDecoder: boolean; frameCount: number; corners: number[][] }> {
+  const data = Uint8Array.from(bytes);
+  const corner = (source: CanvasImageSource, w: number, h: number): number[] => {
+    const c = new OffscreenCanvas(w, h);
+    const ctx = c.getContext("2d", { willReadFrequently: true })!;
+    ctx.drawImage(source, 0, 0);
+    return Array.from(ctx.getImageData(1, 1, 1, 1).data);
+  };
+  const Decoder = (globalThis as unknown as { ImageDecoder?: new (init: { data: Uint8Array; type: string }) => ImageDecoderLike }).ImageDecoder;
+  if (Decoder) {
+    const dec = new Decoder({ data, type: "image/webp" });
+    await dec.tracks.ready;
+    const frameCount = dec.tracks.selectedTrack.frameCount;
+    const corners: number[][] = [];
+    for (let i = 0; i < frameCount; i++) {
+      const { image } = await dec.decode({ frameIndex: i });
+      corners.push(corner(image, image.displayWidth, image.displayHeight));
+      image.close();
+    }
+    return { viaImageDecoder: true, frameCount, corners };
+  }
+  // Fallback: a bitmap decode shows only the first frame.
+  const bmp = await createImageBitmap(new Blob([data], { type: "image/webp" }));
+  return { viaImageDecoder: false, frameCount: 1, corners: [corner(bmp, bmp.width, bmp.height)] };
+}
+declare global {
+  interface Window {
+    webpProbe: () => Promise<string>;
+    runWebpExport: (background: string) => Promise<{ ok: boolean; code?: string; bytes: number[]; frameCount?: number }>;
+    decodeWebp: (bytes: number[]) => Promise<{ viaImageDecoder: boolean; frameCount: number; corners: number[][] }>;
+  }
+}
+window.webpProbe = webpProbeHarness;
+window.runWebpExport = runWebpExportHarness;
+window.decodeWebp = decodeWebpHarness;
+import "./fonts-harness.js";

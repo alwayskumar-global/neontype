@@ -107,6 +107,8 @@ Exporting is deterministic: frame `i` is rendered at `t = i / fps` through the s
 
 ### Requirement 5: WebM With Alpha Export (VP9)
 
+> **Deferred by owner decision.** Spike 4 shows VP9 `alpha: "keep"` is unsupported in Chrome, so this would ship as a permanent "unsupported"; Group 6 is not implemented, `exportWebmAlpha` stays a typed stub, and no `webm-muxer` is added.
+
 **User Story:** As a user making see-through titles, I want to export WebM with a transparent background, so that I can overlay the animation on other content.
 
 #### Acceptance Criteria

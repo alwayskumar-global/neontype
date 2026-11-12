@@ -31,10 +31,10 @@ describe("detectCapabilities — supported", () => {
     const env: CapabilityEnv = { VideoEncoder: okEncoder(), AudioEncoder: okEncoder(), probeWebp: webpOk };
     const r = await detectCapabilities(env);
     expect(r.mp4.status).toBe("supported");
-    // webmAlpha and webp are DEFERRED: always unsupported regardless of probe.
+    // webmAlpha is DEFERRED (owner decision): always unsupported regardless of probe. webp follows its probe.
     expect(r.webmAlpha.status).toBe("unsupported");
     expect(r.aac.status).toBe("supported");
-    expect(r.webp.status).toBe("unsupported");
+    expect(r.webp.status).toBe("supported");
     expect(r.gif.status).toBe("supported");
     expect(r.pngSequence.status).toBe("supported");
     expect(r.embed.status).toBe("supported");

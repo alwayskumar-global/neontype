@@ -31,7 +31,8 @@ import type { WorkerOptions, WorkerPcm } from "./worker/protocol.js";
 import { DEFAULT_LIMITS, MAX_FONT_BYTES } from "./types.js";
 import { decodeAudio } from "./audio/decode.js";
 import { trimOrPad, silentTrack } from "./audio/trim-pad.js";
-import { runWebmAlphaExport, runWebpExport } from "./formats/deferred.js";
+import { runWebmAlphaExport } from "./formats/deferred.js";
+import { isValidWebpQuality } from "./formats/webp.js";
 
 /**
  * Compile-time exhaustive mapping of every `Mp4Options` field to how it reaches
@@ -213,9 +214,22 @@ export function exportWebmAlpha(
 }
 
 /**
- * Exports an animated WebP. DEFERRED: not available in this release; always
- * returns a typed browser-unsupported failure. Never throws.
+ * Exports an animated WebP (hand-written RIFF container over browser-encoded still WebPs). Returns
+ * `browser-unsupported` when the browser cannot encode a still WebP. Never throws.
  */
 export function exportWebp(project: Project, options: WebpOptions = {}): Promise<ExportResult> {
-  return runWebpExport(project, options);
+  const fonts = resolveFonts(options.fonts);
+  if (isFailure(fonts)) return Promise.resolve(fonts);
+  if (options.quality !== undefined && !isValidWebpQuality(options.quality)) {
+    return Promise.resolve(fail("invalid-options", "WebP quality must be a number between 0 and 1.", ["quality"]));
+  }
+  return dispatchExport({
+    driverId: "webp",
+    format: "webp",
+    project,
+    options: { output: options.output, quality: options.quality, fonts },
+    limits: { ...DEFAULT_LIMITS, ...options.limits },
+    onProgress: options.onProgress,
+    signal: options.signal,
+  });
 }

@@ -15,8 +15,8 @@ In product priority order:
 | MP4 (H.264 + optional AAC) | `exportMp4` | Shipped |
 | PNG sequence (ZIP) | `exportPngSequence` | Shipped |
 | Animated GIF | `exportGif` | Shipped |
-| WebM with alpha (VP9) | `exportWebmAlpha` | Deferred (typed stub) |
-| Animated WebP | `exportWebp` | Deferred (typed stub) |
+| Animated WebP | `exportWebp` | Shipped |
+| WebM with alpha (VP9) | `exportWebmAlpha` | Deferred by owner decision (typed stub) |
 
 Every entry returns a discriminated-union `ExportResult` (`{ ok: true, ... }` or
 `{ ok: false, error }`) and NEVER throws; errors are typed by `ErrorCode`.
@@ -45,7 +45,14 @@ if (caps.mp4.status === "supported") {
 PNG entries named `frame_0000.png`, `frame_0001.png`, … (widening past 9999 so
 lexical order matches frame order). `exportGif(project, options)` produces a
 single animated GIF (per-frame delay `round(100/fps)` cs, palette ≤ 256 colors,
-single-color transparency for transparent projects).
+single-color transparency for transparent projects). `exportWebp(project, options)`
+produces a single animated WebP: each frame is a still WebP from the browser
+(`convertToBlob('image/webp', quality)`, `quality` in `[0, 1]`, default `0.8`), wrapped in a
+hand-written RIFF container (`VP8X` + `ANIM` + one `ANMF` per frame; no WebP encoder
+package). Frame durations are whole milliseconds that sum to exactly
+`durationSeconds * 1000`. A transparent project keeps each frame's alpha (VP8X alpha flag
+set); an opaque hex background yields an opaque animation. Where the browser cannot
+encode a still WebP it returns `browser-unsupported` before encoding any frame.
 
 ## Capabilities
 
@@ -54,8 +61,8 @@ single-color transparency for transparent projects).
 with a `supported` / `unsupported` / `unknown` status per format. It performs no
 encode and no network request and completes within ~2 seconds. GIF, PNG
 sequence, and the embed target never require a WebCodecs encoder and are always
-`supported`. `webmAlpha` and `webp` are always reported `unsupported` in this
-release (see "Not in this release").
+`supported`. `webp` is reported from the still-WebP probe. `webmAlpha` is always
+reported `unsupported` in this release (see "Not in this release").
 
 ## Limits
 
@@ -102,18 +109,14 @@ wrapper applies the R14 uniform output scaling.
 
 ## Not in this release
 
-Two formats are deferred and ship as typed stubs — `exportWebmAlpha` and
-`exportWebp` exist in the public API and always return a typed
-`browser-unsupported` failure; `detectCapabilities` always reports `webmAlpha`
-and `webp` as `unsupported`.
+One format is deferred by owner decision and ships as a typed stub: `exportWebmAlpha`
+exists in the public API and always returns a typed `browser-unsupported` failure;
+`detectCapabilities` always reports `webmAlpha` as `unsupported`.
 
 - **WebM with alpha (VP9 `alpha: "keep"`).** Unsupported in the tested Chrome
-  configurations (the encoder reports the alpha config as unsupported), so there
-  is no reliable path to ship it yet. Use a PNG sequence for an alpha-preserving
-  export in the meantime.
-- **Animated WebP.** Requires a hand-written RIFF/VP8X container writer that is
-  not implemented in this release. Use GIF for an animated raster export, or MP4
-  for video.
+  configurations (the encoder reports the alpha config as unsupported), so it would
+  ship as a permanent "unsupported". No `webm-muxer` dependency is added. Use a PNG
+  sequence, or animated WebP, for an alpha-preserving export.
 
 ## Contributing
 

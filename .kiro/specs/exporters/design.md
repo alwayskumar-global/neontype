@@ -331,9 +331,9 @@ Requirement 11.8 reconciliation: 11.8 defers to Requirement 15 for font loading,
 
 - **mp4** (`formats/mp4.ts`): `VideoEncoder` H.264 (`avc1.*`) → `mp4-muxer`; odd dimensions rounded up to even then clamped to canvas bounds (Req 2.5); transparent background painted over solid `backgroundFallback` with the `mp4-no-transparency` note (Req 2.11); optional one AAC track via `AudioEncoder`, trimmed/padded to `durationSeconds` (Req 2.6–2.10); audio decode runs on the main thread (Spike 3).
 - **png-seq** (`formats/png-seq.ts`): each frame → PNG `Blob` via `convertToBlob('image/png')`; packaged with `client-zip` stored (uncompressed) entries carrying CRC-32; zero-padded entry names ≥4 digits (Req 4.5). No codec needed (Req 4.7).
-- **webm-alpha** (`formats/webm-alpha.ts`): `VideoEncoder` VP9 (`vp09.*`) with `alpha: "keep"` → `webm-muxer`; when unsupported, returns `browser-unsupported` with PNG-sequence guidance (Req 5.4, Spike 2).
+- **webm-alpha** — DEFERRED by owner decision (Spike 4: VP9 `alpha: "keep"` is unsupported in Chrome; no `webm-muxer`; `exportWebmAlpha` stays a typed stub). As originally designed (`formats/webm-alpha.ts`): `VideoEncoder` VP9 (`vp09.*`) with `alpha: "keep"` → `webm-muxer`; when unsupported, returns `browser-unsupported` with PNG-sequence guidance (Req 5.4, Spike 2).
 - **gif** (`formats/gif.ts`): per-frame quantize + encode with `gifenc` (palette ≤256), per-frame delay `round(100 / fps)` centiseconds (Req 6.2); single-color transparency for transparent background (Req 6.3).
-- **webp** (`formats/webp.ts`): still WebP per frame via canvas `convertToBlob('image/webp')` (the `quality` option feeds the encode), wrapped in the hand-written RIFF VP8X/ANIM/ANMF container (Req 7, `webp/riff.ts`).
+- **webp** (`formats/webp.ts`): still WebP per frame via canvas `convertToBlob('image/webp')` (the `quality` option feeds the encode), wrapped in the hand-written RIFF VP8X/ANIM/ANMF container (Req 7, `webp/riff.ts`). The still-WebP probe is shared with the capability report (`webp/probe.ts`); it calls `getContext('2d')` before `convertToBlob`, which throws without a context.
 
 ## Design-phase spikes
 
@@ -452,6 +452,15 @@ As built, this property is covered by a table of Node unit tests in `worker/font
 *For any* `Project` and `t`, with the same `fonts` list (or none), the frame rendered by the Worker path and the frame rendered by the main-thread path are pixel-identical (`diffRatio` of exactly `0`). This property is verified by the Chromium Playwright test, not by a Node property test, because it needs a real Worker, `OffscreenCanvas`, `FontFace` and real text rendering. It is checked over a small fixed set of projects and times rather than 100 generated inputs.
 
 **Validates: Requirements 13.11, 13.12, 15.6, 9.8**
+### Property 15: WebP frame durations sum exactly
+*For any* frame count `N` in `[1, 600]` and total `T` in `[0, 600000]` ms, the per-frame durations are each `floor(T/N)` or `ceil(T/N)`, and they sum to exactly `T`.
+**Validates: Requirements 7.1**
+### Property 16: Animated WebP container parse-back
+*For any* frame count, canvas size, and still payload lengths (odd and even), the written file parses back with the RIFF size equal to the file length minus 8, every chunk padded to an even length with a zero byte, VP8X then ANIM then one ANMF per frame, 24-bit sizes equal to the dimensions minus one, and the parsed frame durations summing to the requested total.
+**Validates: Requirements 7.1, 7.2, 7.3**
+### Property 17: WebP export frame count and duration
+*For any* `fps` in `[1, 60]` and duration in `[0.1, 2]` s, a successful animated WebP export has `round(durationSeconds * fps)` frames whose durations sum to `round(durationSeconds * 1000)`; a project with fewer than half a frame fails with `empty-frame-range` and produces no file.
+**Validates: Requirements 7.1**
 
 ## Error Handling
 

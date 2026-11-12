@@ -26,6 +26,7 @@ import type { WorkerOptions } from "./protocol.js";
 import { runMp4Export } from "../formats/mp4.js";
 import { runPngSequenceExport } from "../formats/png-seq.js";
 import { runGifExport } from "../formats/gif.js";
+import { runWebpExport } from "../formats/webp.js";
 
 /** Everything a driver needs to run an export (cloneable; worker-safe). */
 export interface DriverArgs {
@@ -183,12 +184,21 @@ export const gifDriver: ExportDriver = (args, onProgress, isAborted) =>
     isAborted,
   );
 
+/** The animated-WebP driver: adapts `runWebpExport` to the driver shape. */
+export const webpDriver: ExportDriver = (args, onProgress, isAborted) =>
+  runWebpExport(
+    args.project,
+    { output: args.options.output, quality: args.options.quality, limits: args.limits },
+    (fraction, frame, frameCount) => onProgress({ fraction, frame, frameCount }),
+    isAborted,
+  );
 /** The driver registry, keyed by a driver id. */
 const registry = new Map<string, ExportDriver>([
   ["recording", recordingDriver],
   ["mp4", mp4Driver],
   ["png-sequence", pngSequenceDriver],
   ["gif", gifDriver],
+  ["webp", webpDriver],
 ]);
 
 /** Registers a driver under `id` (later groups register format drivers). */
