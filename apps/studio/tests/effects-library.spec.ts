@@ -91,3 +91,31 @@ test("applying an effect the layer already has updates it instead of adding a se
   await expect(effectRows(page)).toHaveCount(before + 1);
   await expect(effectRows(page).last()).toHaveValue("line");
 });
+/** Samples the opacity and transform of the first letter of a card's preview a few times, 300 ms apart. */
+async function sampleThumb(page: Page, effectName: string): Promise<string[]> {
+  const letter = cards(page).filter({ hasText: effectName }).locator('[aria-hidden="true"] > span').first();
+  const out: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    out.push(await letter.evaluate((el) => `${getComputedStyle(el).opacity}|${getComputedStyle(el).transform}|${getComputedStyle(el).animationName}`));
+    await page.waitForTimeout(300);
+  }
+  return out;
+}
+test("a card's preview plays in a loop with no hover or focus", async ({ page }) => {
+  await open(page);
+  await page.mouse.move(2, 2);
+  for (const name of ["Fade Slide", "Glitch Reveal"]) {
+    const samples = await sampleThumb(page, name);
+    expect(new Set(samples).size, `${name} changes over time: ${samples.join(" ; ")}`).toBeGreaterThan(1);
+  }
+});
+test("with reduced motion every preview is a static frame", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page);
+  await page.mouse.move(2, 2);
+  for (const name of ["Fade Slide", "Glitch Reveal"]) {
+    const samples = await sampleThumb(page, name);
+    expect(new Set(samples).size, `${name} stays still: ${samples.join(" ; ")}`).toBe(1);
+    expect(samples[0]!.endsWith("|none"), `${name} has no animation`).toBe(true);
+  }
+});

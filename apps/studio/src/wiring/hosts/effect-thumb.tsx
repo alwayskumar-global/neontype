@@ -1,7 +1,10 @@
 /**
- * Card thumbnails for the Effects Library: a short sample word per effect, animated with CSS keyframes
- * on hover or focus. These are APPROXIMATIONS of the effects (owner decision, gap D-5), not engine
- * output. Per-letter delays go through the `--i` custom property (CSSOM, CSP-safe); no `style` prop.
+ * Card thumbnails for the Effects Library: a short sample word per effect, animated with CSS keyframes in a
+ * continuous loop, whether or not the card is hovered or focused (owner decision, replacing the hover-only rule
+ * of gap D-5). Under prefers-reduced-motion the loop is off and the text shows its final frame. The animation is
+ * CSS only (no JS clock), so the browser composites it and pauses it off-screen. These are APPROXIMATIONS of the
+ * effects, not engine output. Per-letter delays go through the `--i` custom property (CSSOM, CSP-safe); no
+ * `style` prop.
  */
 import type { ReactElement } from "react";
 import { setCssVars } from "../../ui/cssvars.js";
@@ -30,7 +33,7 @@ export function effectThumb(effectId: string): ReactElement | null {
   const t = THUMBS[effectId];
   if (!t) return null;
   return (
-    <span className={`lib-thumb ${t.cls}`} aria-hidden="true" data-effect={effectId}>
+    <span className={`lib-thumb is-playing ${t.cls}`} aria-hidden="true" data-effect={effectId}>
       {graphemes(t.sample).map((g, i) => (
         <span key={i} ref={(el) => { if (el) setCssVars(el, { "--i": i }); }}>
           {g}

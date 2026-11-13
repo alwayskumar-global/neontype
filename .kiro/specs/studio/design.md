@@ -2326,6 +2326,11 @@ Properties 13, 14 and 15 are in "Correctness Properties".
   MP4 has no transparency: a transparent project is filled with black, and the Options and Done steps say so
   (`supportsAlpha`, derived from the format cards). WebM with alpha stays deferred.
 - **Unwired by decision.** Landing Page and Error States are generated and tested but not wired to live data.
+- **Effects Library previews (fix after the owner's local run).** Every card thumbnail loops its preview
+  continuously, with no hover or focus (this replaces the hover-only rule of gap D-5). Pure CSS keyframes, so
+  no JS clock; under `prefers-reduced-motion: reduce` the text shows its final frame. The generated overlay's
+  `backdrop-filter` blur is dropped in the host: with looping previews it cost about 100% of a core in headless
+  software rendering (about 48% total CPU without it, 7.5% before the loops existed).
 - **Reviewed exception.** `packages/engine/src/compute.bench.ts` has the benchmark sample string "Flash-era motion title studio". It names a technology era, not the legacy product, never ships, and the engine is locked, so it stays.
 - **Specs.** The 10.1 specs were re-pointed to the generated editor's accessible names on locator-only rules
   with the owner's approval; the assertion changes and `expect()` tables are in the commit messages.

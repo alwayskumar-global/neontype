@@ -10,10 +10,19 @@
 .lib-thumb { display: inline-flex; white-space: nowrap; font-family: var(--font-ui); font-weight: var(--font-weight-bold); font-size: var(--text-title-size); line-height: var(--text-title-line); color: var(--color-text-primary); }
 .lib-thumb.lib-tamil { font-family: var(--font-tamil); line-height: var(--text-tamil-line); }
 .lib-thumb > span { white-space: pre; }
-.ui-preset:hover .lib-fx--glitch > span,.ui-preset:focus-visible .lib-fx--glitch > span { animation: dc-effects-library-mt-glitch 1.8s linear calc(var(--i, 0) * 60ms) infinite both; }
-.ui-preset:hover .lib-fx--flicker > span,.ui-preset:focus-visible .lib-fx--flicker > span { animation: dc-effects-library-mt-flicker 2.6s linear calc(var(--i, 0) * 370ms) infinite both; }
-.ui-preset:hover .lib-fx--spot > span,.ui-preset:focus-visible .lib-fx--spot > span { animation: dc-effects-library-mt-spot 3s var(--motion-easing-easeInOut) infinite both; }
-.ui-preset:hover .lib-fx--bounce > span,.ui-preset:focus-visible .lib-fx--bounce > span { animation: dc-effects-library-mt-bounce 1.8s linear calc(var(--i, 0) * 120ms) infinite both; }
-.ui-preset:hover .lib-fx--rotdrop > span,.ui-preset:focus-visible .lib-fx--rotdrop > span { animation: dc-effects-library-mt-rotdrop 1.8s var(--motion-easing-easeOut) calc(var(--i, 0) * 80ms) infinite both; }
-.ui-preset:hover .lib-fx--spread > span,.ui-preset:focus-visible .lib-fx--spread > span { animation: dc-effects-library-mt-spread 1.8s var(--motion-easing-easeIn) infinite both; }
-.ui-preset:hover .lib-fx--wipe > span,.ui-preset:focus-visible .lib-fx--wipe > span { animation: dc-effects-library-mt-wipe 1.8s var(--motion-easing-easeInOut) infinite both; }
+.lib-fx--glitch > span { animation: dc-effects-library-mt-glitch 1.8s linear calc(var(--i, 0) * 60ms) infinite both; }
+.lib-fx--flicker > span { animation: dc-effects-library-mt-flicker 2.6s linear calc(var(--i, 0) * 370ms) infinite both; }
+.lib-fx--spot > span { animation: dc-effects-library-mt-spot 3s var(--motion-easing-easeInOut) infinite both; }
+.lib-fx--bounce > span { animation: dc-effects-library-mt-bounce 1.8s linear calc(var(--i, 0) * 120ms) infinite both; }
+.lib-fx--rotdrop > span { animation: dc-effects-library-mt-rotdrop 1.8s var(--motion-easing-easeOut) calc(var(--i, 0) * 80ms) infinite both; }
+.lib-fx--spread > span { animation: dc-effects-library-mt-spread 1.8s var(--motion-easing-easeIn) infinite both; }
+.lib-fx--wipe > span { animation: dc-effects-library-mt-wipe 1.8s var(--motion-easing-easeInOut) infinite both; }
+/* Under reduced motion every thumbnail shows its final frame and does not animate (the design system's own effects
+   have no animation by default; the ones above are switched off here). */
+@media (prefers-reduced-motion: reduce) {
+  .lib-thumb > span { animation: none; }
+}
+/* The generated overlay blurs the studio behind it (backdrop-filter). With the previews looping, the browser re-blurs
+   that backdrop on every frame (about 100% of a core in software rendering, 24% without it, measured in headless
+   Chromium), so the overlay keeps its dark scrim and drops the blur. */
+.lib-host .ds-root.dc-effects-library * { backdrop-filter: none; -webkit-backdrop-filter: none; }
