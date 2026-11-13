@@ -33,14 +33,17 @@ async function focused(page: Page): Promise<{ name: string; isBody: boolean; out
   return await page.evaluate(() => {
     const el = document.activeElement;
     if (!el || el === document.body) return { name: "", isBody: true, outline: "" };
-    const cs = getComputedStyle(el);
+    // The design draws a number field's focus ring on its wrapper (the input's own ring is suppressed), so the
+    // ring is read from the focused element or, failing that, its parent.
+    const ring = (n: Element): string => `${getComputedStyle(n).outlineStyle}|${getComputedStyle(n).boxShadow}`;
+    const own = ring(el);
     const name = el.getAttribute("aria-label") ?? (el.textContent ?? "").trim().slice(0, 40);
-    return { name, isBody: false, outline: `${cs.outlineStyle}|${cs.boxShadow}` };
+    return { name, isBody: false, outline: own !== "none|none" || !el.parentElement ? own : ring(el.parentElement) };
   });
 }
 test("keyboard focus moves through the top bar in order, never to the page body, and is visible", async ({ page }) => {
   await gotoStudio(page, true);
-  await page.getByRole("button", { name: /^Back to .* home$/ }).focus();
+  await page.getByRole("button", { name: /^Back to .*home$/ }).focus();
   const seen: string[] = [];
   for (let i = 1; i <= 30; i++) {
     await page.keyboard.press("Tab");
@@ -49,7 +52,7 @@ test("keyboard focus moves through the top bar in order, never to the page body,
     expect(f.outline, `focus ring on "${f.name}"`).not.toBe("none|none");
     seen.push(f.name);
   }
-  const order = ["New", "Load demo", "Save", "Open"].map((n) => seen.indexOf(n));
+  const order = ["New", "Open", "Save", "Load demo"].map((n) => seen.indexOf(n));
   expect(order.every((i) => i >= 0), `top bar buttons present: ${seen.slice(0, 8).join(", ")}`).toBe(true);
   expect([...order].sort((a, b) => a - b)).toEqual(order);
   expect(seen.indexOf("Export")).toBeGreaterThan(order[3]);

@@ -16,7 +16,7 @@ export const STUDIO_EDITOR_FIXTURE: DcData = {
   stageAspect: "1280 / 720",
   stage: null,
   timeline: null,
-  onNew: noop, onLoadDemo: noop, onSave: noop, onOpen: noop, onExport: noop, undo: noop, canUndo: true,
+  onBack: noop, onNew: noop, onLoadDemo: noop, onSave: noop, onOpen: noop, onExport: noop, undo: noop, canUndo: true,
   canvasPreset: "hd", canvasPresetOpts: [opt("hd", "HD 1280 × 720"), opt("sq", "Square 1080")], onCanvasPreset: noop,
   canvasWidth: 1280, onCanvasWidth: noop, canvasHeight: 720, onCanvasHeight: noop,
   fps: 30, onFps: noop, duration: 6, onDuration: noop,
@@ -39,8 +39,9 @@ export const STUDIO_EDITOR_FIXTURE: DcData = {
     {
       name: "Kinetic pop", split: "char", splitOpts: [opt("char", "Character"), opt("word", "Word")], onSplit: noop, remove: noop,
       params: [
-        { label: "Duration", min: 0.1, max: 3, step: 0.05, val: 0.5, fmt: "0.50 s", set: noop },
-        { label: "Overshoot", min: 0, max: 1, step: 0.05, val: 0.3, fmt: "0.30", set: noop },
+        { kind: "number", isNumber: true, isEnum: false, label: "Duration", min: 0.1, max: 3, step: 0.05, opts: [], val: 0.5, err: "", hasErr: false, set: noop },
+        { kind: "number", isNumber: true, isEnum: false, label: "Overshoot", min: 0, max: 1, step: 0.05, opts: [], val: 0.3, err: "Enter a number", hasErr: true, set: noop },
+        { kind: "enum", isNumber: false, isEnum: true, label: "Direction", min: 0, max: 0, step: 0, opts: [{ value: "forward", label: "Forward" }, { value: "backward", label: "Backward" }], val: "forward", err: "", hasErr: false, set: noop },
       ],
     },
   ],

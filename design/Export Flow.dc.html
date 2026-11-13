@@ -44,7 +44,7 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
             </sc-for>
           </ol>
         </div>
-        <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.IconButton" icon="close" label="Close export" shortcut="Esc" hint-size="28px,28px"></x-import>
+        <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.IconButton" icon="close" label="Close export" shortcut="Esc" on-click="{{ onClose }}" hint-size="28px,28px"></x-import>
       </div>
 
       <!-- STEP 1: FORMAT -->
@@ -77,7 +77,7 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
         </div>
         <div class="ui-modal__foot">
           <span class="ui-modal__foot-meta ui-mono">Project · {{ fps }} · {{ dur }}</span>
-          <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" hint-size="72px,28px">Cancel</x-import>
+          <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" on-click="{{ onClose }}" hint-size="72px,28px">Cancel</x-import>
           <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" icon-right="chevron-right" on-click="{{ toOptions }}" hint-size="104px,28px">Continue</x-import>
         </div>
       </sc-if>
@@ -174,12 +174,12 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
                 <span class="ui-file__name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ fileName }}</span>
                 <span class="ui-file__meta">{{ fileMeta }}</span>
               </span>
-              <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" icon="download" hint-size="104px,28px">Download</x-import>
+              <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" icon="download" on-click="{{ onDownload }}" hint-size="104px,28px">Download</x-import>
             </div>
           </div>
         </div>
         <div class="ui-modal__foot">
-          <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" hint-size="64px,28px">Done</x-import>
+          <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="ghost" on-click="{{ onClose }}" hint-size="64px,28px">Done</x-import>
           <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="secondary" icon="export" on-click="{{ toDest }}" hint-size="128px,28px">Export another</x-import>
         </div>
       </sc-if>
@@ -315,6 +315,7 @@ class Component extends DCLogic {
       estimate: `≈ ${fsize(outMb)} · ${total} frames · ${f.name}`,
       exportLabel: 'Export',
       startExport: this.startExport,
+      onClose: () => {}, onDownload: () => {},
       cancelExport: () => { clearInterval(this._iv); this.setState({ step: 2, running: false, frames: 112 }); },
       pct, pctText: `${pct}%`, framesText: `${frames} / ${total} frames`,
       frameTc: `00:${pad(tsec % 60)}:${pad(frames % P.fps)}`,

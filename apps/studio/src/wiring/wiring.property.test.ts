@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
-import { presetCatalog } from "@studio/engine";
+import { builtinRegistry, presetCatalog } from "@studio/engine";
 import { arbProject } from "../model/__testing/arb-project.js";
+import { newProject } from "../model/project.js";
 import { EFFECTS_LIBRARY_BINDINGS } from "../generated/effects-library/EffectsLibrary.js";
 import { EXPORT_FLOW_BINDINGS } from "../generated/export-flow/ExportFlow.js";
 import { STUDIO_EDITOR_BINDINGS } from "../generated/studio-editor/StudioEditor.js";
@@ -45,6 +46,7 @@ const arbEditorView: fc.Arbitrary<StudioEditorView> = fc.record({
   checker: fc.boolean(),
   safe: fc.boolean(),
   settingsError: fc.option(fc.string({ maxLength: 12 }), { nil: null }),
+  paramErrors: fc.dictionary(fc.constantFrom("a:0:startDelay", "x:1:direction"), fc.record({ value: fc.string({ maxLength: 4 }), message: fc.string({ maxLength: 8 }) })),
 });
 /** The editor's UI state around an arbitrary project: any layer (or none), playhead, flags. */
 const arbEditorPatch = (layerIds: string[]) =>
@@ -150,6 +152,33 @@ describe("Property 14: Studio Editor construction is pure and deterministic", ()
         },
       ),
       { numRuns: 150 },
+    );
+  });
+});
+// Feature: studio, Property 15 (typed effect params)
+describe("Property 15: an invalid typed effect param never reaches the commit dispatcher", () => {
+  it("for any typed text, setEffectParam is called only when the effect's schema accepts the value", () => {
+    const typewriter = {
+      ...newProject(),
+      layers: [{ ...newProject().layers[0]!, effectInstances: [{ effectId: "typewriter", granularity: "character" as const, params: { startDelay: 0, delayPerCharacter: 0.05, direction: "forward" } }] }],
+    };
+    const schema = builtinRegistry.get("typewriter")!.paramSchema;
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 2 }), fc.oneof(fc.string({ maxLength: 6 }), fc.double({ min: -50, max: 50 }).map(String), fc.constantFrom("forward", "backward", "", "NaN", "Infinity", "1e999")), (which, typed) => {
+        const sets: unknown[][] = [];
+        const rejects: unknown[][] = [];
+        const s = studioSpy();
+        const d = { ...s.d, setEffectParam: (...a: unknown[]) => void sets.push(a), rejectEffectParam: (...a: unknown[]) => void rejects.push(a) };
+        const data = adaptStudioEditor(studioState(typewriter), d as typeof s.d).data;
+        const row = (data["effects"] as { params: { set: (e: unknown) => void }[] }[])[0]!.params[which]!;
+        row.set({ target: { value: typed } });
+        const key = ["startDelay", "delayPerCharacter", "direction"][which]!;
+        const value = which === 2 ? typed : typed.trim() === "" ? Number.NaN : Number(typed);
+        const accepted = schema.safeParse({ ...typewriter.layers[0]!.effectInstances[0]!.params, [key]: value }).success;
+        expect(sets.length, `accepted=${accepted}`).toBe(accepted ? 1 : 0);
+        expect(rejects.length).toBe(accepted ? 0 : 1);
+      }),
+      { numRuns: 300 },
     );
   });
 });

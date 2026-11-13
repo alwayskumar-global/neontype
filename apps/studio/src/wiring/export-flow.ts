@@ -3,8 +3,8 @@
  * machine state, and the host's wizard state in; the screen's `data` out. Matches the REVISED design (37
  * bindings): the first step picks a FORMAT (MP4, PNG sequence, GIF, WebP, WebM with alpha), the size is a
  * scale of the project (`0.5×`, `1×`, `2×`), and Frame rate and Duration are plain text read from the
- * project. Every binding is backed. The screen's Close, Cancel, Download and Done controls have no
- * handler yet; `onClose` and `onDownload` follow the owner's next re-export as a small delta.
+ * project. Every binding is backed (39). `onClose` serves the Close button, step 1's Cancel and Done;
+ * `onDownload` serves the Download button.
  */
 import type { ErrorCode } from "@studio/exporters";
 import type { Project } from "@studio/engine";
@@ -75,6 +75,10 @@ export interface ExportFlowDispatchers {
   setResolution(size: string): void;
   startExport(): void;
   cancelExport(): void;
+  /** Closes the dialog (Close, Cancel on the first step, Done). */
+  close(): void;
+  /** Downloads the finished file; does nothing when no export is done. */
+  download(): void;
 }
 /** Binding keys without backing behaviour in v1: none. */
 export const INERT_BINDINGS: readonly string[] = [];
@@ -194,6 +198,8 @@ export function adaptExportFlow(state: ExportFlowState, d: ExportFlowDispatchers
       const picked = outputSizes(project).find((x) => x.label === String(v));
       if (picked) d.setResolution(picked.size);
     },
+    onClose: () => d.close(),
+    onDownload: () => d.download(),
     outSummary: `${resSize} · ${fpsText} · ${durText} · ${fmtName}`,
     pct,
     pctText: `${pct}%`,

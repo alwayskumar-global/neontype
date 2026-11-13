@@ -4,6 +4,6 @@
  */
 import type { Store } from "./store.js";
 import { StudioEditorHost } from "../wiring/hosts/studio-editor-host.js";
-export function StudioView({ store }: { store: Store; onBack: () => void }) {
-  return <StudioEditorHost store={store} />;
+export function StudioView({ store, onBack }: { store: Store; onBack: () => void }) {
+  return <StudioEditorHost store={store} onBack={onBack} />;
 }

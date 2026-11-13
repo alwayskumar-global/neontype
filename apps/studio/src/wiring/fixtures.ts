@@ -34,7 +34,7 @@ export function exportSpy(): Spy<ExportFlowDispatchers> {
   };
   const d: ExportFlowDispatchers = {
     toOptions: rec("toOptions"), toDest: rec("toDest"), pickFormat: rec("pickFormat"),
-    setResolution: rec("setResolution"), startExport: rec("startExport"), cancelExport: rec("cancelExport"),
+    setResolution: rec("setResolution"), startExport: rec("startExport"), cancelExport: rec("cancelExport"), close: rec("close"), download: rec("download"),
   };
   return { d, calls };
 }
@@ -92,13 +92,13 @@ export function studioSpy(): Spy<StudioEditorDispatchers> {
     selectLayer: rec("selectLayer"), moveLayer: rec("moveLayer"), deleteLayer: rec("deleteLayer"), setText: rec("setText"),
     setFont: rec("setFont"), setWeight: rec("setWeight"), setSize: rec("setSize"), setFill: rec("setFill"), setAlign: rec("setAlign"),
     setAnchor: rec("setAnchor"), setLayerTiming: rec("setLayerTiming"), setEffectGranularity: rec("setEffectGranularity"),
-    setEffectParam: rec("setEffectParam"), removeEffect: rec("removeEffect"), openLibrary: rec("openLibrary"), togglePlay: rec("togglePlay"),
+    setEffectParam: rec("setEffectParam"), removeEffect: rec("removeEffect"), rejectEffectParam: rec("rejectEffectParam"), back: rec("back"), openLibrary: rec("openLibrary"), togglePlay: rec("togglePlay"),
     toStart: rec("toStart"), toEnd: rec("toEnd"), toggleLoop: rec("toggleLoop"), toggleChecker: rec("toggleChecker"), toggleSafe: rec("toggleSafe"),
     stage: "stage", timeline: "timeline",
   };
   return { d, calls };
 }
-export const EMPTY_STUDIO_VIEW: StudioEditorView = { checker: false, safe: true, settingsError: null };
+export const EMPTY_STUDIO_VIEW: StudioEditorView = { checker: false, safe: true, settingsError: null, paramErrors: {} };
 export function studioState(project: Project, patch: Partial<Omit<StudioEditorState, "project">> = {}): StudioEditorState {
   return {
     project,

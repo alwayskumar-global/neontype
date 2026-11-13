@@ -48,6 +48,8 @@ export const RANGES_BY_ID: Readonly<Record<string, Readonly<Record<string, Param
   spotlight: { startDelay: s("Start delay", 0, 5, 0.05, "s"), durationSeconds: s("Duration", 0.05, 5, 0.05, "s"), radius: s("Radius", 0.1, 3, 0.05, ""), dimOpacity: s("Dim", 0, 1, 0.05, "") },
   wave: { periodSeconds: s("Period", 0.1, 5, 0.05, "s"), amplitude: s("Amplitude", 0, 100, 1, "px"), phasePerGroup: s("Phase", 0, 2, 0.05, "") },
 };
+/** Labels of the enum params (the choice params), by param key. A drift test checks every enum param has one. */
+export const ENUM_LABELS: Readonly<Record<string, string>> = { direction: "Direction", axis: "Axis", slideAxis: "Slide axis", easing: "Easing" };
 /** The library's category for a catalog entry. */
 export function categoryOf(entry: Pick<PresetCatalogEntry, "id">): Category {
   return CATEGORY_BY_ID[entry.id] ?? "Entrance";

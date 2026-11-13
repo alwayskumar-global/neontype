@@ -4,7 +4,8 @@
  */
 import { describe, it, expect } from "vitest";
 import { builtinRegistry, presetCatalog } from "@studio/engine";
-import { CATEGORIES, CATEGORY_BY_ID, RANGES_BY_ID } from "./tables.js";
+import { paramKinds } from "../model/param-kinds.js";
+import { CATEGORIES, CATEGORY_BY_ID, ENUM_LABELS, RANGES_BY_ID } from "./tables.js";
 describe("category table", () => {
   it("has exactly one entry per catalog effect, with a known category", () => {
     expect(Object.keys(CATEGORY_BY_ID).sort()).toEqual(presetCatalog.map((p) => p.id).sort());
@@ -12,6 +13,12 @@ describe("category table", () => {
   });
   it("marks an effect Looping exactly when the catalog says it loops", () => {
     for (const p of presetCatalog) expect(CATEGORY_BY_ID[p.id] === "Looping", p.id).toBe(p.loop);
+  });
+});
+describe("enum param labels", () => {
+  it("has a label for every enum param of every effect, and none for a key that is no enum", () => {
+    const enumKeys = new Set(presetCatalog.flatMap((p) => paramKinds(p.id).filter(([, k]) => k.kind === "enum").map(([key]) => key)));
+    expect([...enumKeys].sort()).toEqual(Object.keys(ENUM_LABELS).sort());
   });
 });
 describe("param-range table", () => {

@@ -66,9 +66,11 @@ textarea.se-in{height:auto;min-height:56px;padding:6px 8px;line-height:18px;resi
 .se-card__head{display:flex;align-items:center;gap:6px;height:36px;padding:0 4px 0 10px;border-bottom:1px solid #1C2129}
 .se-card__body{display:flex;flex-direction:column;gap:8px;padding:10px}
 .se-card .se-row{grid-template-columns:72px minmax(0,1fr)}
+.se-card .se-err{display:block;margin:0;padding:0;border:0;background:none;font-size:11px;line-height:14px;color:#FFA0A8}
 .se-range{flex:1;min-width:0;accent-color:#F23DC8;cursor:pointer}
 .se-val{min-width:56px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:#C6CDD8;white-space:nowrap}
 .se-insp{position:relative}
+.se-insp__empty{display:grid}
 .se-insp:has(.se-insp__body) .se-insp__empty{display:none}
 </style>
 </helmet>
@@ -78,6 +80,7 @@ textarea.se-in{height:auto;min-height:56px;padding:6px 8px;line-height:18px;resi
 <!-- TOP BAR -->
 <header data-screen-label="Top bar" style="grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 12px;background:#111419;border-bottom:1px solid #1C2129">
   <div style="flex:1;display:flex;align-items:center;gap:4px;min-width:0">
+    <button class="se-ib" aria-label="Back to home" title="Back to home" onClick="{{ onBack }}" style="margin-right:4px"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10H4.5"></path><path d="M9.5 5 4.5 10l5 5"></path></svg></button>
     <img src="assets/neontype-logo.png" alt="NeonType" style="height:22px;width:auto;display:block;flex:none;margin-right:8px">
     <span style="width:1px;height:20px;background:#2D343F;margin-right:4px"></span>
     <button class="se-btn" onClick="{{ onNew }}"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 3.5H6A1.5 1.5 0 0 0 4.5 5v10A1.5 1.5 0 0 0 6 16.5h8a1.5 1.5 0 0 0 1.5-1.5V7.5z"></path><path d="M11.5 3.5v4h4"></path></svg>New</button>
@@ -220,7 +223,7 @@ textarea.se-in{height:auto;min-height:56px;padding:6px 8px;line-height:18px;resi
 
 <!-- INSPECTOR -->
 <aside data-screen-label="Inspector" class="se-insp" style="grid-column:3;grid-row:2/4;display:flex;flex-direction:column;min-height:0;background:#111419;border-left:1px solid #1C2129">
-  <div class="se-insp__empty" style="display:grid;place-content:center;gap:6px;flex:1;padding:24px;text-align:center">
+  <div class="se-insp__empty" style="place-content:center;gap:6px;flex:1;padding:24px;text-align:center">
     <span style="font-size:13px;font-weight:600;color:#C6CDD8">No layer selected</span>
     <span style="font-size:12px;line-height:16px;color:#929CAC">Pick a layer on the left, or add one, to edit its text, style, timing and effects.</span>
   </div>
@@ -297,13 +300,29 @@ textarea.se-in{height:auto;min-height:56px;padding:6px 8px;line-height:18px;resi
                   </select>
                 </label>
                 <sc-for list="{{ fx.params }}" as="p" hint-placeholder-count="3">
-                  <label class="se-row">
-                    <span class="se-lbl">{{ p.label }}</span>
-                    <span style="display:flex;align-items:center;gap:8px;min-width:0">
-                      <input class="se-range" type="range" min="{{ p.min }}" max="{{ p.max }}" step="{{ p.step }}" value="{{ p.val }}" onChange="{{ p.set }}">
-                      <span class="se-val">{{ p.fmt }}</span>
-                    </span>
-                  </label>
+                  <sc-if value="{{ p.isNumber }}" hint-placeholder-val="{{ true }}">
+                    <label class="se-row" style="align-items:start">
+                      <span class="se-lbl" style="padding-top:5px">{{ p.label }}</span>
+                      <span style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                        <span style="display:flex;align-items:center;gap:8px;min-width:0;min-height:28px">
+                          <input class="se-range" type="range" min="{{ p.min }}" max="{{ p.max }}" step="{{ p.step }}" value="{{ p.val }}" onChange="{{ p.set }}">
+                          <input class="se-in" type="number" aria-label="{{ p.label }} value" min="{{ p.min }}" step="{{ p.step }}" value="{{ p.val }}" onChange="{{ p.set }}" style="width:64px;flex:none;text-align:right;font-family:'DM Mono',monospace;font-size:12px">
+                        </span>
+                        <sc-if value="{{ p.hasErr }}" hint-placeholder-val="{{ false }}"><span role="alert" class="se-err">{{ p.err }}</span></sc-if>
+                      </span>
+                    </label>
+                  </sc-if>
+                  <sc-if value="{{ p.isEnum }}" hint-placeholder-val="{{ false }}">
+                    <label class="se-row" style="align-items:start">
+                      <span class="se-lbl" style="padding-top:5px">{{ p.label }}</span>
+                      <span style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                        <select class="se-in" value="{{ p.val }}" onChange="{{ p.set }}">
+                          <sc-for list="{{ p.opts }}" as="o" hint-placeholder-count="2"><option value="{{ o.value }}">{{ o.label }}</option></sc-for>
+                        </select>
+                        <sc-if value="{{ p.hasErr }}" hint-placeholder-val="{{ false }}"><span role="alert" class="se-err">{{ p.err }}</span></sc-if>
+                      </span>
+                    </label>
+                  </sc-if>
                 </sc-for>
               </div>
             </div>
@@ -346,17 +365,19 @@ const PRESETS = [
 const FONTS = ['Instrument Sans', 'Noto Sans Tamil', 'DM Mono'].map(f => ({ value: f, label: f }));
 const WEIGHTS = [[400, 'Regular'], [500, 'Medium'], [600, 'Semibold'], [700, 'Bold']].map(([v, l]) => ({ value: String(v), label: `${l} · ${v}` }));
 const ALIGNS = [['left', 'Left'], ['center', 'Center'], ['right', 'Right']];
-const DURP = ['dur', 'Duration', 0.2, 2, 0.05, 's'];
-const STAGP = ['stag', 'Stagger', 0, 300, 5, 'ms'];
+const N = (key, label, min, max, step, unit) => ({ kind: 'number', key, label, min, max, step, unit });
+const E = (key, label, opts) => ({ kind: 'enum', key, label, opts: opts.map(([v, l]) => ({ value: v, label: l })) });
+const DURP = N('dur', 'Duration', 0.2, 2, 0.05, 's');
+const STAGP = N('stag', 'Stagger', 0, 300, 5, 'ms');
 const FXDEF = {
-  typewriter: { name: 'Typewriter', grans: ['char'], params: [DURP, ['stag', 'Per character', 0, 300, 5, 'ms'], ['caret', 'Caret blink', 0.2, 2, 0.1, 's']] },
-  fade: { name: 'Fade & Slide', grans: ['word', 'line', 'char'], params: [DURP, STAGP, ['dist', 'Distance', 0, 200, 1, 'px']] },
-  wave: { name: 'Wave', grans: ['char'], params: [DURP, STAGP, ['amp', 'Amplitude', 0, 100, 1, '%']] },
-  blur: { name: 'Blur In', grans: ['char', 'word', 'line'], params: [DURP, STAGP, ['blur', 'Blur', 0, 32, 1, 'px']] },
+  typewriter: { name: 'Typewriter', grans: ['char'], params: [N('startDelay', 'Start delay', 0, 2, 0.05, 's'), N('delayPerCharacter', 'Char delay', 0, 1, 0.01, 's'), E('direction', 'Direction', [['forward', 'Forward'], ['backward', 'Backward']])] },
+  fade: { name: 'Fade & Slide', grans: ['word', 'line', 'char'], params: [DURP, STAGP, N('dist', 'Distance', 0, 200, 1, 'px')] },
+  wave: { name: 'Wave', grans: ['char'], params: [DURP, STAGP, N('amp', 'Amplitude', 0, 100, 1, '%')] },
+  blur: { name: 'Blur In', grans: ['char', 'word', 'line'], params: [DURP, STAGP, N('blur', 'Blur', 0, 32, 1, 'px')] },
 };
 const BASE = () => ({ preset: 'landscape', w: 1920, h: 1080, fps: 30, dur: 6, bg: '#000000', transparent: false });
 const DEMO = () => Object.assign(BASE(), { layers: [
-  { id: 1, text: 'Grand Opening', font: 'Instrument Sans', weight: 700, size: 160, fill: '#FFFFFF', align: 'center', ax: 0.5, ay: 0.37, start: 0, dur: 6, effects: [{ fx: 'typewriter', split: 'char', p: { dur: 0.5, stag: 90, caret: 0.8 } }] },
+  { id: 1, text: 'Grand Opening', font: 'Instrument Sans', weight: 700, size: 160, fill: '#FFFFFF', align: 'center', ax: 0.5, ay: 0.37, start: 0, dur: 6, effects: [{ fx: 'typewriter', split: 'char', p: { startDelay: 0.2, delayPerCharacter: -1, direction: 'forward' } }] },
   { id: 2, text: 'Sale starts Friday', font: 'Instrument Sans', weight: 500, size: 72, fill: '#FFD27A', align: 'center', ax: 0.5, ay: 0.52, start: 0.8, dur: 5.2, effects: [{ fx: 'fade', split: 'word', p: { dur: 0.6, stag: 150, dist: 48 } }] },
   { id: 3, text: 'வணக்கம்', font: 'Noto Sans Tamil', weight: 600, size: 80, fill: '#F4F6F9', align: 'center', ax: 0.5, ay: 0.7, start: 0.4, dur: 5.2, effects: [{ fx: 'wave', split: 'char', p: { dur: 0.8, stag: 80, amp: 30 } }] },
 ] });
@@ -368,6 +389,11 @@ const val = e => (e && e.target ? e.target.value : e);
 const num = e => Number(val(e));
 const dec = s => (String(s).split('.')[1] || '').length;
 const fmtUnit = (v, step, unit) => `${Number(v).toFixed(dec(step))}${unit ? (unit === '%' ? '%' : ' ' + unit) : ''}`;
+const paramErr = (d, v) => {
+  if (d.kind !== 'number') return '';
+  if (v === '' || !Number.isFinite(Number(v))) return 'Enter a number';
+  return Number(v) < d.min ? `Must be ${d.min} or more` : '';
+};
 const presetFor = (w, h) => (PRESETS.find(p => p.w === w && p.h === h) || { value: 'custom' }).value;
 function validate(p) {
   const okDim = v => Number.isInteger(v) && v >= 16 && v <= 4096;
@@ -445,10 +471,19 @@ class Component extends DCLogic {
         name: def.name, split: e.split,
         splitOpts: def.grans.map(g => ({ value: g, label: GL[g] })),
         onSplit: ev => this.setFx(k, fx => { fx.split = val(ev); }),
-        params: def.params.map(([key, label, min, max, step, unit]) => ({
-          label, min, max, step, val: e.p[key], fmt: fmtUnit(e.p[key], step, unit),
-          set: ev => this.setFx(k, fx => { fx.p[key] = num(ev); }),
-        })),
+        params: def.params.map(d => {
+          const v = e.p[d.key];
+          const isNumber = d.kind === 'number';
+          const err = paramErr(d, v);
+          const opt = isNumber ? null : d.opts.find(o => o.value === v);
+          return {
+            kind: d.kind, isNumber, isEnum: !isNumber,
+            label: d.label, min: d.min, max: d.max, step: d.step, opts: d.opts || [], val: v,
+            fmt: isNumber ? (v === '' ? '' : fmtUnit(v, d.step, d.unit)) : (opt ? opt.label : String(v)),
+            err, hasErr: !!err,
+            set: ev => this.setFx(k, fx => { const r = val(ev); fx.p[d.key] = isNumber ? (r === '' ? '' : Number(r)) : r; }),
+          };
+        }),
         remove: () => this.setFx(k, null),
       };
     }) : [];
@@ -461,6 +496,7 @@ class Component extends DCLogic {
       onNew: () => this.commit(p => { Object.assign(p, EMPTY()); return { sel: null, t: 0 }; }),
       onLoadDemo: () => this.commit(p => { Object.assign(p, DEMO()); return { sel: 2, t: 0 }; }),
       onSave: () => {}, onOpen: () => {}, onExport: () => {},
+      onBack: () => {},
       undo: () => this.setState(st => {
         if (!st.history.length) return null;
         const last = st.history[st.history.length - 1];

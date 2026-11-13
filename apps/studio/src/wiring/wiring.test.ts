@@ -60,7 +60,7 @@ const SCREENS: Screen[] = [
     bindings: EXPORT_FLOW_BINDINGS,
     inert: EXP_INERT,
     pure: /\.$/,
-    minHandlers: 6,
+    minHandlers: 8,
     argFor: (path, data) => (path === "onRes" ? (data["resOpts"] as string[])[0] : undefined),
     builds: () =>
       projects.flatMap((p) =>
@@ -91,7 +91,7 @@ const SCREENS: Screen[] = [
     builds: () =>
       projects.flatMap((p) => {
         const second = p.layers[1]?.id ?? null;
-        return [{}, { selectedLayerId: null }, { selectedLayerId: second, playing: true, loop: false, canUndo: false }, { view: { checker: true, safe: false, settingsError: "Bad width." } }].map((patch) => {
+        return [{}, { selectedLayerId: null }, { selectedLayerId: second, playing: true, loop: false, canUndo: false }, { view: { checker: true, safe: false, settingsError: "Bad width.", paramErrors: {} } }].map((patch) => {
           const s = studioSpy();
           return { props: adaptStudioEditor(studioState(p, patch), s.d), calls: s.calls };
         });
@@ -265,21 +265,74 @@ describe("Studio Editor adapter details", () => {
     expect(data["effects"]).toEqual([]);
     expect(data["layerText"]).toBe("");
   });
-  it("effect rows list the effect's sliders with formatted values", () => {
+  it("effect rows list the effect's number params (with their slider ranges) and enum params (with options)", () => {
     const { data } = build();
-    const fx = (data["effects"] as { name: string; params: { label: string; fmt: string }[] }[])[0]!;
+    const fx = (data["effects"] as { name: string; params: { label: string; isNumber: boolean; isEnum: boolean; min: number; max: number; step: number }[] }[])[0]!;
     expect(fx.name).toBe("Kinetic Pop");
-    expect(fx.params.map((p) => p.label)).toContain("Duration");
-    expect(fx.params.find((p) => p.label === "Duration")!.fmt).toMatch(/s$/);
+    const duration = fx.params.find((p) => p.label === "Duration")!;
+    expect([duration.isNumber, duration.isEnum, duration.min, duration.max, duration.step]).toEqual([true, false, 0.05, 5, 0.05]);
+    const typewriter = { ...demo, layers: [{ ...demo.layers[0]!, effectInstances: [{ effectId: "typewriter", granularity: "character" as const, params: { startDelay: 0, delayPerCharacter: 0.05, direction: "forward" } }] }] };
+    const rows = (build({}, typewriter).data["effects"] as { params: { label: string; isNumber: boolean; isEnum: boolean; opts: { value: string }[]; val: unknown }[] }[])[0]!.params;
+    expect(rows.map((p) => [p.label, p.isNumber, p.isEnum])).toEqual([["Start delay", true, false], ["Per character", true, false], ["Direction", false, true]]);
+    expect(rows[2]!.opts.map((o) => o.value)).toEqual(["forward", "backward"]);
+    expect(rows[2]!.val).toBe("forward");
+  });
+  describe("typed effect params are validated against the effect's schema", () => {
+    const typewriter = { ...demo, layers: [{ ...demo.layers[0]!, effectInstances: [{ effectId: "typewriter", granularity: "character" as const, params: { startDelay: 0, delayPerCharacter: 0.05, direction: "forward" } }] }] };
+    const setter = (patch = {}) => {
+      const s = studioSpy();
+      const calls: unknown[][] = [];
+      const spy = { ...s.d, setEffectParam: (...a: unknown[]) => void calls.push(["set", ...a]), rejectEffectParam: (...a: unknown[]) => void calls.push(["reject", ...a]) };
+      const data = adaptStudioEditor(studioState(typewriter, patch), spy as typeof s.d).data;
+      const rows = (data["effects"] as { params: { label: string; set: (e: unknown) => void; val: unknown; err: string; hasErr: boolean }[] }[])[0]!.params;
+      return { rows, calls };
+    };
+    it("commits a value the schema accepts, even outside the slider range (3 for a slider that ends at 1)", () => {
+      const { rows, calls } = setter();
+      rows[1]!.set(ev("3"));
+      expect(calls).toEqual([["set", typewriter.layers[0]!.id, 0, "delayPerCharacter", 3]]);
+    });
+    it("rejects a value the schema refuses: nothing is committed, the message names the key", () => {
+      const { rows, calls } = setter();
+      rows[1]!.set(ev("-1"));
+      expect(calls).toHaveLength(1);
+      expect(calls[0]!.slice(0, 1)).toEqual(["reject"]);
+      expect(calls[0]!.slice(2, 5)).toEqual([0, "delayPerCharacter", "-1"]);
+      expect(String(calls[0]![5])).toContain("delayPerCharacter");
+    });
+    it("rejects empty and non-numeric text, and an enum value that is not an option", () => {
+      const { rows, calls } = setter();
+      rows[1]!.set(ev(""));
+      rows[1]!.set(ev("abc"));
+      rows[1]!.set(ev("  "));
+      rows[2]!.set(ev("sideways"));
+      expect(calls.map((c) => c[0])).toEqual(["reject", "reject", "reject", "reject"]);
+    });
+    it("commits a valid enum value", () => {
+      const { rows, calls } = setter();
+      rows[2]!.set(ev("backward"));
+      expect(calls).toEqual([["set", typewriter.layers[0]!.id, 0, "direction", "backward"]]);
+    });
+    it("shows the typed text and the message while an error is recorded", () => {
+      const key = `${typewriter.layers[0]!.id}:0:delayPerCharacter`;
+      const { rows } = setter({ view: { checker: false, safe: true, settingsError: null, paramErrors: { [key]: { value: "-1", message: "delayPerCharacter: Too small" } } } });
+      expect([rows[1]!.val, rows[1]!.err, rows[1]!.hasErr]).toEqual(["-1", "delayPerCharacter: Too small", true]);
+      expect([rows[0]!.hasErr, rows[0]!.err]).toEqual([false, ""]);
+    });
+  });
+  it("the back control calls the host's back", () => {
+    const { data, calls } = build();
+    (data["onBack"] as () => void)();
+    expect(calls).toEqual(["back"]);
   });
   it("playing, loop, checker and safe drive the paired flags", () => {
-    const { data } = build({ playing: true, loop: false, view: { checker: true, safe: false, settingsError: null } });
+    const { data } = build({ playing: true, loop: false, view: { checker: true, safe: false, settingsError: null, paramErrors: {} } });
     expect([data["playing"], data["paused"], data["loop"], data["noLoop"], data["checker"], data["noChecker"], data["safe"], data["noSafe"]]).toEqual([true, false, false, true, true, false, false, true]);
     expect([data["checkerAria"], data["safeAria"]]).toEqual(["true", "false"]);
   });
   it("the settings error shows only when the host sets one", () => {
     expect(build().data["hasSettingsError"]).toBe(false);
-    const withErr = build({ view: { checker: false, safe: true, settingsError: "Bad width." } }).data;
+    const withErr = build({ view: { checker: false, safe: true, settingsError: "Bad width.", paramErrors: {} } }).data;
     expect([withErr["hasSettingsError"], withErr["settingsError"]]).toEqual([true, "Bad width."]);
   });
 });

@@ -36,20 +36,26 @@ export function commit(project: Project, candidate: Project): Project {
 }
 
 /**
- * Whether a param edit is acceptable (Requirement 4.5). The edited key must already exist on the instance, and
- * the effect's own param schema (the engine's `paramSchema`, through the public registry) must not report an
- * issue caused by the edit: one on the edited key, or a whole-object issue when the params were valid before.
- * An issue on ANOTHER key, which the edit did not cause, does not block it. An effect the registry does not
- * know is not checked here (the engine reports it at render time).
+ * Why a param edit is not acceptable (Requirement 4.5), or null when it is. The edited key must already exist on the
+ * instance, and the effect's own param schema (the engine's `paramSchema`, through the public registry) must not
+ * report an issue caused by the edit: one on the edited key, or a whole-object issue when the params were valid
+ * before. An issue on ANOTHER key, which the edit did not cause, does not block it. An effect the registry does not
+ * know is not checked here (the engine reports it at render time). The message names the key and carries the schema's
+ * own text.
  */
-export function paramEditAllowed(effectId: string, prev: Record<string, unknown>, key: string, value: unknown): boolean {
-  if (!Object.hasOwn(prev, key)) return false;
+export function paramEditIssue(effectId: string, prev: Record<string, unknown>, key: string, value: unknown): string | null {
+  if (!Object.hasOwn(prev, key)) return `${key}: this effect has no such parameter`;
   const def = builtinRegistry.get(effectId);
-  if (!def) return true;
+  if (!def) return null;
   const result = def.paramSchema.safeParse({ ...prev, [key]: value });
-  if (result.success) return true;
+  if (result.success) return null;
   const prevOk = def.paramSchema.safeParse(prev).success;
-  return !result.error.issues.some((i) => (i.path.length === 0 ? prevOk : i.path[0] === key));
+  const issue = result.error.issues.find((i) => (i.path.length === 0 ? prevOk : i.path[0] === key));
+  return issue === undefined ? null : `${key}: ${issue.message}`;
+}
+/** Whether a param edit is acceptable (see `paramEditIssue`). Exported for tests only. */
+export function paramEditAllowed(effectId: string, prev: Record<string, unknown>, key: string, value: unknown): boolean {
+  return paramEditIssue(effectId, prev, key, value) === null;
 }
 /** Replaces the layer with `id` via `fn`; no-op if the id is absent. */
 function mapLayer(project: Project, id: string, fn: (l: TextLayer) => TextLayer): Project {

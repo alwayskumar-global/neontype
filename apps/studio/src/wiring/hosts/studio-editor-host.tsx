@@ -18,7 +18,7 @@ import { loadProjectFromFile } from "../../io/load.js";
 import { demoProject } from "../../model/demo.js";
 import { newProject } from "../../model/project.js";
 import { EffectsLibraryHost } from "./effects-library-host.js";
-import { adaptStudioEditor, type StudioEditorDispatchers, type StudioEditorView } from "../studio-editor.js";
+import { adaptStudioEditor, paramKey, type StudioEditorDispatchers, type StudioEditorView } from "../studio-editor.js";
 import "./studio-editor-host.css";
 /** Roles that Space activates. */
 const SPACE_ROLES = new Set(["button", "switch", "radio", "checkbox", "option", "menuitem", "tab", "link"]);
@@ -32,11 +32,11 @@ function ownsKey(target: EventTarget | null, key: string): boolean {
   if (key === " ") return tag === "BUTTON" || tag === "A" || (role !== null && SPACE_ROLES.has(role));
   return false;
 }
-export function StudioEditorHost({ store }: { store: Store }) {
+export function StudioEditorHost({ store, onBack }: { store: Store; onBack: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const state = useSyncExternalStore(store.subscribe, store.getState);
-  const [view, setView] = useState<StudioEditorView>({ checker: false, safe: true, settingsError: null });
+  const [view, setView] = useState<StudioEditorView>({ checker: false, safe: true, settingsError: null, paramErrors: {} });
   const [exportOpen, setExportOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -82,17 +82,20 @@ export function StudioEditorHost({ store }: { store: Store }) {
     newProject: () => {
       store.setProject(newProject());
       setLoadError(null);
-      setView((v) => ({ ...v, settingsError: null }));
+      setView((v) => ({ ...v, settingsError: null, paramErrors: {} }));
     },
     loadDemo: () => {
       store.setProject(demoProject());
       setLoadError(null);
-      setView((v) => ({ ...v, settingsError: null }));
+      setView((v) => ({ ...v, settingsError: null, paramErrors: {} }));
     },
     save: () => downloadProject(store.getState().project),
     open: () => fileRef.current?.click(),
     exportProject: () => setExportOpen(true),
-    undo: () => void store.undo(),
+    undo: () => {
+      store.undo();
+      setView((v) => ({ ...v, paramErrors: {} }));
+    },
     setCanvasSize: (width, height) => {
       const ok = store.dispatchGuarded({ type: "set-canvas-size", width, height });
       setView((v) => ({ ...v, settingsError: ok ? null : "That size is not allowed." }));
@@ -116,7 +119,10 @@ export function StudioEditorHost({ store }: { store: Store }) {
     setBackground: (background) => store.dispatch({ type: "set-background", background }),
     setTransparent: (transparent) => store.dispatch({ type: "set-transparent", transparent }),
     addLayer: () => store.dispatch({ type: "add-layer" }),
-    selectLayer: (id) => store.setUi({ selectedLayerId: id }),
+    selectLayer: (id) => {
+      store.setUi({ selectedLayerId: id });
+      setView((v) => ({ ...v, paramErrors: {} }));
+    },
     moveLayer: (id, toIndex) => store.dispatch({ type: "reorder-layer", id, toIndex }),
     deleteLayer: (id) => store.dispatch({ type: "delete-layer", id }),
     setText: (id, text) => store.dispatch({ type: "set-text", id, text }),
@@ -128,8 +134,23 @@ export function StudioEditorHost({ store }: { store: Store }) {
     setAnchor: (id, x, y) => store.dispatch({ type: "set-anchor", id, x, y }),
     setLayerTiming: (id, startSeconds, endSeconds) => store.dispatch({ type: "set-layer-timing", id, startSeconds, endSeconds }),
     setEffectGranularity: (layerId, index, granularity: Granularity) => store.dispatch({ type: "set-effect-granularity", layerId, index, granularity }),
-    setEffectParam: (layerId, index, key, value) => store.dispatchGuarded({ type: "set-effect-param", layerId, index, key, value }),
-    removeEffect: (layerId, index) => store.dispatch({ type: "remove-effect", layerId, index }),
+    setEffectParam: (layerId, index, key, value) => {
+      store.dispatchGuarded({ type: "set-effect-param", layerId, index, key, value });
+      setView((v) => {
+        const k = paramKey(layerId, index, key);
+        if (!(k in v.paramErrors)) return v;
+        const rest = { ...v.paramErrors };
+        delete rest[k];
+        return { ...v, paramErrors: rest };
+      });
+    },
+    rejectEffectParam: (layerId, index, key, typed, message) =>
+      setView((v) => ({ ...v, paramErrors: { ...v.paramErrors, [paramKey(layerId, index, key)]: { value: typed, message } } })),
+    removeEffect: (layerId, index) => {
+      store.dispatch({ type: "remove-effect", layerId, index });
+      setView((v) => ({ ...v, paramErrors: {} }));
+    },
+    back: onBack,
     openLibrary: () => setLibraryOpen(true),
     togglePlay: () => {
       const clock = getClock(canvasRef.current);

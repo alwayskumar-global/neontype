@@ -13,10 +13,12 @@
  */
 import { presetCatalog, type Granularity, type Project, type TextLayer } from "@studio/engine";
 import type { DcProps, DcValue } from "../ds/dc-runtime.js";
+import { paramKinds } from "../model/param-kinds.js";
 import { FONT_FAMILIES, type FontFamily } from "../model/project.js";
+import { paramEditIssue } from "../model/transitions.js";
 import { GRAN_LABEL } from "./effects-library.js";
-import { RANGES_BY_ID } from "./tables.js";
-import { decimals, timecode, withUnit } from "./format.js";
+import { ENUM_LABELS, RANGES_BY_ID } from "./tables.js";
+import { timecode } from "./format.js";
 import type { Data } from "./types.js";
 /** The editor's own view state (held by the host, never saved). */
 export interface StudioEditorView {
@@ -24,7 +26,11 @@ export interface StudioEditorView {
   safe: boolean;
   /** The message for a rejected settings edit, or null. */
   settingsError: string | null;
+  /** Rejected effect-param edits: the typed text and the schema message, by `paramKey`. Cleared by the next valid edit. */
+  paramErrors: Readonly<Record<string, { value: string; message: string }>>;
 }
+/** The key of one param of one effect on one layer in `StudioEditorView.paramErrors`. */
+export const paramKey = (layerId: string, index: number, key: string): string => `${layerId}:${index}:${key}`;
 export interface StudioEditorState {
   project: Project;
   selectedLayerId: string | null;
@@ -63,7 +69,12 @@ export interface StudioEditorDispatchers {
   setAnchor(id: string, x: number, y: number): void;
   setLayerTiming(id: string, startSeconds: number, endSeconds: number): void;
   setEffectGranularity(layerId: string, index: number, granularity: Granularity): void;
-  setEffectParam(layerId: string, index: number, key: string, value: number): void;
+  /** Commits a param value the effect's schema accepted (number or enum text); clears that param's error. */
+  setEffectParam(layerId: string, index: number, key: string, value: number | string): void;
+  /** Records a param value the schema rejected: nothing is committed; the typed text stays in the field with `message`. */
+  rejectEffectParam(layerId: string, index: number, key: string, typed: string, message: string): void;
+  /** Goes back to the landing page. */
+  back(): void;
   removeEffect(layerId: string, index: number): void;
   /** Opens the Effects Library for the selected layer. */
   openLibrary(): void;
@@ -108,7 +119,7 @@ function text(e: unknown): string | null {
 }
 function num(e: unknown): number | null {
   const v = raw(e);
-  if (v === "" || v === null || v === undefined || typeof v === "boolean") return null;
+  if (v === null || v === undefined || typeof v === "boolean" || (typeof v === "string" && v.trim() === "")) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
@@ -161,22 +172,34 @@ export function adaptStudioEditor(state: StudioEditorState, d: StudioEditorDispa
             const g = supported.find((x) => x === v);
             if (g !== undefined) d.setEffectGranularity(layer.id, index, g);
           },
-          params: Object.entries(ranges).map(([key, r]) => {
+          params: paramKinds(inst.effectId).flatMap(([key, kind]): DcValue[] => {
+            const err = view.paramErrors[paramKey(layer.id, index, key)];
             const stored = inst.params[key];
-            const def = entry?.defaultParams[key];
-            const val = typeof stored === "number" ? stored : typeof def === "number" ? def : r.min;
-            return {
-              label: r.label,
-              min: r.min,
-              max: r.max,
-              step: r.step,
-              val,
-              fmt: withUnit(val, r.step, r.unit),
-              set: (e: unknown) => {
-                const n = num(e);
-                if (n !== null) d.setEffectParam(layer.id, index, key, round(n, Math.max(decimals(r.step), 0)));
-              },
+            const commit = (e: unknown): void => {
+              const typed = kind.kind === "number" ? num(e) : text(e);
+              const value: number | string = kind.kind === "number" ? (typed === null ? Number.NaN : Number(typed)) : String(typed ?? "");
+              const issue = paramEditIssue(inst.effectId, inst.params, key, value);
+              if (issue === null) d.setEffectParam(layer.id, index, key, value);
+              else d.rejectEffectParam(layer.id, index, key, String(raw(e) ?? ""), issue);
             };
+            if (kind.kind === "enum") {
+              return [{
+                kind: "enum", isNumber: false, isEnum: true,
+                label: ENUM_LABELS[key] ?? key, min: 0, max: 0, step: 0,
+                opts: kind.options.map((o) => ({ value: o, label: o.charAt(0).toUpperCase() + o.slice(1) })),
+                val: err ? err.value : typeof stored === "string" ? stored : "",
+                err: err?.message ?? "", hasErr: err !== undefined, set: commit,
+              }];
+            }
+            const r = ranges[key];
+            if (r === undefined) return [];
+            const def = entry?.defaultParams[key];
+            return [{
+              kind: "number", isNumber: true, isEnum: false,
+              label: r.label, min: r.min, max: r.max, step: r.step, opts: [],
+              val: err ? err.value : typeof stored === "number" ? stored : typeof def === "number" ? def : r.min,
+              err: err?.message ?? "", hasErr: err !== undefined, set: commit,
+            }];
           }),
           remove: () => d.removeEffect(layer.id, index),
         };
@@ -226,6 +249,7 @@ export function adaptStudioEditor(state: StudioEditorState, d: StudioEditorDispa
     noChecker: !view.checker,
     noLoop: !state.loop,
     noSafe: !view.safe,
+    onBack: () => d.back(),
     onAnchorX: onLayerNumber((l, n) => d.setAnchor(l.id, round(n * width, 2), l.anchor.y)),
     onAnchorY: onLayerNumber((l, n) => d.setAnchor(l.id, l.anchor.x, round(n * height, 2))),
     onBackground: (e: unknown) => {

@@ -347,6 +347,16 @@
   :where(.dc-studio-editor) .se-card .se-row {
     grid-template-columns: 72px minmax(0,1fr);
   }
+  :where(.dc-studio-editor) .se-card .se-err {
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 11px;
+    line-height: 14px;
+    color: #FFA0A8;
+  }
   :where(.dc-studio-editor) .se-range {
     flex: 1;
     min-width: 0;
@@ -364,6 +374,9 @@
   :where(.dc-studio-editor) .se-insp {
     position: relative;
   }
+  :where(.dc-studio-editor) .se-insp__empty {
+    display: grid;
+  }
   :where(.dc-studio-editor) .se-insp:has(.se-insp__body) .se-insp__empty {
     display: none;
   }
@@ -376,6 +389,7 @@
 .dc-studio-editor .dc-studio-editor-s0a2ace { display: flex; align-items: center; gap: 4px; }
 .dc-studio-editor .dc-studio-editor-s0f600c { grid-column: 1/-1; display: flex; align-items: center; gap: 12px; padding: 0 12px; background: #111419; border-bottom: 1px solid #1C2129; }
 .dc-studio-editor .dc-studio-editor-s13dcb3 { flex: 1; min-height: 0; overflow: auto; }
+.dc-studio-editor .dc-studio-editor-s1ac2df { margin-right: 4px; }
 .dc-studio-editor .dc-studio-editor-s1bff30 { font-family: 'DM Mono',monospace; font-size: 12px; color: #929CAC; }
 .dc-studio-editor .dc-studio-editor-s1f9a61 { position: absolute; top: 2px; right: 2px; width: 10px; height: 10px; border-radius: 999px; background: #FFF0FB; }
 .dc-studio-editor .dc-studio-editor-s25b165 { position: absolute; inset: 0; }
@@ -383,8 +397,10 @@
 .dc-studio-editor .dc-studio-editor-s2c7bba { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 .dc-studio-editor .dc-studio-editor-s377076 { grid-column: 2; grid-row: 3; position: relative; z-index: 5; display: flex; flex-direction: column; min-width: 0; background: #111419; border-top: 1px solid #1C2129; }
 .dc-studio-editor .dc-studio-editor-s390a9b { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.dc-studio-editor .dc-studio-editor-s399f7d { width: 64px; flex: none; text-align: right; font-family: 'DM Mono',monospace; font-size: 12px; }
 .dc-studio-editor .dc-studio-editor-s3e9a13 { flex: 1; display: flex; align-items: center; gap: 4px; min-width: 0; }
 .dc-studio-editor .dc-studio-editor-s41149a { align-items: start; }
+.dc-studio-editor .dc-studio-editor-s52b579 { place-content: center; gap: 6px; flex: 1; padding: 24px; text-align: center; }
 .dc-studio-editor .dc-studio-editor-s55ddec { margin-left: auto; letter-spacing: 0; }
 .dc-studio-editor .dc-studio-editor-s6390ac { font-size: 12px; font-weight: 500; color: #A6AFBD; }
 .dc-studio-editor .dc-studio-editor-s6de59e { flex: none; border-top: 1px solid #1C2129; }
@@ -394,7 +410,7 @@
 .dc-studio-editor .dc-studio-editor-s783ad2 { margin-left: 8px; font-family: 'DM Mono',monospace; font-size: 14px; font-weight: 500; color: #5CE3FA; }
 .dc-studio-editor .dc-studio-editor-s78966a { display: inline-flex; align-items: center; gap: 8px; height: 24px; padding: 0 6px; border: 0; border-radius: 4px; background: transparent; font-size: 12px; color: #A6AFBD; cursor: pointer; }
 .dc-studio-editor .dc-studio-editor-s78966a:hover { background: #161A20; color: #E4E8EE; }
-.dc-studio-editor .dc-studio-editor-s7eceae { display: grid; place-content: center; gap: 6px; flex: 1; padding: 24px; text-align: center; }
+.dc-studio-editor .dc-studio-editor-s80d84a { padding-top: 5px; }
 .dc-studio-editor .dc-studio-editor-s82969a { width: 1px; height: 20px; background: #2D343F; margin: 0 4px; }
 .dc-studio-editor .dc-studio-editor-s8317e0 { position: relative; width: 26px; height: 14px; border-radius: 999px; background: #2D343F; box-shadow: inset 0 0 0 1px #5E6776; }
 .dc-studio-editor .dc-studio-editor-s83725d { flex: 1; }
@@ -426,12 +442,13 @@
 .dc-studio-editor .dc-studio-editor-sdd7c97 { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: #F23DC8; color: #1A0516; font-size: 13px; font-weight: 600; cursor: pointer; }
 .dc-studio-editor .dc-studio-editor-sdd7c97:hover { background: #FF5CD6; }
 .dc-studio-editor .dc-studio-editor-sdd7c97:active { background: #E233BD; box-shadow: 0 0 0 1px #F23DC8,0 0 16px -2px rgba(242,61,200,.45); }
+.dc-studio-editor .dc-studio-editor-sdf76c3 { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .dc-studio-editor .dc-studio-editor-se1b3b3 { width: 1px; height: 20px; background: #2D343F; margin: 0 6px; }
 .dc-studio-editor .dc-studio-editor-se8df4b { padding: 12px; border-bottom: 1px solid #1C2129; flex: none; }
 .dc-studio-editor .dc-studio-editor-sea1b5b { font-size: 13px; font-weight: 600; color: #C6CDD8; }
-.dc-studio-editor .dc-studio-editor-seaec26 { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .dc-studio-editor .dc-studio-editor-sf04c7a { width: 6px; height: 6px; border-radius: 999px; background: #2DD3F0; }
 .dc-studio-editor .dc-studio-editor-sf1e407 { font-size: 12px; line-height: 16px; color: #929CAC; }
+.dc-studio-editor .dc-studio-editor-sf44b35 { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 28px; }
 .dc-studio-editor .dc-studio-editor-sf87fcd { flex: none; }
 .dc-studio-editor .dc-studio-editor-sfd35cc { flex: 1; font-family: 'DM Mono',monospace; font-size: 12px; }
 .dc-studio-editor .dc-studio-editor-sfecd41 { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 6px; background: #062D36; color: #5CE3FA; cursor: pointer; padding: 0; box-shadow: 0 0 0 1px #2DD3F0; }
