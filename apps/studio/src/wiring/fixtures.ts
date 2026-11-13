@@ -2,7 +2,7 @@
  * Test fixtures for the adapters: spy dispatchers and representative states. Used by the unit and
  * property tests only (not imported by app code).
  */
-import { presetCatalog, type Project } from "@studio/engine";
+import type { Project } from "@studio/engine";
 import type { CapabilityReport, ErrorCode, ExportResult } from "@studio/exporters";
 import type { ExportState } from "../export/machine.js";
 import type { EffectsLibraryDispatchers, EffectsLibraryState, EffectsLibraryView } from "./effects-library.js";
@@ -78,7 +78,6 @@ export function exportRuns(code: ErrorCode = "out-of-memory"): ExportState[] {
 export function exportState(project: Project, run: ExportState, view: ExportFlowView): ExportFlowState {
   return { project, run, view };
 }
-export const CATALOG_IDS: readonly string[] = presetCatalog.map((p) => p.id);
 /** Spy dispatchers for the Studio Editor: every method records its name; the two slots are plain strings. */
 export function studioSpy(): Spy<StudioEditorDispatchers> {
   const calls: string[] = [];

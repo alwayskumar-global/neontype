@@ -13,8 +13,6 @@ import type { DcFn, DcValue } from "../ds/dc-runtime.js";
  * the keys it is used for in `INERT_BINDINGS`.
  */
 export const INERT: DcFn = () => undefined;
-/** A list of binding keys, as exported by a generated screen (`*_BINDINGS`). */
-export type BindingKeys = readonly string[];
 /** Option shape the design-system selects and segmented controls read (`asOptions`). */
 export interface Option {
   readonly value: string | number;

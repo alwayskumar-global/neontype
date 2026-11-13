@@ -69,11 +69,6 @@ export function nudgeTiming(
   return dragTiming(kind, timing, frames, fps, durationSeconds);
 }
 
-/** Snaps a time to the frame grid (clamps below at 0 only). */
-export function snapToFrame(seconds: number, fps: number): number {
-  return toSeconds(Math.max(0, toFrames(seconds, fps)), fps);
-}
-
 /** Ruler pixel -> frame-snapped seconds, clamped to [0, last frame]. */
 export function pxToSeconds(px: number, g: AxisGeometry): number {
   const N = lastFrame(g.durationSeconds, g.fps);

@@ -10,22 +10,6 @@
   font-size: var(--text-body-size);
 }
 
-input:not(:where(.ds-root *)), select:not(:where(.ds-root *)), button:not(:where(.ds-root *)) {
-  background: var(--color-bg-control);
-  color: var(--color-text);
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-2);
-  font: inherit;
-}
-input:focus-visible:not(:where(.ds-root *)), select:focus-visible:not(:where(.ds-root *)), button:focus-visible:not(:where(.ds-root *)) {
-  outline: var(--border-width-focus) solid var(--color-focus);
-  outline-offset: 1px;
-}
-button:not(:where(.ds-root *)) { cursor: pointer; }
-button:hover:not(:where(.ds-root *)) { background: var(--color-bg-control-hover); }
-button:disabled:not(:where(.ds-root *)) { opacity: 0.5; cursor: default; }
-
 .preview-stage {
   flex: 1; display: grid; place-items: center; min-height: 0; padding: var(--space-4);
   background: var(--color-bg-stage);

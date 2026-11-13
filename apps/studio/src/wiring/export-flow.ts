@@ -33,7 +33,6 @@ export const FORMAT_CARDS: readonly FormatCard[] = [
   { id: "webp", name: "Animated WebP", nameLower: "animated WebP", icon: "image", meta: "Full colour · transparency · loops", use: "Smaller than GIF, for websites and apps.", format: "webp", title: "Your animated WebP is ready" },
   { id: "webm", name: "WebM with alpha", nameLower: "WebM with alpha", icon: "play", meta: "VP9 · transparency", use: "One small see-through video file.", format: null, title: "Your WebM with alpha is ready" },
 ];
-export const DEFAULT_FORMAT = "mp4";
 const WEBM_REASON = "Not available in this version. Use PNG sequence or WebP for transparency.";
 /** The capability key for each machine format. */
 const CAP_KEY = { mp4: "mp4", "png-sequence": "pngSequence", gif: "gif", webp: "webp" } as const;

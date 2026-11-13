@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
-import { dragTiming, nudgeTiming, toFrames, toSeconds, snapToFrame, pxToSeconds, lastFrame, type TimingKind } from "./timeline.js";
+import { dragTiming, nudgeTiming, toFrames, toSeconds, pxToSeconds, lastFrame, type TimingKind } from "./timeline.js";
 
 const KINDS: TimingKind[] = ["move", "start", "end"];
 
@@ -9,7 +9,6 @@ describe("timeline math (unit)", () => {
     expect(toFrames(0.5, 1)).toBe(1);
     expect(toFrames(-0.5, 1)).toBe(-1);
     expect(toSeconds(1, 3)).toBe(0.333333);
-    expect(snapToFrame(1.234, 30)).toBe(toSeconds(37, 30));
   });
   it("move keeps length and clamps inside [0, duration]", () => {
     const t = { startSeconds: 1, endSeconds: 2 };
