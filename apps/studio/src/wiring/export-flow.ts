@@ -25,14 +25,22 @@ export interface FormatCard {
   /** The machine's format; null for a format this release cannot export (WebM with alpha). */
   readonly format: ExportFormatId | null;
   readonly title: string;
+  /** Whether a file in this format can carry transparency (the single source for `supportsAlpha`). */
+  readonly alpha: boolean;
 }
 export const FORMAT_CARDS: readonly FormatCard[] = [
-  { id: "mp4", name: "MP4 video", nameLower: "MP4 video", icon: "play", meta: "H.264 · solid background", use: "Plays everywhere: social posts, slides and messages.", format: "mp4", title: "Your MP4 video is ready" },
-  { id: "png", name: "PNG sequence", nameLower: "PNG sequence", icon: "layers", meta: "ZIP of frames · transparency", use: "Lossless frames for video editors and compositing.", format: "png-sequence", title: "Your PNG sequence is ready" },
-  { id: "gif", name: "Animated GIF", nameLower: "animated GIF", icon: "grid", meta: "256 colours · loops", use: "Loops in chats, docs and email.", format: "gif", title: "Your animated GIF is ready" },
-  { id: "webp", name: "Animated WebP", nameLower: "animated WebP", icon: "image", meta: "Full colour · transparency · loops", use: "Smaller than GIF, for websites and apps.", format: "webp", title: "Your animated WebP is ready" },
-  { id: "webm", name: "WebM with alpha", nameLower: "WebM with alpha", icon: "play", meta: "VP9 · transparency", use: "One small see-through video file.", format: null, title: "Your WebM with alpha is ready" },
+  { id: "mp4", name: "MP4 video", nameLower: "MP4 video", icon: "play", meta: "H.264 · solid background", use: "Plays everywhere: social posts, slides and messages.", format: "mp4", title: "Your MP4 video is ready", alpha: false },
+  { id: "png", name: "PNG sequence", nameLower: "PNG sequence", icon: "layers", meta: "ZIP of frames · transparency", use: "Lossless frames for video editors and compositing.", format: "png-sequence", title: "Your PNG sequence is ready", alpha: true },
+  { id: "gif", name: "Animated GIF", nameLower: "animated GIF", icon: "grid", meta: "256 colours · loops", use: "Loops in chats, docs and email.", format: "gif", title: "Your animated GIF is ready", alpha: true },
+  { id: "webp", name: "Animated WebP", nameLower: "animated WebP", icon: "image", meta: "Full colour · transparency · loops", use: "Smaller than GIF, for websites and apps.", format: "webp", title: "Your animated WebP is ready", alpha: true },
+  { id: "webm", name: "WebM with alpha", nameLower: "WebM with alpha", icon: "play", meta: "VP9 · transparency", use: "One small see-through video file.", format: null, title: "Your WebM with alpha is ready", alpha: true },
 ];
+/** A format an export can produce: the machine's four plus WebM with alpha (deferred, so never produced). */
+export type ExportFormat = ExportFormatId | "webm-alpha";
+/** Whether a file in `format` can carry transparency. Derived from the format cards, the one table of format metadata. */
+export function supportsAlpha(format: ExportFormat): boolean {
+  return FORMAT_CARDS.find((c) => (c.format ?? "webm-alpha") === format)?.alpha ?? false;
+}
 const WEBM_REASON = "Not available in this version. Use PNG sequence or WebP for transparency.";
 /** The capability key for each machine format. */
 const CAP_KEY = { mp4: "mp4", "png-sequence": "pngSequence", gif: "gif", webp: "webp" } as const;
@@ -131,6 +139,7 @@ export function adaptExportFlow(state: ExportFlowState, d: ExportFlowDispatchers
   const pct = Math.round(fraction * 100);
   const format: ExportFormatId = run.status === "running" ? run.format : (card.format ?? "mp4");
   const fmtName = FORMAT_NAME[format];
+  const alphaWarn = !supportsAlpha(format) && project.background === "transparent";
   const dims = project.canvas.width / project.canvas.height;
   const crumbState = (i: number): "done" | "current" | "todo" | "error" =>
     step === 4 ? "done" : step === 5 ? (i < 2 ? "done" : "error") : i + 1 < Math.min(step, 3) ? "done" : i + 1 === Math.min(step, 3) ? "current" : "todo";
@@ -182,6 +191,8 @@ export function adaptExportFlow(state: ExportFlowState, d: ExportFlowDispatchers
     destCards,
     dur: durText,
     errCode: errorCode === null ? "" : `ERR_${errorCode.toUpperCase().replace(/-/g, "_")}`,
+    alphaWarn,
+    alphaWarnText: step === 4 ? "Exported without transparency." : `${fmtName} has no transparency — the background will be filled with the project colour.`,
     estimate: `${total} frames · ${fmtName}`,
     exportLabel: "Export",
     exportSteps,

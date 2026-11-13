@@ -119,10 +119,27 @@ test("a transparent project shows the mp4-no-transparency note before and after 
   await page.getByRole("switch", { name: "Transparent" }).check();
   await openDialog(page);
   const dialog = page.getByRole("dialog", { name: "Export" });
+  // The note belongs to the Options step (the format is MP4 by default).
+  await dialog.getByRole("button", { name: "Continue" }).click();
   await expect(dialog.getByText(/MP4 has no transparency/)).toBeVisible();
-  await page.getByRole("button", { name: /Export mp4/ }).click();
+  await dialog.getByRole("button", { name: "Export", exact: true }).click();
   await expect(page.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 9000 });
   await expect(dialog.getByText(/Exported without transparency/)).toBeVisible();
+});
+test("a transparent project exported as GIF shows no transparency warning on Options or Done", async ({ page }) => {
+  await gotoStudio(page, true);
+  await shrink(page, "0.3");
+  await page.getByRole("switch", { name: "Transparent" }).check();
+  await openDialog(page);
+  const dialog = page.getByRole("dialog", { name: "Export" });
+  await exportFormat(page, "gif").click();
+  await dialog.getByRole("button", { name: "Continue" }).click();
+  await expect(dialog.getByText("Animated GIF options")).toBeVisible();
+  await expect(dialog.getByRole("note")).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Export", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 9000 });
+  await expect(dialog.getByRole("note")).toHaveCount(0);
+  await expect(dialog.getByText(/without transparency/)).toHaveCount(0);
 });
 test("a failed export shows the message mapped from its ErrorCode", async ({ page }) => {
   await gotoStudio(page, true);

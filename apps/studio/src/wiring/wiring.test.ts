@@ -11,7 +11,7 @@ import { EFFECTS_LIBRARY_BINDINGS } from "../generated/effects-library/EffectsLi
 import { EXPORT_FLOW_BINDINGS } from "../generated/export-flow/ExportFlow.js";
 import { STUDIO_EDITOR_BINDINGS } from "../generated/studio-editor/StudioEditor.js";
 import { adaptEffectsLibrary, INERT_BINDINGS as LIB_INERT } from "./effects-library.js";
-import { adaptExportFlow, INERT_BINDINGS as EXP_INERT, TRY_NEXT } from "./export-flow.js";
+import { adaptExportFlow, INERT_BINDINGS as EXP_INERT, supportsAlpha, TRY_NEXT, type ExportFormat } from "./export-flow.js";
 import { ALL_ERROR_CODES, EXPORT_VIEWS, effectsSpy, exportRuns, exportSpy, exportState, libraryState } from "./fixtures.js";
 import { adaptStudioEditor, INERT_BINDINGS as ED_INERT, SIZE_PRESETS } from "./studio-editor.js";
 import { studioSpy, studioState } from "./fixtures.js";
@@ -334,5 +334,31 @@ describe("Studio Editor adapter details", () => {
     expect(build().data["hasSettingsError"]).toBe(false);
     const withErr = build({ view: { checker: false, safe: true, settingsError: "Bad width.", paramErrors: {} } }).data;
     expect([withErr["hasSettingsError"], withErr["settingsError"]]).toEqual([true, "Bad width."]);
+  });
+});
+
+describe("supportsAlpha and the transparency note", () => {
+  it("only MP4 cannot carry transparency", () => {
+    const expected: Record<ExportFormat, boolean> = { mp4: false, "png-sequence": true, gif: true, webp: true, "webm-alpha": true };
+    for (const [format, alpha] of Object.entries(expected)) expect(supportsAlpha(format as ExportFormat), format).toBe(alpha);
+  });
+  const transparent = { ...projects[0]!, background: "transparent" };
+  const note = (project: typeof transparent, format: string, run = exportRuns()[1]!) => {
+    const { data } = adaptExportFlow(exportState(project, run, { step: 2, format, resolution: null }), exportSpy().d);
+    return { warn: data["alphaWarn"], text: data["alphaWarnText"] };
+  };
+  it("warns for MP4 on a transparent project, with the Options text", () => {
+    expect(note(transparent, "mp4")).toEqual({ warn: true, text: "MP4 has no transparency — the background will be filled with the project colour." });
+  });
+  it("shows the Done text on the Done step", () => {
+    const done = exportRuns().find((r) => r.status === "done")!;
+    expect(note(transparent, "mp4", done)).toEqual({ warn: true, text: "Exported without transparency." });
+  });
+  it("does not warn for formats that keep transparency, or for an opaque project", () => {
+    // The idle run offers every card, so each format is the selected one.
+    const idle = exportRuns()[0]!;
+    for (const id of ["png", "gif", "webp"]) expect(note(transparent, id, idle).warn, id).toBe(false);
+    expect(note(projects[0]!, "mp4", idle).warn).toBe(false);
+    expect(note(transparent, "mp4", idle).warn).toBe(true);
   });
 });

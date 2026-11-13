@@ -19,6 +19,9 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
 .ui-dest:disabled{cursor:not-allowed}
 .ui-dest:disabled .ui-dest__name{color:var(--color-text-disabled)}
 .ui-dest:disabled .ui-dest__frame{background:transparent;box-shadow:inset 0 0 0 1px var(--color-border-strong);color:var(--color-text-disabled)}
+.ef-alpha{display:flex;align-items:flex-start;gap:8px;margin:0;padding:8px 10px;border:1px solid var(--color-warning-border);border-radius:4px;background:var(--color-warning-bg);color:var(--color-text-warning);font-size:12px;line-height:16px;text-wrap:pretty}
+.ef-alpha__icon{display:inline-flex;flex:none}
+.ui-result .ef-alpha{width:100%;max-width:520px}
 </style>
 </helmet>
 
@@ -119,6 +122,9 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
               </div>
             </div>
           </div>
+          <sc-if value="{{ alphaWarn }}" hint-placeholder-val="{{ true }}">
+            <p role="note" class="ef-alpha"><span class="ef-alpha__icon" aria-hidden="true"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="warning" hint-size="16px,16px"></x-import></span>{{ alphaWarnText }}</p>
+          </sc-if>
         </div>
         <div class="ui-modal__foot">
           <span class="ui-modal__foot-meta ui-mono">{{ estimate }}</span>
@@ -176,6 +182,9 @@ a{color:var(--color-text-accent)}a:hover{color:var(--color-magenta-200)}
               </span>
               <x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Button" variant="primary" icon="download" on-click="{{ onDownload }}" hint-size="104px,28px">Download</x-import>
             </div>
+            <sc-if value="{{ alphaWarn }}" hint-placeholder-val="{{ true }}">
+              <p role="note" class="ef-alpha"><span class="ef-alpha__icon" aria-hidden="true"><x-import component-from-global-scope="MotionTextStudioDesignSystem_f5b901.Icon" name="warning" hint-size="16px,16px"></x-import></span>{{ alphaWarnText }}</p>
+            </sc-if>
           </div>
         </div>
         <div class="ui-modal__foot">
@@ -248,7 +257,7 @@ class Component extends DCLogic {
   componentWillUnmount() { clearInterval(this._iv); }
   project() {
     const [w, h] = String(this.props.projectSize || '1920 × 1080').split(' × ').map(Number);
-    return { w: w || 1920, h: h || 1080, fps: 30, dur: 6 };
+    return { w: w || 1920, h: h || 1080, fps: 30, dur: 6, transparent: true };
   }
   total() { const p = this.project(); return Math.round(p.dur * p.fps); }
   startExport = () => {
@@ -316,6 +325,8 @@ class Component extends DCLogic {
       exportLabel: 'Export',
       startExport: this.startExport,
       onClose: () => {}, onDownload: () => {},
+      alphaWarn: s.fmt === 'mp4' && !!P.transparent,
+      alphaWarnText: s.step === 4 ? 'Exported without transparency.' : 'MP4 has no transparency — the background will be filled with the project colour.',
       cancelExport: () => { clearInterval(this._iv); this.setState({ step: 2, running: false, frames: 112 }); },
       pct, pctText: `${pct}%`, framesText: `${frames} / ${total} frames`,
       frameTc: `00:${pad(tsec % 60)}:${pad(frames % P.fps)}`,

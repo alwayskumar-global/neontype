@@ -30,6 +30,28 @@
     box-shadow: inset 0 0 0 1px var(--color-border-strong);
     color: var(--color-text-disabled);
   }
+  :where(.dc-export-flow) .ef-alpha {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--color-warning-border);
+    border-radius: 4px;
+    background: var(--color-warning-bg);
+    color: var(--color-text-warning);
+    font-size: 12px;
+    line-height: 16px;
+    text-wrap: pretty;
+  }
+  :where(.dc-export-flow) .ef-alpha__icon {
+    display: inline-flex;
+    flex: none;
+  }
+  :where(.dc-export-flow) .ui-result .ef-alpha {
+    width: 100%;
+    max-width: 520px;
+  }
 }
 
 .dc-export-flow .dc-export-flow-s0c0a2f { font-size: 11px; color: var(--color-text-tertiary); padding-top: 8px; border-top: 1px solid var(--color-border-subtle); }
