@@ -1,0 +1,5 @@
+/*
+ * Host styles for the Export Flow overlay. The generated root is `position: fixed; inset: 0` with an opaque app
+ * background; the host raises it above the studio and lets the studio show through its scrim.
+ */
+.exp-host > .ds-root.dc-export-flow { z-index: 1000; background: transparent; }

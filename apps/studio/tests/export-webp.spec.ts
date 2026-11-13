@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoStudio, settingsPanel, shrinkProject } from "./helpers.js";
+import { exportAs, exportFormat, gotoStudio, settingsPanel, shrinkProject } from "./helpers.js";
 /**
  * Animated WebP in the export dialog (task: offer WebP). Gated on the exporters capability result like the other
  * formats; a finished export is a real file with the RIFF/WEBP header and the VP8X animation flag. Role, label,
@@ -20,9 +20,8 @@ async function openDialog(page: Page): Promise<void> {
 test("WebP is offered next to the other formats and is enabled when the browser can encode it", async ({ page }) => {
   await gotoStudio(page, true);
   await openDialog(page);
-  const dialog = page.getByRole("dialog", { name: "Export" });
-  for (const name of [/Export mp4/, /Export png-sequence/, /Export gif/, /Export webp/]) {
-    await expect(dialog.getByRole("button", { name })).toBeEnabled();
+  for (const format of ["mp4", "png-sequence", "gif", "webp"] as const) {
+    await expect(exportFormat(page, format)).toBeEnabled();
   }
 });
 test("WebP is disabled with a reason when the browser cannot encode a still WebP", async ({ page }) => {
@@ -91,8 +90,8 @@ test("after a WebP export, Export again returns to the format choices", async ({
   await shrinkProject(page, "0.3");
   await openDialog(page);
   const dialog = page.getByRole("dialog", { name: "Export" });
-  await dialog.getByRole("button", { name: /Export webp/ }).click();
+  await exportAs(page, "webp");
   await expect(dialog.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 30_000 });
-  await dialog.getByRole("button", { name: "Export again" }).click();
-  await expect(dialog.getByRole("button", { name: /Export webp/ })).toBeVisible();
+  await dialog.getByRole("button", { name: "Export another" }).click();
+  await expect(exportFormat(page, "webp")).toBeVisible();
 });

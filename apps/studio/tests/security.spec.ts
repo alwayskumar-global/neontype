@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoStudio, layersPanel } from "./helpers.js";
+import { exportAs, gotoStudio, layersPanel } from "./helpers.js";
 /**
  * Security (Requirement 11), against the dev server. The strict CSP and its violations are
  * verified against the production build in tests-csp/. Here: opened files are validated before
@@ -72,8 +72,8 @@ test("a session makes no request off this origin", async ({ page }) => {
   await page.getByRole("button", { name: "Add layer" }).click();
   await page.getByRole("button", { name: "Export", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Export" })).toBeVisible();
-  await page.getByRole("button", { name: /Export gif/ }).click();
-  await expect(page.getByRole("progressbar", { name: "Export progress" }).or(page.getByRole("button", { name: "Download" }))).toBeVisible();
+  await exportAs(page, "gif");
+  await expect(page.getByRole("progressbar", { name: "Rendering frames" }).or(page.getByRole("button", { name: "Download" }))).toBeVisible();
   await page.getByRole("button", { name: "Cancel" }).or(page.getByRole("button", { name: "Download" })).click();
   expect(external).toEqual([]);
 });

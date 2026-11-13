@@ -1,4 +1,4 @@
-import { gotoStudio, shrinkProject } from "./helpers.js";
+import { exportAs, exportFormat, gotoStudio, shrinkProject } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 import { ERROR_MESSAGES } from "../src/export/errors.js";
 
@@ -20,7 +20,7 @@ const shrink = shrinkProject;
 async function openDialog(page: import("@playwright/test").Page): Promise<void> {
   await page.getByRole("button", { name: "Export", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Export" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Export mp4/ })).toBeVisible();
+  await expect(exportFormat(page, "mp4")).toBeVisible();
 }
 
 const ascii = (b: number[]): string => String.fromCharCode(...b);
@@ -29,7 +29,7 @@ test("exports MP4 with a valid ftyp header", async ({ page }) => {
   await gotoStudio(page, true);
   await shrink(page, "0.3");
   await openDialog(page);
-  await page.getByRole("button", { name: /Export mp4/ }).click();
+  await exportAs(page, "mp4");
   await expect(page.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 9000 });
   const info = await page.evaluate(() => window.__lastExport);
   expect(info!.size).toBeGreaterThan(0);
@@ -40,7 +40,7 @@ test("exports GIF with a GIF8 header", async ({ page }) => {
   await gotoStudio(page, true);
   await shrink(page, "0.3");
   await openDialog(page);
-  await page.getByRole("button", { name: /Export gif/ }).click();
+  await exportAs(page, "gif");
   await expect(page.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 9000 });
   const info = await page.evaluate(() => window.__lastExport);
   expect(info!.size).toBeGreaterThan(0);
@@ -122,7 +122,7 @@ test("a failed export shows the message mapped from its ErrorCode", async ({ pag
   await page.getByRole("region", { name: "PROJECT" }).getByLabel("Frame rate").fill("120");
   await page.getByRole("region", { name: "PROJECT" }).getByLabel("Duration in seconds").fill("600");
   await openDialog(page);
-  await page.getByRole("button", { name: /Export gif/ }).click();
+  await exportAs(page, "gif");
   const alert = page.getByRole("dialog", { name: "Export" }).getByRole("alert");
   await expect(alert).toBeVisible({ timeout: 15000 });
   const text = ((await alert.innerText()) ?? "").trim();
@@ -159,11 +159,11 @@ test("after a success, Export again returns to the format choices and a second e
   await shrink(page, "0.3");
   await openDialog(page);
   const dialog = page.getByRole("dialog", { name: "Export" });
-  await dialog.getByRole("button", { name: /Export gif/ }).click();
+  await exportAs(page, "gif");
   await expect(dialog.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 9000 });
-  await dialog.getByRole("button", { name: "Export again" }).click();
-  await expect(dialog.getByRole("button", { name: /Export mp4/ })).toBeVisible();
-  await dialog.getByRole("button", { name: /Export mp4/ }).click();
+  await dialog.getByRole("button", { name: "Export another" }).click();
+  await expect(exportFormat(page, "mp4")).toBeVisible();
+  await exportAs(page, "mp4");
   await expect(dialog.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 9000 });
   const info = await page.evaluate(() => window.__lastExport);
   expect(ascii(info!.head.slice(4, 8))).toBe("ftyp");

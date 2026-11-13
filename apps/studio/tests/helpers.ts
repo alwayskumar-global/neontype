@@ -173,3 +173,17 @@ export async function applyPreset(page: Page, displayName: string): Promise<void
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
 }
+
+/** The export formats of the generated Export Flow, by the start of the format card's accessible name. */
+const EXPORT_FORMAT_CARDS = { mp4: /^MP4 video/, "png-sequence": /^PNG sequence/, gif: /^Animated GIF/, webp: /^Animated WebP/ } as const;
+/** The format card (a radio) for an export format. */
+export function exportFormat(page: Page, format: keyof typeof EXPORT_FORMAT_CARDS): Locator {
+  return page.getByRole("dialog", { name: "Export" }).getByRole("radio", { name: EXPORT_FORMAT_CARDS[format] });
+}
+/** With the Export dialog open: picks a format, continues to the options, and starts the export. */
+export async function exportAs(page: Page, format: keyof typeof EXPORT_FORMAT_CARDS): Promise<void> {
+  const dialog = page.getByRole("dialog", { name: "Export" });
+  await exportFormat(page, format).click();
+  await dialog.getByRole("button", { name: "Continue" }).click();
+  await dialog.getByRole("button", { name: "Export", exact: true }).click();
+}

@@ -11,7 +11,7 @@ import { StudioEditor } from "../../generated/studio-editor/StudioEditor.js";
 import type { Store } from "../../shell/store.js";
 import { PreviewCanvas, getClock } from "../../preview/PreviewCanvas.js";
 import { Timeline } from "../../timeline/Timeline.js";
-import { ExportDialog } from "../../export/dialog.js";
+import { ExportFlowHost } from "./export-flow-host.js";
 import { shouldUndo } from "../../shell/undo-key.js";
 import { downloadProject } from "../../io/save.js";
 import { loadProjectFromFile } from "../../io/load.js";
@@ -209,7 +209,7 @@ export function StudioEditorHost({ store, onBack }: { store: Store; onBack: () =
         </p>
       )}
       {libraryOpen && <EffectsLibraryHost store={store} onClose={() => setLibraryOpen(false)} />}
-      {exportOpen && <ExportDialog store={store} onClose={() => setExportOpen(false)} />}
+      {exportOpen && <ExportFlowHost store={store} onClose={() => setExportOpen(false)} />}
     </>
   );
 }
