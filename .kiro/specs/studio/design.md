@@ -2328,9 +2328,10 @@ Properties 13, 14 and 15 are in "Correctness Properties".
 - **Unwired by decision.** Landing Page and Error States are generated and tested but not wired to live data.
 - **Effects Library previews (fix after the owner's local run).** Every card thumbnail loops its preview
   continuously, with no hover or focus (this replaces the hover-only rule of gap D-5). Pure CSS keyframes, so
-  no JS clock; under `prefers-reduced-motion: reduce` the text shows its final frame. The generated overlay's
-  `backdrop-filter` blur is dropped in the host: with looping previews it cost about 100% of a core in headless
-  software rendering (about 48% total CPU without it, 7.5% before the loops existed).
+  no JS clock; under `prefers-reduced-motion: reduce` the text shows its final frame. The overlay has no
+  `backdrop-filter` blur (the owner removed it from the design after measuring: with looping previews it cost
+  about 100% of a core in headless software rendering, about 48% total CPU without it while the library is open,
+  0% once it is closed, 7.5% before the loops existed). The footer reads "Previews loop automatically".
 - **Apply closes the library.** A successful apply (a new effect, or one already on the layer) closes the
   dialog through the same path as Esc, returns focus to Add effect, scrolls the new effect into view in
   "Effects on this layer", and announces "Applied X to \u201clayer\u201d" in a polite live region in the editor host. The

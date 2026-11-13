@@ -80,6 +80,7 @@
 .dc-effects-library .dc-effects-library-s9dffdd { position: absolute; top: 8px; bottom: 8px; left: 8px; width: min(1200px,calc(100% - 136px)); display: flex; flex-direction: column; background: var(--color-bg-panel); border-radius: var(--radius-xl); box-shadow: var(--shadow-modal); overflow: hidden; }
 .dc-effects-library .dc-effects-library-s9e3701 { position: relative; min-width: 1100px; height: 100%; min-height: 640px; overflow: hidden; }
 .dc-effects-library .dc-effects-library-sa242b6 { flex: 1; min-height: 0; overflow: auto; padding: 0 16px 16px; display: flex; flex-direction: column; gap: 16px; }
+.dc-effects-library .dc-effects-library-sa41747 { position: absolute; inset: 0; z-index: 400; background: var(--color-bg-overlay); }
 .dc-effects-library .dc-effects-library-sa45c39 { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); z-index: 400; }
 .dc-effects-library .dc-effects-library-sa4e017 { display: flex; align-items: center; gap: 8px; }
 .dc-effects-library .dc-effects-library-sa61023 { display: grid; grid-template-columns: repeat(auto-fill,minmax(196px,1fr)); gap: 12px; }
@@ -91,7 +92,6 @@
 .dc-effects-library .dc-effects-library-sbd361a { font-size: 12px; color: var(--color-text-tertiary); }
 .dc-effects-library .dc-effects-library-sbea011 { display: grid; gap: 8px; padding: 4px 4px 10px; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-bg-raised); }
 .dc-effects-library.dc-effects-library-sc0e48e { position: fixed; inset: 0; overflow: auto; background: var(--color-bg-app); color-scheme: dark; }
-.dc-effects-library .dc-effects-library-sc14590 { position: absolute; inset: 0; z-index: 400; background: var(--color-bg-overlay); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
 .dc-effects-library .dc-effects-library-sc28fa1 { font-size: 10px; }
 .dc-effects-library .dc-effects-library-sc4293e { position: absolute; left: 20px; bottom: 16px; right: auto; top: auto; width: 360px; z-index: 500; }
 .dc-effects-library .dc-effects-library-scc310e { height: 10px; width: var(--dc-0); margin: 2px 4px 0; border-radius: 2px; background: var(--color-bg-control-hover); animation: dc-effects-library-mt-skel 1.4s ease-in-out infinite; animation-delay: var(--dc-1); }
