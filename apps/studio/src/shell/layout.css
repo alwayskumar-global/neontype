@@ -1,4 +1,7 @@
 /* Studio shell layout (class-based; no inline styles). Tokens from tokens.css. */
+/* Page base: no default 8px body margin and no white page behind the app. */
+html, body { margin: 0; height: 100%; background: var(--color-bg-app); }
+#root { height: 100%; }
 .app-shell {
   display: grid;
   grid-template-columns: 264px minmax(0, 1fr) 304px;
