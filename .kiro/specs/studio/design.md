@@ -2278,19 +2278,18 @@ change) so both UIs expose the contract. It records every control that has no
 counterpart in a generated screen as a gap for criterion 19.9.
 
 #### Files to remove (Requirement 19.7)
-Each deletion waits for its replacement to pass the safety-net specs.
-| File | Replaced by | When |
+As built: each deletion waited for its replacement to pass the specs.
+| File | Replaced by | Done in |
 | --- | --- | --- |
 | `export/dialog.tsx` | `wiring/hosts/export-flow-host.tsx` | 10.4. `export/machine.ts`, `errors.ts`, `prepare.ts` stay. |
-| `panels/EffectsPanel.tsx` | Effects Library host (picker) plus the Studio Editor inspector effect stack | 10.5 for the picker; the effect-stack editing stays hand-written until the revised Studio Editor covers it |
-| `panels/SettingsPanel.tsx`, `panels/LayersPanel.tsx`, `preview/Transport.tsx`, `shell/StudioView.tsx`, most of `shell/layout.css` | Studio Editor host | 10.3, only if the owner resolves D-1 and D-2 |
-Stay: `preview/PreviewCanvas.tsx`, `preview/draw.ts`, `timeline/Timeline.tsx`,
-`playback/*`, `model/*`, `io/*`, `fonts/*`, `tokens.css`, and, while DEFERRED,
-`landing/*`. If the Studio Editor stays unwired, StudioView and its panels also stay,
-and the group ends with one hand-written route (the editor) by owner decision. Also
-removed or changed when the editor is wired: the dc-harness (Deviation 21 says it is
-deleted when a real route renders the generated screens).
-
+| `panels/EffectsPanel.tsx` | Effects Library host (picker) plus the Studio Editor inspector effect stack | 10.5 (picker), 10.3 (stack) |
+| `panels/SettingsPanel.tsx`, `panels/LayersPanel.tsx`, `preview/Transport.tsx` | Studio Editor host | 10.3, deleted in 10.6 |
+| the `shell/layout.css` rules for the old columns, panels, fields, layers, effects, transport, dialog and element controls | the generated screens | 10.6 |
+| `rulerTicks`, `rulerLabels`, `percent`, `timeOfFrame`, `layerById`, `activeLayers`, `snapToFrame`, `DEFAULT_FORMAT`, `CATALOG_IDS`, `BindingKeys` | nothing (unreferenced) | 10.6 |
+Kept: `shell/StudioView.tsx` (a thin mount of the editor host), `preview/PreviewCanvas.tsx`,
+`preview/draw.ts`, `timeline/Timeline.tsx`, `playback/*`, `model/*`, `io/*`, `fonts/*`,
+`tokens.css`, `landing/Landing.tsx` (wraps the generated landing page) and the dc-harness
+(still used by the CSP and layer specs and the screens page; Deviation 21 is not applied).
 #### Tests for Requirement 19
 | Clause | Test | Kind | What it checks |
 | --- | --- | --- | --- |
@@ -2304,6 +2303,30 @@ deleted when a real route renders the generated screens).
 | 19.5 | CSP spec | e2e | at most the one Zod probe |
 Properties 13 and 14 are in "Correctness Properties".
 
+
+#### Group 10 as built
+- **Cascade layers.** `ds.css` is wrapped in `@layer ds`; each generated screen puts its helmet CSS in
+  `@layer screen`; converted inline-style classes and the hand-written CSS stay unlayered. The layer
+  order (`@layer ds, screen;`, declared once at the top of `ds.css`) replaces the converter's old
+  helmet-specificity guard. An inline `!important` in a design file fails the converter closed. Known
+  difference: a later layer beats an earlier one whatever the specificity (the check for higher-specificity
+  DS rules found none).
+- **Native form elements.** The converter accepts `<select>`, `<option>` and `<textarea>`, boolean
+  attributes on their valid hosts, `min`/`max`/`step` on `<input>`, and an `aria-label` that mixes text
+  with bindings.
+- **Adapters.** Studio Editor 71 bindings, Export Flow 39, Effects Library 54, none inert. Effect params
+  take their kind from the engine schema (`z.number`, `z.enum`, and the easing union's named values); a typed
+  value is validated with the effect's own schema and a rejected one commits nothing (Property 15).
+- **Adapter and design differences (listed, not redesigned).** Fonts and weights are the bundled ones
+  (Noto Sans, Noto Sans Tamil; Regular and Bold). The size presets add HD 1280 x 720 and Custom. Anchor X
+  and Y show a fraction of the canvas (4 decimals) while the project stores pixels. The model's limits apply
+  and the design's `min`/`max` are hints. The MP4 bitrate is fixed at 8 Mbit/s; the design has no control.
+- **Export.** The flow picks a format, then a size (0.5x, 1x, 2x), then exports; Cancel returns to Options.
+  MP4 has no transparency: a transparent project is filled with black, and the Options and Done steps say so
+  (`supportsAlpha`, derived from the format cards). WebM with alpha stays deferred.
+- **Unwired by decision.** Landing Page and Error States are generated and tested but not wired to live data.
+- **Specs.** The 10.1 specs were re-pointed to the generated editor's accessible names on locator-only rules
+  with the owner's approval; the assertion changes and `expect()` tables are in the commit messages.
 
 ## Correctness Properties
 

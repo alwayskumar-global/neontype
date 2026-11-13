@@ -10,7 +10,8 @@ canvas, and export — no backend, no accounts, and no network calls at runtime.
 - Text layers with per-layer font (Noto Sans / Noto Sans Tamil, 400/700), size,
   colour, alignment, position, and numeric start/duration.
 - 12 preset text-animation effects with editable parameters and granularity.
-- Export to MP4 (H.264 + optional AAC), a PNG sequence (ZIP), and GIF.
+- Export to MP4 (H.264 + optional AAC), a PNG sequence (ZIP), GIF and animated WebP (WebM with
+  alpha is deferred).
 - Save/load projects as validated JSON.
 
 ## Prerequisites
@@ -33,8 +34,8 @@ pnpm --filter @studio/app build                   # static build to apps/studio/
 
 ```
 packages/engine/      Pure render core: computeFrameState / drawFrame / renderFrame; Zod Project schema; 12 preset effects.
-packages/exporters/   Client-side MP4 / PNG-sequence / GIF export + capability detection.
-apps/studio/          The studio app (Vite + React): preview, panels, export dialog, save/load.
+packages/exporters/   Client-side MP4 / PNG-sequence / GIF / WebP export + capability detection.
+apps/studio/          The studio app (Vite + React): the generated editor, effects library and export flow, save/load.
 docs/                 Dependency log and project docs (incl. docs/kiro-usage.md).
 .kiro/                Specs, steering, and hooks used to build the project.
 ```
@@ -45,8 +46,10 @@ docs/                 Dependency log and project docs (incl. docs/kiro-usage.md)
 `pnpm --filter @studio/app dc:convert`, turns the five `.dc.html` screens into typed React
 components and scoped CSS under `apps/studio/src/generated/` (committed, never hand-edited), using
 the ported design-system components in `apps/studio/src/ds/`. It has no dependencies, is
-deterministic, and its output is CSP-clean. See `apps/studio/README.md`. Generated screens are not
-yet wired into the live studio.
+deterministic, and its output is CSP-clean. See `apps/studio/README.md`. The live studio renders
+three generated screens through hand-written hosts: the Studio Editor, the Effects Library (the
+effect picker) and the Export Flow. The Landing Page and Error States are generated and tested but
+not wired to live data, by decision.
 
 ## Export formats
 Supported: **MP4** (H.264, optional AAC), **PNG sequence** (ZIP of stored PNGs),

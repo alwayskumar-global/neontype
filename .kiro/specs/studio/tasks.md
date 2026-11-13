@@ -305,6 +305,7 @@ reported). They are planning estimates, not budgets.
     - Commit: `docs(studio): repository readiness and final checkpoint`
 
 - [ ] 8. Group 8: Reserve (only if needed)
+    - Not used.
     - Reserved for overflow from G1–G7 (e.g. a design-fidelity polish pass or a Playwright flake-stabilisation pass). Not planned work; opened only with owner approval.
 
 - [x] 9. Group 9: Design-source converter and design-system port  *(est. ~35 credits)*
@@ -393,7 +394,7 @@ reported). They are planning estimates, not budgets.
     - **Completion:** all commands exit 0; parity is exactly 0 at the three times on both routes; no change under `packages/`; `tokens.css` unchanged; `dist/` scan clean.
     - Commit: `feat(studio): dc converter and design-system port`
 
-- [ ] 10. Group 10: Wire the generated screens into the live studio  *(est. ~90 credits, range 65 to 120; excludes the owner's design revision)*
+- [x] 10. Group 10: Wire the generated screens into the live studio  *(est. ~90 credits, range 65 to 120; excludes the owner's design revision)*
   - **Scope.** Requirement 19 and the design section "Generated-screen wiring". WIRE: Effects Library now; Export Flow and the Studio Editor are BLOCKED until the owner's design revision lands in `design/` (gaps D-1 to D-4). DEFERRED by owner decision: Landing Page and Error States. Exporters Groups 6 and 7 are NOT part of this group.
   - **Stop-and-wait rules for this group.** STOP and ask the owner if:
     - (a) at the start of 10.3 any of gaps D-1, D-2, D-3 is unresolved and unwaived (Requirement 19.9);
@@ -451,7 +452,7 @@ reported). They are planning estimates, not budgets.
     - **Covers:** Requirement 19.5
     - **Completion:** the inverted tests pass and fail when the import and the screens are removed (mutation check, then restore).
     - **Outcome.** Done in the same commit as 10.5 (wiring the Effects Library pulls `ds.css` and the six DS fonts into the default dist). The harness assertions are kept.
-  - [ ] 10.8 Checkpoint — Group 10
+  - [x] 10.8 Checkpoint — Group 10
     - Run `pnpm --filter @studio/app exec tsc --noEmit`, `pnpm --filter @studio/app lint`, `pnpm --filter @studio/app exec vitest run`, the FULL studio Playwright suite including every 10.1 spec unchanged, the CSP spec, `pnpm --filter @studio/app run test:dc`, and root `pnpm test`. Confirm export parity is exactly 0 at t = 1, 3, 5.5 on the default route, `git diff --stat -- packages/` is empty, `src/generated` has no hand edit, and the Task 7.2 no-drift check passes.
     - **Closes when done:** task 7.2 (then Group 7).
     - **Completion:** all commands exit 0; the no-drift check passes.

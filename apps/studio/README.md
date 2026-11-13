@@ -40,7 +40,7 @@ Reads the five screens listed in `scripts/dc-convert.config.json` and writes
 | `{{ a.b }}` | a safe lookup in the component's `data` (a missing path is `undefined`, never an error) |
 | `<sc-if>` / `<sc-for>` | a conditional / a list with its own scope and `$index` |
 | `<x-import ...Button>` | the ported design-system component (12 are supported) |
-| `<helmet><style>` | CSS scoped under `:where(.dc-<slug>)`; `html`/`body`/`:root` become the root; keyframes are prefixed |
+| `<helmet><style>` | CSS scoped under `:where(.dc-<slug>)` inside one `@layer screen` block; `html`/`body`/`:root` become the root; keyframes are prefixed |
 | `<dc-import name=...>` | a `backdrop` prop slot |
 | support runtime, the data `<script>`, the bundle `<script>` | dropped, never executed or embedded |
 
@@ -49,8 +49,22 @@ guesses. The generated output never contains a `style=` attribute or JSX `style`
 `dangerouslySetInnerHTML`, a `<script>` or `<style>` element, a remote URL, or an import from
 `design/`. Per-file rules (`omitIf`, `replaceText`, `forbid`) live in `dc-convert.config.json`.
 
-A generated component is a pure function of `{ data, backdrop? }`. **Wiring a generated screen into
-the live studio (routes, state) is out of scope and needs its own spec.**
+A generated component is a pure function of `{ data, backdrop? }`.
+## The live UI (`src/wiring/`)
+Three generated screens are wired. Each has one pure adapter (`wiring/<slug>.ts`: store state and
+dispatchers in, the screen's `data` out; every binding backed, none inert) and a host in
+`wiring/hosts/` that owns what the screen cannot (the live canvas and timeline, the export machine,
+focus handling, Space/Home/End shortcuts).
+- **Studio Editor** (`studio-editor-host.tsx`): project settings, layers, inspector with typed and
+  enum effect params (validated against the effect's schema), transport, save/open, undo.
+- **Effects Library** (`effects-library-host.tsx`): the effect picker, opened by Add effect.
+- **Export Flow** (`export-flow-host.tsx`): choose a format (MP4, PNG sequence, GIF, animated WebP;
+  WebM with alpha is deferred), choose a size (0.5x, 1x, 2x), export, download. MP4 has no
+  transparency, so a transparent project is filled with black and the flow says so. The MP4
+  bitrate is fixed at 8 Mbit/s.
+The Landing Page and Error States are generated but not wired to live data, by decision.
+Cascade layers: `ds.css` is in `@layer ds`, each screen's helmet CSS in `@layer screen`, converted
+inline-style classes and the hand-written CSS are unlayered.
 
 ## Design-system port (`src/ds/`)
 
@@ -72,7 +86,7 @@ change canvas and export glyphs. A test asserts `ds.css` and `src/fonts/fonts.cs
 2. **Scoped tokens.** `ds.css` and `generated/` carry the design's literal values, a documented
    exception to "no hard-coded values" that covers `generated/` and `ds/` only.
 3. **Config rules:** Landing links become `href="#studio"` with an optional `onOpenStudio` handler
-   from the data; the Export Flow "Review bar" is omitted; Error States icon colours come from a
+   from the data; Error States icon colours come from a
    class per variant (`data-variant`).
 4. **Known visible differences:** `dc-props` (a full-width hint) is not applied; whitespace-only text
    between inline siblings is dropped; `html`/`body` rules apply to the screen root, so a host must
