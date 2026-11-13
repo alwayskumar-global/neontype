@@ -2332,6 +2332,9 @@ Properties 13, 14 and 15 are in "Correctness Properties".
   `backdrop-filter` blur (the owner removed it from the design after measuring: with looping previews it cost
   about 100% of a core in headless software rendering, about 48% total CPU without it while the library is open,
   0% once it is closed, 7.5% before the loops existed). The footer reads "Previews loop automatically".
+  A hovered or keyboard-focused card plays its own preview at 2.5x (its badge says so): the host sets
+  `playbackRate` on that card's animations through the Web Animations API (no inline style, no new keyframes) and
+  resets it on leave or blur; with reduced motion there are no animations, so it does nothing.
 - **Apply closes the library.** A successful apply (a new effect, or one already on the layer) closes the
   dialog through the same path as Esc, returns focus to Add effect, scrolls the new effect into view in
   "Effects on this layer", and announces "Applied X to \u201clayer\u201d" in a polite live region in the editor host. The

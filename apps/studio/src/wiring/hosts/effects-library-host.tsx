@@ -17,6 +17,8 @@ import type { Category } from "../tables.js";
 import { effectThumb } from "./effect-thumb.js";
 import "./effects-library-host.css";
 const TOAST_MS = 6000;
+/** Playback rate of the hovered or focused card's preview (the badge on the card says 2.5x). */
+const FAST_RATE = 2.5;
 const INITIAL_VIEW: EffectsLibraryView = {
   open: true, query: "", grans: [], cats: [], sort: "catalog", sel: null, hover: null, focusId: null, staged: {}, toast: null,
 };
@@ -123,6 +125,52 @@ export function EffectsLibraryHost({ store, onClose, onApplied }: { store: Store
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
+  // The hovered or keyboard-focused card plays its preview at 2.5x (the badge on the card says so); the others stay at
+  // 1x. Web Animations API on that card's own animations only: no inline style, no new keyframes. With reduced motion
+  // there are no animations, so this does nothing. Closing the library removes the cards, so a reopened one starts at 1x.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    let hover: Element | null = null;
+    let focus: Element | null = null;
+    const cardOf = (target: EventTarget | null): Element | null => (target instanceof Element ? target.closest(".ui-preset") : null);
+    const apply = (): void => {
+      for (const card of Array.from(root.querySelectorAll(".ui-preset"))) {
+        const rate = card === hover || card === focus ? FAST_RATE : 1;
+        for (const animation of card.getAnimations({ subtree: true })) if (animation.playbackRate !== rate) animation.playbackRate = rate;
+      }
+    };
+    const onOver = (e: Event): void => {
+      hover = cardOf(e.target);
+      apply();
+    };
+    const onLeave = (): void => {
+      hover = null;
+      apply();
+    };
+    const onFocusIn = (e: Event): void => {
+      focus = cardOf(e.target);
+      apply();
+    };
+    const onFocusOut = (e: FocusEvent): void => {
+      if (cardOf(e.relatedTarget) === focus && focus !== null) return;
+      focus = null;
+      apply();
+    };
+    root.addEventListener("pointerover", onOver);
+    root.addEventListener("pointerleave", onLeave);
+    root.addEventListener("focusin", onFocusIn);
+    root.addEventListener("focusout", onFocusOut);
+    return () => {
+      root.removeEventListener("pointerover", onOver);
+      root.removeEventListener("pointerleave", onLeave);
+      root.removeEventListener("focusin", onFocusIn);
+      root.removeEventListener("focusout", onFocusOut);
+      hover = null;
+      focus = null;
+      apply();
+    };
+  }, []);
   // The "Applied" toast clears itself.
   useEffect(() => {
     if (view.toast === null) return;

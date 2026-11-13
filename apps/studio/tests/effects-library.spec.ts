@@ -136,3 +136,60 @@ test("with reduced motion every preview is a static frame", async ({ page }) => 
     expect(samples[0]!.endsWith("|none"), `${name} has no animation`).toBe(true);
   }
 });
+/** The playback rates of every animation inside one card's preview. */
+async function rates(page: Page, effectName: string): Promise<number[]> {
+  return await cards(page).filter({ hasText: effectName }).evaluate((card) => card.getAnimations({ subtree: true }).map((a) => a.playbackRate));
+}
+test("hovering a card plays its preview at 2.5x and leaves the other cards at 1x", async ({ page }) => {
+  await open(page);
+  await page.mouse.move(2, 2);
+  expect((await rates(page, "Fade Slide")).length, "the preview is animating").toBeGreaterThan(0);
+  await cards(page).filter({ hasText: "Fade Slide" }).hover();
+  const hot = await rates(page, "Fade Slide");
+  expect(hot.every((r) => r === 2.5), `hovered card rates: ${hot.join(",")}`).toBe(true);
+  const other = await rates(page, "Wave");
+  expect(other.length).toBeGreaterThan(0);
+  expect(other.every((r) => r === 1), `other card rates: ${other.join(",")}`).toBe(true);
+});
+test("leaving a card resets its preview to 1x", async ({ page }) => {
+  await open(page);
+  await cards(page).filter({ hasText: "Fade Slide" }).hover();
+  expect((await rates(page, "Fade Slide")).every((r) => r === 2.5)).toBe(true);
+  await page.mouse.move(2, 2);
+  const after = await rates(page, "Fade Slide");
+  expect(after.length).toBeGreaterThan(0);
+  expect(after.every((r) => r === 1), `rates after leaving: ${after.join(",")}`).toBe(true);
+});
+test("keyboard focus plays a card's preview at 2.5x and blur resets it", async ({ page }) => {
+  await open(page);
+  await page.mouse.move(2, 2);
+  await cards(page).filter({ hasText: "Blur In" }).focus();
+  const focused = await rates(page, "Blur In");
+  expect(focused.every((r) => r === 2.5), `focused card rates: ${focused.join(",")}`).toBe(true);
+  expect((await rates(page, "Wave")).every((r) => r === 1)).toBe(true);
+  await library(page).getByRole("searchbox", { name: "Search effects" }).focus();
+  const blurred = await rates(page, "Blur In");
+  expect(blurred.every((r) => r === 1), `rates after blur: ${blurred.join(",")}`).toBe(true);
+});
+test("a reopened library starts at 1x", async ({ page }) => {
+  await open(page);
+  await cards(page).filter({ hasText: "Fade Slide" }).hover();
+  await page.keyboard.press("Escape");
+  await expect(library(page)).toBeHidden();
+  await page.mouse.move(2, 2);
+  await openButton(page).click();
+  const reopened = await rates(page, "Fade Slide");
+  expect(reopened.length).toBeGreaterThan(0);
+  expect(reopened.every((r) => r === 1), `rates after reopening: ${reopened.join(",")}`).toBe(true);
+});
+test("with reduced motion, hovering a card throws nothing and there are no animations", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page);
+  await cards(page).filter({ hasText: "Fade Slide" }).hover();
+  await cards(page).filter({ hasText: "Blur In" }).focus();
+  expect(await rates(page, "Fade Slide")).toEqual([]);
+  expect(await rates(page, "Blur In")).toEqual([]);
+  expect(errors).toEqual([]);
+});
