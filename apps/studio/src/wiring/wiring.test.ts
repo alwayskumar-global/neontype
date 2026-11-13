@@ -348,7 +348,7 @@ describe("supportsAlpha and the transparency note", () => {
     return { warn: data["alphaWarn"], text: data["alphaWarnText"] };
   };
   it("warns for MP4 on a transparent project, with the Options text", () => {
-    expect(note(transparent, "mp4")).toEqual({ warn: true, text: "MP4 has no transparency — the background will be filled with the project colour." });
+    expect(note(transparent, "mp4")).toEqual({ warn: true, text: "MP4 has no transparency — the background will be black." });
   });
   it("shows the Done text on the Done step", () => {
     const done = exportRuns().find((r) => r.status === "done")!;

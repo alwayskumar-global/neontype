@@ -192,7 +192,7 @@ export function adaptExportFlow(state: ExportFlowState, d: ExportFlowDispatchers
     dur: durText,
     errCode: errorCode === null ? "" : `ERR_${errorCode.toUpperCase().replace(/-/g, "_")}`,
     alphaWarn,
-    alphaWarnText: step === 4 ? "Exported without transparency." : `${fmtName} has no transparency — the background will be filled with the project colour.`,
+    alphaWarnText: step === 4 ? "Exported without transparency." : `${fmtName} has no transparency — the background will be black.`,
     estimate: `${total} frames · ${fmtName}`,
     exportLabel: "Export",
     exportSteps,

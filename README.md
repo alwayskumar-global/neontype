@@ -57,7 +57,8 @@ Supported: **MP4** (H.264, optional AAC), **PNG sequence** (ZIP of stored PNGs),
 The export dialog is the generated Export Flow: choose a format, choose a size
 (0.5x, 1x or 2x of the project, same aspect), export, then download. Formats are gated
 by runtime capability detection, and a format the browser cannot encode shows its reason.
-The MP4 video bitrate is fixed at 8 Mbit/s; the design has no control for it.
+The MP4 video bitrate is fixed at 8 Mbit/s (the design has no control for it), and MP4 has
+no transparency: a transparent project is filled with black.
 ## Built with Kiro
 
 This project was built spec-first in Kiro:
