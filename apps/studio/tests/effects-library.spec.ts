@@ -45,27 +45,41 @@ test("search and category filters narrow the cards; an empty result says so", as
   await expect(library(page).getByText(/No effects match/)).toBeVisible();
   await expect(cards(page)).toHaveCount(0);
 });
-test("applying adds the effect with the staged split, as one undo step", async ({ page }) => {
+test("applying adds the effect with the staged split, closes the dialog, and focuses Add effect, as one undo step", async ({ page }) => {
   await open(page);
   const before = await effectRows(page).count();
   await cards(page).filter({ hasText: "Blur In" }).click();
   await library(page).getByRole("radiogroup", { name: "Split by" }).getByRole("radio", { name: "Word" }).click();
   await library(page).getByRole("button", { name: "Apply to selected layer" }).click();
-  await expect(library(page).getByText(/Applied Blur In/)).toBeVisible();
-  await page.keyboard.press("Escape");
+  await expect(library(page)).toBeHidden();
+  await expect(openButton(page)).toBeFocused();
   await expect(effectRows(page)).toHaveCount(before + 1);
   await expect(effectRows(page).last()).toHaveValue("word");
+  await expect(effectRows(page).last()).toBeInViewport();
+  await expect(page.getByRole("status").filter({ hasText: /Applied Blur In/ })).toBeAttached();
   // One Ctrl/Cmd+Z removes it again (one gesture, one undo step).
   await page.keyboard.press("ControlOrMeta+z");
   await expect(effectRows(page)).toHaveCount(before);
 });
-test("the toast's Undo removes the effect it just added", async ({ page }) => {
+test("a new effect is scrolled into view in Effects on this layer", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await gotoStudio(page, false);
+  for (const name of ["Wave", "Spotlight", "Glitch Reveal"]) {
+    await openButton(page).click();
+    await cards(page).filter({ hasText: name }).click();
+    await library(page).getByRole("button", { name: "Apply to selected layer" }).click();
+    await expect(library(page)).toBeHidden();
+    await expect(effectRows(page).last()).toBeInViewport();
+  }
+});
+test("after an apply, Ctrl/Cmd+Z undoes it from the editor", async ({ page }) => {
   await open(page);
   const before = await effectRows(page).count();
   await cards(page).filter({ hasText: "Wave" }).click();
   await library(page).getByRole("button", { name: "Apply to selected layer" }).click();
-  await library(page).getByRole("button", { name: "Undo" }).click();
-  await page.keyboard.press("Escape");
+  await expect(library(page)).toBeHidden();
+  await expect(effectRows(page)).toHaveCount(before + 1);
+  await page.keyboard.press("ControlOrMeta+z");
   await expect(effectRows(page)).toHaveCount(before);
 });
 test("Ctrl/Cmd+Z does nothing while the library is open", async ({ page }) => {
@@ -74,6 +88,8 @@ test("Ctrl/Cmd+Z does nothing while the library is open", async ({ page }) => {
   await openButton(page).click();
   await cards(page).filter({ hasText: "Wave" }).click();
   await library(page).getByRole("button", { name: "Apply to selected layer" }).click();
+  await expect(library(page)).toBeHidden();
+  await openButton(page).click();
   await library(page).getByRole("option", { name: /^Wave,/ }).focus();
   await page.keyboard.press("ControlOrMeta+z");
   await page.keyboard.press("Escape");
@@ -83,11 +99,12 @@ test("applying an effect the layer already has updates it instead of adding a se
   await open(page);
   const before = await effectRows(page).count();
   for (const split of ["Word", "Line"]) {
+    if (!(await library(page).isVisible())) await openButton(page).click();
     await cards(page).filter({ hasText: "Wave" }).click();
     await library(page).getByRole("radiogroup", { name: "Split by" }).getByRole("radio", { name: split }).click();
     await library(page).getByRole("button", { name: "Apply to selected layer" }).click();
+    await expect(library(page)).toBeHidden();
   }
-  await page.keyboard.press("Escape");
   await expect(effectRows(page)).toHaveCount(before + 1);
   await expect(effectRows(page).last()).toHaveValue("line");
 });

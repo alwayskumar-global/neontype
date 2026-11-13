@@ -50,7 +50,20 @@ export function applyStagedEffect(store: Store, effectId: string, view: EffectsL
   }
   return store.commitGesture();
 }
-export function EffectsLibraryHost({ store, onClose }: { store: Store; onClose: () => void }) {
+/** The result of an apply: the effect was added or updated, nothing needed changing, or it could not be applied. */
+export type ApplyResult = "applied" | "unchanged" | "failed";
+/** Applies the staged effect and says what happened. "unchanged" is an effect already on the layer with those values. */
+export function applyResult(store: Store, effectId: string, view: EffectsLibraryView): ApplyResult {
+  const layerId = store.getState().ui.selectedLayerId;
+  const had = layerId !== null && (store.getState().project.layers.find((l) => l.id === layerId)?.effectInstances.some((e) => e.effectId === effectId) ?? false);
+  if (applyStagedEffect(store, effectId, view)) return "applied";
+  return had ? "unchanged" : "failed";
+}
+/** What the library does with an apply result: close (the effect is on the layer), or stay open with a message. */
+export function applyOutcome(result: ApplyResult): { close: boolean; error: string | null } {
+  return result === "failed" ? { close: false, error: "Couldn\u2019t apply this effect. Select a layer and try again." } : { close: true, error: null };
+}
+export function EffectsLibraryHost({ store, onClose, onApplied }: { store: Store; onClose: () => void; onApplied?: (message: string) => void }) {
   const project = useStoreState(store, (s) => s.project);
   const selectedLayerId = useStoreState(store, (s) => s.ui.selectedLayerId);
   const [view, setView] = useState<EffectsLibraryView>(INITIAL_VIEW);
@@ -151,14 +164,22 @@ export function EffectsLibraryHost({ store, onClose }: { store: Store; onClose: 
     toggleCat: (c: Category) => setView((v) => ({ ...v, cats: toggle(v.cats, c) })),
     clearFilters: () => patch({ query: "", grans: [], cats: [] }),
     setSort: (sort) => patch({ sort }),
-    select: (id) => patch({ sel: id }),
+    select: (id) => patch({ sel: id, error: null }),
     setHover: (id) => patch({ hover: id }),
     setFocus: (id) => patch({ focusId: id }),
     stageSplit: (id, split) => setView((v) => ({ ...v, staged: { ...v.staged, [id]: { ...v.staged[id], split } } })),
     stageEase: (id, ease) => setView((v) => ({ ...v, staged: { ...v.staged, [id]: { ...v.staged[id], ease } } })),
     stageParam: (id, key, value) => setView((v) => ({ ...v, staged: { ...v.staged, [id]: { ...v.staged[id], params: { ...v.staged[id]?.params, [key]: value } } } })),
     applyEffect: (id) => {
-      if (applyStagedEffect(store, id, viewRef.current)) patch({ toast: { id }, sel: id });
+      const outcome = applyOutcome(applyResult(store, id, viewRef.current));
+      if (!outcome.close) {
+        patch({ error: outcome.error, sel: id });
+        return;
+      }
+      const name = presetCatalog.find((p) => p.id === id)?.displayName ?? id;
+      const layer = store.getState().project.layers.find((l) => l.id === store.getState().ui.selectedLayerId);
+      onApplied?.(`Applied ${name} to \u201c${layer?.text.split("\n")[0] ?? "the layer"}\u201d.`);
+      onClose();
     },
     undo: () => {
       store.undo();

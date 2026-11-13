@@ -2331,6 +2331,11 @@ Properties 13, 14 and 15 are in "Correctness Properties".
   no JS clock; under `prefers-reduced-motion: reduce` the text shows its final frame. The generated overlay's
   `backdrop-filter` blur is dropped in the host: with looping previews it cost about 100% of a core in headless
   software rendering (about 48% total CPU without it, 7.5% before the loops existed).
+- **Apply closes the library.** A successful apply (a new effect, or one already on the layer) closes the
+  dialog through the same path as Esc, returns focus to Add effect, scrolls the new effect into view in
+  "Effects on this layer", and announces "Applied X to \u201clayer\u201d" in a polite live region in the editor host. The
+  generated in-dialog toast is therefore unreachable and its Undo is gone (Ctrl/Cmd+Z undoes the apply in one
+  step). A failed apply keeps the dialog open and shows a message in the apply help line.
 - **Reviewed exception.** `packages/engine/src/compute.bench.ts` has the benchmark sample string "Flash-era motion title studio". It names a technology era, not the legacy product, never ships, and the engine is locked, so it stays.
 - **Specs.** The 10.1 specs were re-pointed to the generated editor's accessible names on locator-only rules
   with the owner's approval; the assertion changes and `expect()` tables are in the commit messages.

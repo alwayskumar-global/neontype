@@ -27,6 +27,8 @@ export interface EffectsLibraryView {
   focusId: string | null;
   staged: Record<string, Staged>;
   toast: { id: string } | null;
+  /** A message for an apply that failed, shown in place of the help line; the dialog stays open. */
+  error?: string | null;
 }
 export interface EffectsLibraryState {
   project: Project;
@@ -206,7 +208,7 @@ export function adaptEffectsLibrary(state: EffectsLibraryState, d: EffectsLibrar
     applySel: () => {
       if (selEntry) d.applyEffect(selEntry.id);
     },
-    applyHelp: selEntry
+    applyHelp: view.error ? view.error : selEntry
       ? onLayer(selEntry.id)
         ? `Already on “${layerText}”. Applying updates its parameters.`
         : `Adds ${selEntry.displayName} to “${layerText}”.`

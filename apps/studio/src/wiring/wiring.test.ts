@@ -11,6 +11,8 @@ import { EFFECTS_LIBRARY_BINDINGS } from "../generated/effects-library/EffectsLi
 import { EXPORT_FLOW_BINDINGS } from "../generated/export-flow/ExportFlow.js";
 import { STUDIO_EDITOR_BINDINGS } from "../generated/studio-editor/StudioEditor.js";
 import { adaptEffectsLibrary, INERT_BINDINGS as LIB_INERT } from "./effects-library.js";
+import { applyOutcome, applyResult } from "./hosts/effects-library-host.js";
+import { Store } from "../shell/store.js";
 import { adaptExportFlow, INERT_BINDINGS as EXP_INERT, supportsAlpha, TRY_NEXT, type ExportFormat } from "./export-flow.js";
 import { ALL_ERROR_CODES, EXPORT_VIEWS, effectsSpy, exportRuns, exportSpy, exportState, libraryState } from "./fixtures.js";
 import { adaptStudioEditor, INERT_BINDINGS as ED_INERT, SIZE_PRESETS } from "./studio-editor.js";
@@ -360,5 +362,28 @@ describe("supportsAlpha and the transparency note", () => {
     for (const id of ["png", "gif", "webp"]) expect(note(transparent, id, idle).warn, id).toBe(false);
     expect(note(projects[0]!, "mp4", idle).warn).toBe(false);
     expect(note(transparent, "mp4", idle).warn).toBe(true);
+  });
+});
+describe("the Effects Library apply outcome", () => {
+  it("closes after an applied or unchanged effect and stays open with a message after a failure", () => {
+    expect(applyOutcome("applied")).toEqual({ close: true, error: null });
+    expect(applyOutcome("unchanged")).toEqual({ close: true, error: null });
+    const failed = applyOutcome("failed");
+    expect(failed.close).toBe(false);
+    expect(failed.error).toMatch(/apply/);
+  });
+  const view = { open: true, query: "", grans: [], cats: [], sort: "catalog", sel: null, hover: null, focusId: null, staged: {}, toast: null } as const;
+  it("applyResult: applied for a new effect, unchanged for the same effect again, failed with no layer selected", () => {
+    const store = new Store(newProject());
+    expect(applyResult(store, "wave", { ...view, grans: [], cats: [] })).toBe("applied");
+    expect(applyResult(store, "wave", { ...view, grans: [], cats: [] })).toBe("unchanged");
+    store.setUi({ selectedLayerId: null });
+    expect(applyResult(store, "typewriter", { ...view, grans: [], cats: [] })).toBe("failed");
+    expect(store.canUndo()).toBe(true);
+  });
+  it("a failed apply shows the message in the help line", () => {
+    const s = effectsSpy();
+    const { data } = adaptEffectsLibrary(libraryState(projects[0]!, { sel: "wave", error: "nope" }), s.d);
+    expect(data["applyHelp"]).toBe("nope");
   });
 });

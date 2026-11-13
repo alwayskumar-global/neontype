@@ -40,6 +40,17 @@ export function StudioEditorHost({ store, onBack }: { store: Store; onBack: () =
   const [exportOpen, setExportOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Spoken (polite live region) when the Effects Library applies an effect; `tick` re-runs the scroll to the new effect.
+  const [applied, setApplied] = useState<{ message: string; tick: number }>({ message: "", tick: 0 });
+  useEffect(() => {
+    if (applied.tick === 0) return;
+    // The new effect is the last one in "Effects on this layer": bring it into view in the inspector.
+    const id = requestAnimationFrame(() => {
+      const removers = document.querySelectorAll<HTMLElement>('[aria-label^="Remove "]');
+      removers[removers.length - 1]?.scrollIntoView({ block: "nearest" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [applied.tick]);
   const exportOpenRef = useRef(false);
   exportOpenRef.current = exportOpen;
   // Ctrl/Cmd+Z: undo one step (cancels an open gesture first). Ignored in text fields and while the export dialog is open.
@@ -208,7 +219,16 @@ export function StudioEditorHost({ store, onBack }: { store: Store; onBack: () =
           {loadError}
         </p>
       )}
-      {libraryOpen && <EffectsLibraryHost store={store} onClose={() => setLibraryOpen(false)} />}
+      <p role="status" aria-live="polite" className="visually-hidden">
+        {applied.message}
+      </p>
+      {libraryOpen && (
+        <EffectsLibraryHost
+          store={store}
+          onClose={() => setLibraryOpen(false)}
+          onApplied={(message) => setApplied((a) => ({ message, tick: a.tick + 1 }))}
+        />
+      )}
       {exportOpen && <ExportFlowHost store={store} onClose={() => setExportOpen(false)} />}
     </>
   );
