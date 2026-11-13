@@ -411,9 +411,10 @@ file to share.
 2. THE dialog SHALL call `detectCapabilities` and SHALL disable (with a reason) a
    format reported `unsupported`, enabling only `supported`/`unknown` formats.
    *(unit, Playwright)*
-3. THE dialog SHALL expose the per-format options the exporter accepts (e.g. MP4
-   `videoBitrate` and `backgroundFallback`; output size), seeded from the project.
-   *(unit, Playwright)*
+3. THE dialog SHALL expose, per export, the format and the output size (0.5x, 1x or
+   2x of the project, same aspect), seeded from the project. THE MP4 `videoBitrate`
+   SHALL be fixed at 8 Mbit/s and SHALL NOT be shown. *(unit, Playwright)*
+   *Revised in Group 10 (design revision): the revised Export Flow has no bitrate control and offers sizes as scales of the project.*
 4. WHILE an export runs THE dialog SHALL show a progress bar driven by the
    exporter `onProgress` fraction. *(Playwright)*
 5. WHEN the user cancels THE dialog SHALL abort via the `AbortSignal`, and the
@@ -423,9 +424,14 @@ file to share.
    exception. *(unit, property)*
 7. WHEN the export succeeds THE dialog SHALL offer the produced file for download
    using the exporter-provided `fileName`. *(Playwright)*
-8. WHEN the project background is `transparent` AND the target is MP4 THE dialog
-   SHALL show the `mp4-no-transparency` note (surfaced from the export summary).
-   *(unit, Playwright)*
+8. WHEN the project background is `transparent` AND the chosen format cannot carry
+   alpha (`supportsAlpha(format)` is false; MP4 only) THE dialog SHALL show a
+   no-transparency note on the Options step before export ("... the background will
+   be black.") and on the Done step after it ("Exported without transparency."). THE
+   note SHALL be derived from `supportsAlpha(format)` and the project background, not
+   from the export summary, and SHALL NOT show for a format that keeps alpha (PNG
+   sequence, GIF, WebP). *(unit, Playwright)*
+   *Revised in Group 10 (design revision): the revised Export Flow shows the note itself on two steps, so the adapter derives it from the format and the project.*
 9. THE export SHALL run off the main thread when the exporter uses a worker, and
    the dialog SHALL remain responsive (cancel works) during the export. *(Playwright)*
 
@@ -917,20 +923,23 @@ design while rendering, export, and schema logic stay where they are today.
 
    | Live route | Generated screen | Decision | Why |
    | --- | --- | --- | --- |
-   | Editor | Studio Editor | WIRE, gated by criterion 9 (blocked: awaiting the owner's design revision) | 38 of its 57 interactive elements have no bound handler, it has no slot for the canvas or the timeline, and 21 of its 54 bindings are inert in v1 |
-   | Export dialog | Export Flow | WIRE (blocked: awaiting the owner's design revision, D-4) | 74 bindings, 27 inert; the inert set is hidden or unreachable (Web embed destination omitted, WebM stays unsupported). Owner decision: Frame rate and Duration are read-only displays and the export step SHALL NOT edit the project; the Loop and Audio rows are removed from the design |
-   | Preset picker | Effects Library | WIRE (task 10.5) | 51 bindings, 1 inert (the large preview); needs a studio-side category table and a param-range table (design gaps D-5, D-6) |
+   | Editor | Studio Editor | WIRE (task 10.3) | 71 bindings, all backed, 0 inert; the live canvas and timeline are hosted in its two slots |
+   | Export dialog | Export Flow | WIRE (task 10.4) | 39 bindings, all backed, 0 inert. Owner decision: Frame rate and Duration are read-only displays and the export step SHALL NOT edit the project |
+   | Preset picker | Effects Library | WIRE (task 10.5) | 54 bindings, all backed, 0 inert; uses a studio-side category table and a param-range table (design gaps D-5, D-6) |
    | Landing | Landing Page | DEFERRED (owner decision: not wired) | its copy and tiles claim Web embed, WebM alpha, and "Works offline", none of which ship; `tests/landing.spec.ts` asserts those words are absent; its hero and gallery are CSS approximations while the live landing draws with the real renderer |
    | Error and empty states | Error States | DEFERRED (owner decision: not wired) | all 8 bindings are inert: no warnings surface exists in the store or UI, and the offline toast would assert an offline mode the app does not have |
-
+   *Revised in Group 10 (design revision): the table now states what was built (the earlier rows described the screens before the owner's revised designs).*
 2. THE app SHALL contain exactly one pure adapter per wired screen at
    `apps/studio/src/wiring/<slug>.ts`, with the signature
    `(state, dispatchers) => DcProps`. THE adapter's data keys SHALL equal that
    screen's exported `*_BINDINGS` list exactly, with no missing and no extra key.
    THE adapter SHALL read only store state, `presetCatalog`, the export error map,
-   and the selectors in `model/selectors.ts`. IT SHALL NOT call `computeFrameState`,
-   `renderFrame`, or any exporter; read the DOM, a clock, or a random source; or use
-   a React hook. *(unit, property)*
+   the selectors in `model/selectors.ts`, and the engine's `builtinRegistry`
+   (read-only, through `paramKinds` and `paramEditIssue`, for param kinds and schema
+   validation). IT SHALL NOT call `computeFrameState`,
+   `renderFrame`, or any exporter; call any engine function that mutates state; read
+   the DOM, a clock, or a random source; or use a React hook. *(unit, property)*
+   *Revised in Group 10 (design revision): typed effect params are validated against the effect's own schema, which needs the engine registry read-only; the purity walk still enforces the rest.*
 3. EVERY binding SHALL be classified in the design as an action (A), selector (S),
    constant (C), host view state (V), or inert in v1 (I), with its source or reason.
    EVERY handler binding SHALL either call one documented store action, gesture

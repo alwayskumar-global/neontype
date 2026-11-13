@@ -291,14 +291,14 @@ reported). They are planning estimates, not budgets.
     - **Completion:** all pass (perf reports numbers).
     - Commit: `feat(studio): accessibility, performance, and CSP verification`
 
-- [ ] 7. Group 7: Repository readiness + final checkpoint  *(est. ~10 credits)*
+- [x] 7. Group 7: Repository readiness + final checkpoint  *(est. ~10 credits)*
   - [x] 7.1 Root README and deploy docs
     - Create/finalize the repository root `README.md` per Requirement 15: product summary (no legacy name/assets); prerequisites (the required Node and the repo's pnpm version); install/dev/test/build commands (incl. the `apps/studio` dev + build commands); workspace layout (`packages/engine`, `packages/exporters`, `apps/studio`, `docs/`, `.kiro/`); a "Built with Kiro" section (specs, steering, hooks, property-based testing); a third-party & disclosure section (planning + visual design produced OUTSIDE Kiro with Claude and Claude Design, all code written in Kiro) linking to `docs/dependencies.md`; and a Vercel static-output deploy section (build command, output dir, the CSP headers via `vercel.json`).
     - Finalize `apps/studio/README.md` (usage + the design-as-reference rule) and verify `docs/dependencies.md` lists the studio deps with exact versions/licences/reasons and the publish dates recorded at install.
     - **Covers:** Requirement 15.1–15.6; Design "Overview"
     - **Completion:** the root README has all six required sections and the deploy section; `docs/dependencies.md` is complete for the studio deps.
 
-  - [ ] 7.2 Final checkpoint and no-drift check
+  - [x] 7.2 Final checkpoint and no-drift check
     - Run root `pnpm test` (whole-workspace typecheck + lint + Vitest) AND the full `apps/studio` Playwright suite. Confirm NO drift: `apps/studio` runtime deps are exactly `@studio/engine`, `@studio/exporters`, `react`, `react-dom` (+ the approved dev deps); no dependency beyond the approved set; no `tsconfig` change outside `apps/studio`; the engine visual goldens are unchanged (no modified files under the engine's visual snapshots).
     - **Covers:** Requirement 9, 10, 11, 12, 13, 14; Design "Testing Strategy"
     - **Completion:** root `pnpm test` exits 0; the full studio Playwright suite passes; the no-drift check passes.

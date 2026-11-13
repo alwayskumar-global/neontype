@@ -668,20 +668,21 @@ idle ──open──▶ configuring ──start──▶ running ──success�
 - **configuring**: the dialog has a `CapabilityReport` from `detectCapabilities()`
   (called once on open). Formats offered are exactly MP4, PNG sequence, GIF, animated WebP
   (Requirement 8.1); a format whose `CapabilityResult.status === "unsupported"`
-  is disabled with its `reason`. Per-format option fields are seeded from the
-  project (MP4: `videoBitrate`, `backgroundFallback`, output size; PNG/GIF: output
-  size).
+  is disabled with its `reason`. As built, the options are the format and the output
+  size (0.5x, 1x, 2x of the project); the MP4 `videoBitrate` is fixed at 8 Mbit/s and
+  `backgroundFallback` is black for a transparent project (Requirement 8.3).
 - **running**: the shell calls the chosen `@studio/exporters` entry
   (`exportMp4`/`exportPngSequence`/`exportGif`) with `{ onProgress, signal }`.
   `onProgress.fraction` drives the progress bar. An `AbortController` is created
   per run; `signal` is passed to the exporter; Cancel calls `controller.abort()`.
 - **done**: holds the `ExportResult` success; the dialog offers the produced
   `file` for download under `result.fileName`. If the project background is
-  `transparent` and the format is MP4, the `mp4-no-transparency` note (read from
-  `result.summary.notes`) is shown (Requirement 8.8).
+  `transparent` and `supportsAlpha(format)` is false (MP4), the adapter's
+  `alphaWarn` shows the no-transparency note on Options and on Done (Requirement 8.8).
 - **failed**: holds the `ExportError`; the dialog shows `errors.ts`'s message for
   that `ErrorCode` (never a raw exception).
-- **cancelled**: reached when the result is the `cancelled` error; no file.
+- **cancelled**: reached when the result is the `cancelled` error; no file. The Export Flow shows no
+  cancelled message: Cancel returns to the Options step with the format and size kept.
 
 **ErrorCode → message map** (`export/errors.ts`) covers ALL 12 values:
 
@@ -2255,7 +2256,7 @@ must pass unchanged after each swap; any needed edit stops the group (rule c).
 | `settings.spec.ts` | canvas presets and custom size within engine bounds, fps and duration inputs, background and transparent, out-of-bound entry rejected with a message and never written |
 | `layers.spec.ts` | add, edit text, delete, reorder (draw order follows list order), per-layer fields, user text rendered as text (no HTML) |
 | `effects.spec.ts` | the picker lists exactly the 12 catalog presets by display name, apply seeds defaults and the first granularity, granularity change, invalid param rejected, remove |
-| `export.spec.ts` (additions) | unsupported formats disabled with a reason, progress advances, the `mp4-no-transparency` note for a transparent project, an ErrorCode shown through the error map |
+| `export.spec.ts` (additions) | unsupported formats disabled with a reason, progress advances to Done, the no-transparency note for a transparent MP4 project and no note for GIF (Requirement 8.8; unit: `supportsAlpha` and `alphaWarn` in `wiring.test.ts`), an ErrorCode shown through the error map, Cancel back to Options, Change settings and Retry export |
 | `a11y.spec.ts` | Playwright ARIA snapshot of each region, focus order through the main controls, focus trap and restore in the export dialog, reduced motion leaves the preview playing |
 | `perf.spec.ts` | the 10 s measurement of Requirement 13 on the 1280x720, 5-layer fixture, reporting mean and p95 |
 | `security.spec.ts` | no `style` attribute and no inline script in the DOM, layer text containing markup creates no element, an oversized or invalid project file is rejected before use |
@@ -2295,13 +2296,13 @@ Kept: `shell/StudioView.tsx` (a thin mount of the editor host), `preview/Preview
 | --- | --- | --- | --- |
 | 19.2 | `wiring/wiring.test.ts` | unit | for each wired screen, `Object.keys(adapt(...).data)` sorted equals the sorted `*_BINDINGS`; no extra, none missing; a deliberately wrong adapter fails the test |
 | 19.2 | `wiring/wiring.test.ts` | unit | static audit: adapters import no `react`, no `computeFrameState`, no `renderFrame`, no exporter, no `document`, `window`, `Date`, `performance`, `Math.random` |
-| 19.3 | `wiring/wiring.test.ts` | unit | with spy dispatchers, every non-inert handler calls its documented dispatcher once; every inert handler is `INERT` and calls none; `INERT_BINDINGS` matches the design table |
+| 19.3 | `wiring/wiring.test.ts` | unit | with spy dispatchers, every non-inert handler calls its documented dispatcher once; every inert handler is `INERT` and calls none; `INERT_BINDINGS` is empty for every adapter (all bindings are backed) |
 | 19.6 | `wiring/tables.test.ts` | unit | category and range tables have one entry per `presetCatalog` id and each range contains the effect's default value; every key matches a real param in the effect's schema |
 | 19.5 | `__tests__/dc/dist-scan.test.ts` | unit (slow) | inverted: default-route dist has `.ds-root`, a `.ui-` selector, and all six DS fonts; the harness dist still does |
 | 19.4 | Playwright, default route | e2e | `__studioExportParity` is 0 at t = 1, 3, 5.5 after the swap |
 | 19.6 | the 10.1 specs | e2e | unchanged after each swap |
 | 19.5 | CSP spec | e2e | at most the one Zod probe |
-Properties 13 and 14 are in "Correctness Properties".
+Properties 13, 14 and 15 are in "Correctness Properties".
 
 
 #### Group 10 as built
@@ -2325,6 +2326,7 @@ Properties 13 and 14 are in "Correctness Properties".
   MP4 has no transparency: a transparent project is filled with black, and the Options and Done steps say so
   (`supportsAlpha`, derived from the format cards). WebM with alpha stays deferred.
 - **Unwired by decision.** Landing Page and Error States are generated and tested but not wired to live data.
+- **Reviewed exception.** `packages/engine/src/compute.bench.ts` has the benchmark sample string "Flash-era motion title studio". It names a technology era, not the legacy product, never ships, and the engine is locked, so it stays.
 - **Specs.** The 10.1 specs were re-pointed to the generated editor's accessible names on locator-only rules
   with the owner's approval; the assertion changes and `expect()` tables are in the commit messages.
 
@@ -2602,7 +2604,7 @@ renders an empty `<svg>`.
 | `undo.spec` | Ctrl/Cmd+Z restores a canvas drag, a nudge, a timeline end-handle drag, and a panel edit, each in one step; Ctrl/Cmd+Z inside a number input does not undo the project; Ctrl/Cmd+Z mid-drag cancels the gesture with no extra step; Escape mid-drag cancels with no step; Ctrl/Cmd+Z while an export is running does nothing; Open/New clears undo | ~5 s |
 | `fonts.spec` | first frame waits for fonts; Tamil glyphs render; not-ready maps to error | ~2 s |
 | `saveload.spec` | download round-trips; open valid replaces project; invalid shows error, no change | ~2 s |
-| `export.spec` | dialog offers MP4/PNG/GIF only; capability gating; progress; cancel→cancelled; success download; mp4-no-transparency note; error mapping | ~6 s |
+| `export.spec` | dialog offers MP4/PNG/GIF/WebP; capability gating; progress; cancel back to Options; success download; no-transparency note (MP4 only); error mapping | ~6 s |
 | `parity.spec` | preview frame vs exporter FrameRenderer frame within tolerance (Req 9); the export parity probe still reports 0 differing pixels with a layer selected (the overlay is a DOM element, not canvas pixels) | ~3 s |
 | `security.spec` | no network requests during a representative session; no design/ asset loaded | ~3 s |
 | `csp.spec` | zero `securitypolicyviolation` events and no CSP console errors across a representative session that now includes a canvas drag, a nudge, and a timeline drag; only the single named Zod eval probe is allowed (Req 11.2, 11.3) | ~4 s |
