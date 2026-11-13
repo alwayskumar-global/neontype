@@ -35,7 +35,12 @@ async function focused(page: Page): Promise<{ name: string; isBody: boolean; out
     if (!el || el === document.body) return { name: "", isBody: true, outline: "" };
     // The design draws a number field's focus ring on its wrapper (the input's own ring is suppressed), so the
     // ring is read from the focused element or, failing that, its parent.
-    const ring = (n: Element): string => `${getComputedStyle(n).outlineStyle}|${getComputedStyle(n).boxShadow}`;
+    // A ring counts only when it is VISIBLE: an outline with a style and a width, or a box shadow.
+    const ring = (n: Element): string => {
+      const cs = getComputedStyle(n);
+      const outline = cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) > 0;
+      return outline || cs.boxShadow !== "none" ? `${outline ? cs.outlineStyle : "none"}|${cs.boxShadow}` : "none|none";
+    };
     const own = ring(el);
     const name = el.getAttribute("aria-label") ?? (el.textContent ?? "").trim().slice(0, 40);
     return { name, isBody: false, outline: own !== "none|none" || !el.parentElement ? own : ring(el.parentElement) };

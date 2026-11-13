@@ -1,4 +1,4 @@
-import { exportAs, exportFormat, gotoStudio, shrinkProject } from "./helpers.js";
+import { exportAs, exportFormat, exportProgress, gotoStudio, progressSeen, shrinkProject, watchExportProgress } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 import { ERROR_MESSAGES } from "../src/export/errors.js";
 
@@ -47,13 +47,19 @@ test("exports GIF with a GIF8 header", async ({ page }) => {
   expect(ascii(info!.head.slice(0, 4))).toBe("GIF8");
 });
 
-test("cancel during export ends in the cancelled state", async ({ page }) => {
+test("cancel during export returns to the Options step with the format and size kept, and no download fires", async ({ page }) => {
+  let downloads = 0;
+  page.on("download", () => downloads++);
   await gotoStudio(page, true);
   await shrink(page, "4");
   await openDialog(page);
-  await page.getByRole("button", { name: /Export mp4/ }).click();
-  await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(page.getByText("Export cancelled.")).toBeVisible({ timeout: 9000 });
+  await exportAs(page, "mp4", /^2×/);
+  await page.getByRole("button", { name: "Cancel export" }).click();
+  const dialog = page.getByRole("dialog", { name: "Export" });
+  await expect(dialog.getByText("MP4 video options")).toBeVisible({ timeout: 9000 });
+  await expect(dialog.getByRole("combobox", { name: "Size" })).toHaveValue(/^2×/);
+  await page.waitForTimeout(300);
+  expect(downloads, "no download fired").toBe(0);
 });
 
 test("dialog traps Tab inside and returns focus to the Export button on close", async ({ page }) => {
@@ -85,26 +91,28 @@ test("a format the browser cannot encode is disabled, with its reason", async ({
   });
   await gotoStudio(page, true);
   await page.getByRole("button", { name: "Export", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Export" });
-  await expect(dialog).toBeVisible();
-  const mp4 = dialog.getByRole("button", { name: /Export mp4/ });
+  await expect(page.getByRole("dialog", { name: "Export" })).toBeVisible();
+  const mp4 = exportFormat(page, "mp4");
   await expect(mp4).toBeDisabled();
-  await expect(mp4).toHaveText(/unsupported/);
-  await expect(mp4).toHaveAttribute("title", /.+/);
+  await expect(mp4).toContainText("VideoEncoder is unavailable");
   // The other formats stay available.
-  await expect(dialog.getByRole("button", { name: /Export png-sequence/ })).toBeEnabled();
-  await expect(dialog.getByRole("button", { name: /Export gif/ })).toBeEnabled();
+  await expect(exportFormat(page, "png-sequence")).toBeEnabled();
+  await expect(exportFormat(page, "gif")).toBeEnabled();
 });
-test("progress advances while an export runs", async ({ page }) => {
+
+test("progress advances while an export runs and ends at the Done step", async ({ page }) => {
   await gotoStudio(page, true);
   await openDialog(page);
-  await page.getByRole("button", { name: /Export mp4/ }).click();
-  const progress = page.getByRole("progressbar", { name: "Export progress" });
+  await watchExportProgress(page);
+  await exportAs(page, "mp4");
+  const progress = exportProgress(page);
   await expect(progress).toBeVisible();
-  await expect.poll(() => progress.evaluate((el) => (el as HTMLProgressElement).value), { timeout: 15000 }).toBeGreaterThan(0);
-  await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(page.getByText("Export cancelled.")).toBeVisible();
+  await expect.poll(async () => Number(await progress.getAttribute("aria-valuenow")), { timeout: 15000 }).toBeGreaterThan(0);
+  await expect(page.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 60000 });
+  const seen = await progressSeen(page);
+  expect(Math.max(...seen.values), "the bar reached its end").toBeGreaterThan(0);
 });
+
 test("a transparent project shows the mp4-no-transparency note before and after exporting", async ({ page }) => {
   await gotoStudio(page, true);
   await shrink(page, "0.3");
@@ -125,35 +133,43 @@ test("a failed export shows the message mapped from its ErrorCode", async ({ pag
   await exportAs(page, "gif");
   const alert = page.getByRole("dialog", { name: "Export" }).getByRole("alert");
   await expect(alert).toBeVisible({ timeout: 15000 });
-  const text = ((await alert.innerText()) ?? "").trim();
-  expect(Object.values(ERROR_MESSAGES)).toContain(text);
+  await expect(alert).toContainText(ERROR_MESSAGES["invalid-options"]);
 });
+
 // Back (after a failure or a cancel) and "Export again" (after a success) return to the format step, and a second export runs.
-test("Back after a failed export returns to the format choices", async ({ page }) => {
+test("after a failed export, Change settings returns to Options with the settings kept, and Retry export runs again", async ({ page }) => {
   await gotoStudio(page, true);
   await page.getByRole("region", { name: "PROJECT" }).getByLabel("Frame rate").fill("120");
   await page.getByRole("region", { name: "PROJECT" }).getByLabel("Duration in seconds").fill("600");
   await openDialog(page);
-  await page.getByRole("button", { name: /Export gif/ }).click();
+  await exportAs(page, "gif", /^0\.5×/);
   const dialog = page.getByRole("dialog", { name: "Export" });
   await expect(dialog.getByRole("alert")).toBeVisible({ timeout: 15000 });
-  await dialog.getByRole("button", { name: "Back", exact: true }).click();
-  await expect(dialog.getByRole("button", { name: /Export mp4/ })).toBeVisible();
+  await dialog.getByRole("button", { name: "Change settings" }).click();
+  await expect(dialog.getByText("Animated GIF options")).toBeVisible();
+  await expect(dialog.getByRole("combobox", { name: "Size" })).toHaveValue(/^0\.5×/);
+  await dialog.getByRole("button", { name: "Export", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toBeVisible({ timeout: 15000 });
+  // Retry export runs the export again: the progress bar shows once more before the failure comes back.
+  await watchExportProgress(page);
+  await dialog.getByRole("button", { name: "Retry export" }).click();
+  await expect.poll(async () => (await progressSeen(page)).appeared, { timeout: 15000 }).toBe(true);
+  await expect(dialog.getByRole("alert")).toBeVisible({ timeout: 15000 });
 });
-test("after a cancel, Back returns to the format choices and a second export completes", async ({ page }) => {
+
+test("after a cancel, exporting again from Options completes", async ({ page }) => {
   await gotoStudio(page, true);
   await openDialog(page);
-  await page.getByRole("button", { name: /Export mp4/ }).click();
-  await page.getByRole("button", { name: "Cancel" }).click();
+  await exportAs(page, "mp4");
+  await page.getByRole("button", { name: "Cancel export" }).click();
   const dialog = page.getByRole("dialog", { name: "Export" });
-  await expect(dialog.getByText("Export cancelled.")).toBeVisible({ timeout: 9000 });
-  await dialog.getByRole("button", { name: "Back", exact: true }).click();
-  await expect(dialog.getByRole("button", { name: /Export gif/ })).toBeVisible();
-  await dialog.getByRole("button", { name: /Export gif/ }).click();
-  await expect(dialog.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 30000 });
+  await expect(dialog.getByText("MP4 video options")).toBeVisible({ timeout: 9000 });
+  await dialog.getByRole("button", { name: "Export", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 60000 });
   const info = await page.evaluate(() => window.__lastExport);
-  expect(ascii(info!.head.slice(0, 4))).toBe("GIF8");
+  expect(ascii(info!.head.slice(4, 8))).toBe("ftyp");
 });
+
 test("after a success, Export again returns to the format choices and a second export completes", async ({ page }) => {
   await gotoStudio(page, true);
   await shrink(page, "0.3");

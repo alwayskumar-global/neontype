@@ -84,8 +84,13 @@ test("a worker-path export with bundled fonts completes under the strict CSP", a
   await settings.getByLabel("Height").fill("90");
   await settings.getByLabel("Duration in seconds").fill("0.5");
   await page.getByRole("button", { name: "Export", exact: true }).click();
-  await page.getByRole("button", { name: /Export png-sequence/ }).click();
-  await expect(page.getByText(/^Done: frames\.zip/)).toBeVisible({ timeout: 30_000 });
+  const dialog = page.getByRole("dialog", { name: "Export" });
+  await dialog.getByRole("radio", { name: /^PNG sequence/ }).click();
+  await dialog.getByRole("button", { name: "Continue" }).click();
+  await dialog.getByRole("button", { name: "Export", exact: true }).click();
+  await expect(dialog.getByText("frames.zip")).toBeVisible({ timeout: 30_000 });
+  const [download] = await Promise.all([page.waitForEvent("download"), dialog.getByRole("button", { name: "Download" }).click()]);
+  expect(download.suggestedFilename()).toBe("frames.zip");
 
   const violations = await page.evaluate(
     () => (window as unknown as { __csp: { directive: string; blocked: string }[] }).__csp,

@@ -49,15 +49,15 @@ deterministic, and its output is CSP-clean. See `apps/studio/README.md`. Generat
 yet wired into the live studio.
 
 ## Export formats
-
 Supported: **MP4** (H.264, optional AAC), **PNG sequence** (ZIP of stored PNGs),
-**GIF** (<=256-colour palette, single-colour transparency).
+**GIF** (<=256-colour palette, single-colour transparency) and **animated WebP**
+(with alpha). Deferred (not in this release; a typed stub that reports unsupported):
+**WebM with alpha** (VP9 alpha unsupported in tested Chrome configurations).
 
-Deferred (not in this release; typed stubs that report unsupported): **WebM with
-alpha** (VP9 alpha unsupported in tested Chrome configurations) and **animated
-WebP** (needs a hand-written RIFF container). The export dialog offers only the
-three supported formats and gates them by runtime capability detection.
-
+The export dialog is the generated Export Flow: choose a format, choose a size
+(0.5x, 1x or 2x of the project, same aspect), export, then download. Formats are gated
+by runtime capability detection, and a format the browser cannot encode shows its reason.
+The MP4 video bitrate is fixed at 8 Mbit/s; the design has no control for it.
 ## Built with Kiro
 
 This project was built spec-first in Kiro:

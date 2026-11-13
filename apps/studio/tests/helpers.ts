@@ -181,9 +181,38 @@ export function exportFormat(page: Page, format: keyof typeof EXPORT_FORMAT_CARD
   return page.getByRole("dialog", { name: "Export" }).getByRole("radio", { name: EXPORT_FORMAT_CARDS[format] });
 }
 /** With the Export dialog open: picks a format, continues to the options, and starts the export. */
-export async function exportAs(page: Page, format: keyof typeof EXPORT_FORMAT_CARDS): Promise<void> {
+export async function exportAs(page: Page, format: keyof typeof EXPORT_FORMAT_CARDS, size?: RegExp): Promise<void> {
   const dialog = page.getByRole("dialog", { name: "Export" });
   await exportFormat(page, format).click();
   await dialog.getByRole("button", { name: "Continue" }).click();
+  if (size !== undefined) {
+    const sizes = dialog.getByRole("combobox", { name: "Size" });
+    await sizes.selectOption({ label: (await sizes.getByRole("option").allInnerTexts()).map((t) => t.trim()).find((t) => size.test(t)) ?? "" });
+  }
   await dialog.getByRole("button", { name: "Export", exact: true }).click();
+}
+/** The export progress bar of the generated flow (a role=progressbar named "Rendering frames"). */
+export function exportProgress(page: Page): Locator {
+  return page.getByRole("dialog", { name: "Export" }).getByRole("progressbar", { name: "Rendering frames" });
+}
+/**
+ * Installs (call before the export starts) an observer that records whether the export progress bar showed and the
+ * values (aria-valuenow) it had, however briefly. Read it back with `progressSeen`.
+ */
+export async function watchExportProgress(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const seen: { appeared: boolean; values: number[] } = { appeared: false, values: [] };
+    (window as unknown as { __progressSeen: typeof seen }).__progressSeen = seen;
+    const look = (): void => {
+      const bar = document.querySelector('[role="progressbar"][aria-label="Rendering frames"]');
+      if (bar) {
+        seen.appeared = true;
+        seen.values.push(Number(bar.getAttribute("aria-valuenow")));
+      }
+    };
+    new MutationObserver(look).observe(document.body, { subtree: true, childList: true, attributes: true });
+  });
+}
+export async function progressSeen(page: Page): Promise<{ appeared: boolean; values: number[] }> {
+  return await page.evaluate(() => (window as unknown as { __progressSeen: { appeared: boolean; values: number[] } }).__progressSeen);
 }

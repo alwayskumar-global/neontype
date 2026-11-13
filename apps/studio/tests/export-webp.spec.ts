@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
-import { exportAs, exportFormat, gotoStudio, settingsPanel, shrinkProject } from "./helpers.js";
+import { exportAs, exportFormat, gotoStudio, progressSeen, settingsPanel, shrinkProject, watchExportProgress } from "./helpers.js";
+import { summarizeWebp, VP8X_ALPHA, VP8X_ANIMATION } from "./webp.js";
 /**
  * Animated WebP in the export dialog (task: offer WebP). Gated on the exporters capability result like the other
  * formats; a finished export is a real file with the RIFF/WEBP header and the VP8X animation flag. Role, label,
@@ -34,34 +35,35 @@ test("WebP is disabled with a reason when the browser cannot encode a still WebP
   });
   await gotoStudio(page, true);
   await openDialog(page);
-  const dialog = page.getByRole("dialog", { name: "Export" });
-  const webp = dialog.getByRole("button", { name: /Export webp/ });
+  const webp = exportFormat(page, "webp");
   await expect(webp).toBeDisabled();
-  await expect(webp).toHaveText(/unsupported/);
-  await expect(webp).toHaveAttribute("title", /.+/);
-  await expect(dialog.getByRole("button", { name: /Export gif/ })).toBeEnabled();
+  await expect(webp).toContainText("still image/webp encode unavailable");
+  await expect(exportFormat(page, "gif")).toBeEnabled();
 });
-test("exports a shortened demo as an animated WebP: header, animation flag, progress UI, and the summary line", async ({ page }) => {
+/** Clicks Download and returns the downloaded file's suggested name and bytes. */
+async function download(page: Page): Promise<{ name: string; bytes: Uint8Array }> {
+  const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("dialog", { name: "Export" }).getByRole("button", { name: "Download" }).click()]);
+  const stream = await dl.createReadStream();
+  const parts: Uint8Array[] = [];
+  for await (const part of stream as AsyncIterable<Uint8Array>) parts.push(part);
+  const bytes = new Uint8Array(parts.reduce((n, p) => n + p.byteLength, 0));
+  let at = 0;
+  for (const p of parts) {
+    bytes.set(p, at);
+    at += p.byteLength;
+  }
+  return { name: dl.suggestedFilename(), bytes };
+}
+test("exports a shortened demo as an animated WebP: header, animation flag, progress UI, and the downloaded file", async ({ page }) => {
   await gotoStudio(page, true);
   await shrinkProject(page, "1");
   await openDialog(page);
   const dialog = page.getByRole("dialog", { name: "Export" });
   // Watch for the progress bar and its values, however briefly it shows.
-  await page.evaluate(() => {
-    const seen: { appeared: boolean; values: number[] } = { appeared: false, values: [] };
-    (window as unknown as { __progressSeen: typeof seen }).__progressSeen = seen;
-    const look = (): void => {
-      const bar = document.querySelector('progress[aria-label="Export progress"]') as HTMLProgressElement | null;
-      if (bar) {
-        seen.appeared = true;
-        seen.values.push(bar.value);
-      }
-    };
-    new MutationObserver(look).observe(document.body, { subtree: true, childList: true, attributes: true });
-  });
-  await dialog.getByRole("button", { name: /Export webp/ }).click();
+  await watchExportProgress(page);
+  await exportAs(page, "webp");
   await expect(dialog.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 30_000 });
-  const progress = await page.evaluate(() => (window as unknown as { __progressSeen: { appeared: boolean; values: number[] } }).__progressSeen);
+  const progress = await progressSeen(page);
   expect(progress.appeared, "the progress bar showed while exporting").toBe(true);
   const info = await lastExport(page);
   expect(info.fileName).toMatch(/\.webp$/);
@@ -71,7 +73,13 @@ test("exports a shortened demo as an animated WebP: header, animation flag, prog
   expect(ascii(info.head.slice(12, 16))).toBe("VP8X");
   expect(info.head[20]! & 0x02, "the VP8X animation flag").toBe(0x02);
   expect(info.head[20]! & 0x10, "an opaque background clears the alpha flag").toBe(0);
-  await expect(dialog.getByText("WebP · 1 file")).toBeVisible();
+  const file = await download(page);
+  expect(file.name).toMatch(/\.webp$/);
+  const webp = summarizeWebp(file.bytes);
+  expect([webp.riff, webp.webp], "RIFF....WEBP").toEqual([true, true]);
+  expect(webp.chunks).toContain("VP8X");
+  expect(webp.vp8xFlags! & VP8X_ANIMATION, "the ANIM flag").toBe(VP8X_ANIMATION);
+  expect(webp.chunks.filter((c) => c === "ANMF").length, "at least two frames").toBeGreaterThanOrEqual(2);
 });
 test("a transparent project exports a WebP with the VP8X alpha flag set", async ({ page }) => {
   await gotoStudio(page, true);
@@ -79,11 +87,14 @@ test("a transparent project exports a WebP with the VP8X alpha flag set", async 
   await settingsPanel(page).getByRole("switch", { name: "Transparent" }).check();
   await openDialog(page);
   const dialog = page.getByRole("dialog", { name: "Export" });
-  await dialog.getByRole("button", { name: /Export webp/ }).click();
+  await exportAs(page, "webp");
   await expect(dialog.getByRole("button", { name: "Download" })).toBeVisible({ timeout: 30_000 });
   const info = await lastExport(page);
   expect(info.head[20]! & 0x12, "animation and alpha flags").toBe(0x12);
-  await expect(dialog.getByText("WebP · 1 file")).toBeVisible();
+  const file = await download(page);
+  expect(file.name).toMatch(/\.webp$/);
+  const webp = summarizeWebp(file.bytes);
+  expect(webp.vp8xFlags! & VP8X_ALPHA, "the ALPHA flag").toBe(VP8X_ALPHA);
 });
 test("after a WebP export, Export again returns to the format choices", async ({ page }) => {
   await gotoStudio(page, true);
